@@ -6,7 +6,7 @@ FC = gfortran
 INCLUDE = -I../include
 GRN_LIBS = -lm -L../lib -lglib -lget
 PLOT_LIBS = -L../lib -lcgraph
-INSTALL = ../bin
+INSTALL = ../bin -lm
 
 #CFLAGS = -Wall -g -m32 $(INCLUDE)
 #FFLAGS = -m32
