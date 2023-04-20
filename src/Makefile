@@ -11,7 +11,7 @@ INSTALL = ../bin
 #CFLAGS = -Wall -g -m32 $(INCLUDE)
 #FFLAGS = -m32
 #
-CFLAGS = $(INCLUDE)
+CFL AGS = $(INCLUDE) -lm
 FFLAGS = 
 
 .c.o :
