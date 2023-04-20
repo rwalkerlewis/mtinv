@@ -4,14 +4,14 @@ CC = gcc
 FC = gfortran
 #
 INCLUDE = -I../include
-GRN_LIBS = -lm -L../lib -lglib -lget
+GRN_LIBS = -lm -L../lib -lglib -lget -lm
 PLOT_LIBS = -L../lib -lcgraph
 INSTALL = ../bin
 
 #CFLAGS = -Wall -g -m32 $(INCLUDE)
 #FFLAGS = -m32
 #
-CFL AGS = $(INCLUDE) -lm
+CFLAGS = $(INCLUDE)
 FFLAGS = 
 
 .c.o :
