@@ -5,7 +5,7 @@
 
 #include "../include/mt.h"
 
-char progname[128];
+extern char progname[128];
 
 EventInfo *glib2inv_get_input_parameters( char *filename, 
 	EventInfo *ev, int *n, int verbose )
@@ -151,57 +151,98 @@ EventInfo *glib2inv_get_input_parameters( char *filename,
 
 		ev = (EventInfo *)realloc( ev, (ista+1)*sizeof(EventInfo) );
 
-		/****                  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 ***/
-		nitems = sscanf( rec, "%s %s %s %d %d %f %f %d %f %f %f %c %f %c %f %f", 
+		/****                  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 ***/
+		nitems = sscanf( rec, "%s %s %s %s %d %d %f %f %d %f %f %f %c %f %c %f %f %s", 
 			ev[ista].stnm, 			/*  1 */
 			ev[ista].net,			/*  2 */
-			ev[ista].modfile,		/*  3 */
-			&(ev[ista].npole),		/*  4 */
-			&(ev[ista].npass),		/*  5 */
-			&(ev[ista].lf),			/*  6 */
-			&(ev[ista].hf),			/*  7 */
-			&(ev[ista].nt),			/*  8 */
-			&(ev[ista].dt),			/*  9 */
-			&(ev[ista].tr),                 /* 10 */
-			&(ev[ista].tt),			/* 11 */
-			&grd_mo_type,			/* 12 */
-			&(ev[ista].mul_factor),		/* 13 */
-			&kused,				/* 14 */
-			&(ev[ista].time_shift_all),     /* 15 */
-			&(ev[ista].weight) 		/* 16 */
+			ev[ista].loc,                   /*  3 */
+			ev[ista].modfile,		/*  4 */
+			&(ev[ista].npole),		/*  5 */
+			&(ev[ista].npass),		/*  6 */
+			&(ev[ista].lf),			/*  7 */
+			&(ev[ista].hf),			/*  8 */
+			&(ev[ista].nt),			/*  9 */
+			&(ev[ista].dt),			/* 10 */
+			&(ev[ista].tr),                 /* 11 */
+			&(ev[ista].tt),			/* 12 */
+			&grd_mo_type,			/* 13 */
+			&(ev[ista].mul_factor),		/* 14 */
+			&kused,				/* 15 */
+			&(ev[ista].time_shift_all),     /* 16 */
+			&(ev[ista].weight), 		/* 17 */
+			ev[ista].wavetype               /* 18 Surf/Pnl Rotational */
 		);
+
+	/*** time_shift_all will get updated with the max cross-correlation ***/
+		ev[ista].time_shift_user = ev[ista].time_shift_all;
+
+		/* fprintf( stdout, "loc=(%s)\n", ev[ista].loc ); */
+
+		if(  strcmp( ev[ista].loc, "\"\"" ) == 0 || strcmp( ev[ista].loc, "--" ) == 0 )
+		{
+			strcpy( ev[ista].loc, "" );
+		}
+
+	/***************************************/
+	/*** G. Ichinose Nov 5, 2019 check wavetype options: "Surf/Pnl" or "Rotational" ***/
+	/***************************************/
+
+		if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 || 
+		    strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		{
+			if(verbose)
+			  fprintf( stdout, "%s: %s: %s: (%s.%s.%s) wavetype=(%s) ok\n",
+				progname, __FILE__, __func__, 
+				ev[ista].net, ev[ista].stnm, ev[ista].loc, ev[ista].wavetype );
+		}
+		else if( strcmp( ev[ista].wavetype, "" ) == 0 || strncmp( ev[ista].wavetype, "#", 1 ) == 0 )  /*** empty or next string is start of comment # ***/
+		{
+			strcpy( ev[ista].wavetype, "Surf/Pnl" );
+			fprintf( stdout, "%s: %s: %s: ista=%d WARNING: NULL was entered so wavetype=(%s) assigned by default\n",
+                                progname, __FILE__, __func__, ista, ev[ista].wavetype );
+		}
+		else
+		{
+			fprintf( stdout, "%s: %s: %s: STDOUT: FATAL ERROR: ista=%d unknown wavetype=(%s) options: \"Surf/Pnl\", \"Rotational\", or \"\"\n",
+                                progname, __FILE__, __func__, ista, ev[ista].wavetype );
+			fprintf( stderr, "%s: %s: %s: STDERR: FATAL ERROR: ista=%d unknown wavetype=(%s) options: \"Surf/Pnl\", \"Rotational\", or \"\"\n",
+                                progname, __FILE__, __func__, ista, ev[ista].wavetype );
+			exit(-1);
+		}
 
 	/***************************************/
 	/*** check time number of items read ***/
 	/***************************************/
-		if( nitems < 16 )
+		if( nitems < 17 )
 		{
 		  fprintf(stderr, "%s: not enough items=%d read from file %s ista=%d\n\n",
 			progname, nitems, filename, ista );
 		  fprintf(stderr, "%s: offending line=%s\n", progname, rec );
 		  fprintf(stderr, "\n" );
 		  fprintf(stderr, "%s: free-format, space seperated with 18 columns: \n", progname );
-	          fprintf(stderr, "1   2   3   4     5     6    7    8   9    10 11 12 13   14   15  16     \n" );
-		  fprintf(stderr, "sta net mod npole npass lf   hf   nt  dt   tr tt GM fmul used TS  weight \n" );
-		  fprintf(stderr, "--- --- --- ----- ----- ---- ---- --- ---- -- -- -- ---- ---- --  ------ \n");
-		  fprintf(stderr, "PAS CI  wus 3     2     0.02 0.05 512 0.15 0  0  d  1    y    0   1.0    \n" );
+	          fprintf(stderr, "1   2   3   4   5     6     7    8    9   10   11 12 13   14   15 16  17     18       \n" );
+		  fprintf(stderr, "sta net loc mod npole npass lf   hf   nt  dt   tr tt GM fmul used TS  weight wavetype \n" );
+		  fprintf(stderr, "--- --- --- --- ----- ----- ---- ---- --- ---- -- -- -- ---- ---- --  ------ -------- \n");
+		  fprintf(stderr, "PAS CI  ""  wus 3     2     0.02 0.05 512 0.15 0  0  d  1    y    0   1.0    Surf/Pnl or Rotational \n" );
 		  fprintf(stderr, "\n" );
 		  fprintf(stderr, "Column  1: Station Code\n" );
 		  fprintf(stderr, "Column  2: Netwok Code\n" );
-	          fprintf(stderr, "Column  3: 1D Velocity Model Base File Name (without .mod extension)\n" );
-    		  fprintf(stderr, "Column  4: Butterworth Filter number of poles\n" );
-		  fprintf(stderr, "Column  5: Butterworth Filter number of passes\n" );
-		  fprintf(stderr, "Column  6: Butterworth Filter lowpass corner (Hz)\n" );
-		  fprintf(stderr, "Column  7: Butterworth Filter highpass corner (Hz)\n" );
-		  fprintf(stderr, "Column  8: Decimated number of points\n" );
-		  fprintf(stderr, "Column  9: Decimated Sampling Rate (sec/samp)\n" );
-		  fprintf(stderr, "Column 10: Rise Time of Boxcar (sec)\n" );
-		  fprintf(stderr, "Column 11: Duration of Boxcar (sec)\n" );
-		  fprintf(stderr, "Column 12: Ground Motion (d=displacement v=velocity)\n" );
-		  fprintf(stderr, "Column 13: Multuply all amplitudes of data by this value\n" );
-		  fprintf(stderr, "Column 14: y=use in calculation and residual n=do not use only predict\n" );
-		  fprintf(stderr, "Column 15: time shift all data by this value in (sec)\n" );
-		  fprintf(stderr, "Column 16: Amplitude weight given to this station data for inversion\n" );
+	          fprintf(stderr, "Column  3: Location Code = \"\", \"00\", \"10\", .... \n" );
+		  fprintf(stderr, "Column  4: 1D Velocity Model Base File Name (without .mod extension)\n" );
+    		  fprintf(stderr, "Column  5: Butterworth Filter number of poles\n" );
+		  fprintf(stderr, "Column  6: Butterworth Filter number of passes\n" );
+		  fprintf(stderr, "Column  7: Butterworth Filter lowpass corner (Hz)\n" );
+		  fprintf(stderr, "Column  8: Butterworth Filter highpass corner (Hz)\n" );
+		  fprintf(stderr, "Column  9: Decimated number of points\n" );
+		  fprintf(stderr, "Column 10: Decimated Sampling Rate (sec/samp)\n" );
+		  fprintf(stderr, "Column 11: Rise Time of Boxcar (sec)\n" );
+		  fprintf(stderr, "Column 12: Duration of Boxcar (sec)\n" );
+		  fprintf(stderr, "Column 13: Ground Motion (d=displacement v=velocity)\n" );
+		  fprintf(stderr, "Column 14: Multuply all amplitudes of data by this value\n" );
+		  fprintf(stderr, "Column 15: y=use in calculation and residual n=do not use only predict\n" );
+		  fprintf(stderr, "Column 16: time shift all data by this value in (sec)\n" );
+		  fprintf(stderr, "Column 17: Amplitude weight given to this station data for inversion\n" );
+		  fprintf(stderr, "Column 18: Wave type: Surf/Pnl (ZRT) or Rotational-3C (UWV) [default empty is Surf/Pnl which is typical]\n" );
 		  fprintf(stderr, "\n" );
 		  exit(-1);
 		}
@@ -311,14 +352,17 @@ EventInfo *glib2inv_get_input_parameters( char *filename,
 	/*** create file names for output files ***/
 	/******************************************/
 
-		sprintf( ev[ista].data_filename, "%s.%s.%c.%02d.data", 
-			ev[ista].stnm, ev[ista].net, grd_mo_type, ista );
+		sprintf( ev[ista].data_filename, "%s.%s.%s.%c.%02d.data", 
+			ev[ista].net, ev[ista].stnm, ev[ista].loc, 
+			grd_mo_type, ista );
 
-		sprintf( ev[ista].glib_filename, "%s.%s.%s.glib",
-			ev[ista].stnm, ev[ista].net, ev[ista].modfile );
+		sprintf( ev[ista].glib_filename, "%s.%s.%s.%s.glib",
+			ev[ista].net, ev[ista].stnm, ev[ista].loc,
+			ev[ista].modfile );
 
-		sprintf( ev[ista].ginv_filename, "%s.%s.%s.%c.%02d.ginv", 
-			ev[ista].stnm, ev[ista].net, ev[ista].modfile, grd_mo_type, ista );
+		sprintf( ev[ista].ginv_filename, "%s.%s.%s.%s.%c.%02d.ginv", 
+			ev[ista].net, ev[ista].stnm, ev[ista].loc,
+			ev[ista].modfile, grd_mo_type, ista );
 
 		if( verbose )
 		{
@@ -386,6 +430,71 @@ EventInfo *glib2inv_get_input_parameters( char *filename,
 	return (EventInfo *)ev;
 }
 
+void array2grnRot( float **garray, Greens *g )
+{       
+        int it, nt;
+        nt = g->nt;
+        if( nt > 4096 ) printf("%s: array2grn: nt=%d > 4096\n", progname, nt );
+        
+        for( it=0; it<nt; it++ )
+        {       
+                g->g.rss[it] = 0;
+                g->g.rds[it] = 0;
+                g->g.rdd[it] = 0;
+                g->g.rep[it] = 0;
+                g->g.zss[it] = 0;
+                g->g.zds[it] = 0;
+                g->g.zdd[it] = 0;
+                g->g.zep[it] = 0;
+                g->g.tss[it] = 0;
+                g->g.tds[it] = 0;
+
+		g->g.w1ss[it] = 0;
+                g->g.w1ds[it] = 0;
+                g->g.w1dd[it] = 0;
+                g->g.w1ex[it] = 0;
+
+                g->g.w2ss[it] = 0;
+                g->g.w2ds[it] = 0;
+                g->g.w2dd[it] = 0;
+                g->g.w2ex[it] = 0;
+
+                g->g.w3ss[it] = 0;
+                g->g.w3ds[it] = 0;
+		g->g.w3dd[it] = 0;
+                g->g.w3ex[it] = 0;
+        }
+        
+        for( it=0; it<nt; it++ )
+        {
+                g->g.rss[it] = garray[0][it];
+                g->g.rds[it] = garray[1][it];
+                g->g.rdd[it] = garray[2][it];
+                g->g.rep[it] = garray[3][it];
+                g->g.zss[it] = garray[4][it];
+                g->g.zds[it] = garray[5][it];
+                g->g.zdd[it] = garray[6][it];
+                g->g.zep[it] = garray[7][it];
+                g->g.tss[it] = garray[8][it];
+                g->g.tds[it] = garray[9][it];
+
+		g->g.w1ss[it] = garray[10][it];
+                g->g.w1ds[it] = garray[11][it];
+                g->g.w1dd[it] = garray[12][it];
+                g->g.w1ex[it] = garray[13][it];
+
+                g->g.w2ss[it] = garray[14][it];
+                g->g.w2ds[it] = garray[15][it];
+                g->g.w2dd[it] = garray[16][it];
+                g->g.w2ex[it] = garray[17][it];
+
+                g->g.w3ss[it] = garray[18][it];
+                g->g.w3ds[it] = garray[19][it];
+                g->g.w3dd[it] = garray[20][it];
+                g->g.w3ex[it] = garray[21][it];
+        }
+}
+
 void array2grn( float **garray, Greens *g )
 {
         int it, nt;
@@ -418,6 +527,46 @@ void array2grn( float **garray, Greens *g )
                 g->g.zep[it] = garray[7][it];
                 g->g.tss[it] = garray[8][it];
                 g->g.tds[it] = garray[9][it];
+        }
+}
+
+/*** incase ev->wavetype == Rotational then
+     access additional rotational green's func ***/
+
+void split2grnRot( Greens *g, float **garray )
+{
+        int it, nt;
+        nt = g->nt;
+
+        for( it=0; it<nt; it++ )
+        {
+                garray[0][it] = g->g.rss[it];
+                garray[1][it] = g->g.rds[it];
+                garray[2][it] = g->g.rdd[it];
+                garray[3][it] = g->g.rep[it];
+                garray[4][it] = g->g.zss[it];
+                garray[5][it] = g->g.zds[it];
+                garray[6][it] = g->g.zdd[it];
+                garray[7][it] = g->g.zep[it];
+                garray[8][it] = g->g.tss[it];
+                garray[9][it] = g->g.tds[it];
+
+		garray[10][it] = g->g.w1ss[it];
+                garray[11][it] = g->g.w1ds[it];
+                garray[12][it] = g->g.w1dd[it];
+                garray[13][it] = g->g.w1ex[it];
+
+                garray[14][it] = g->g.w2ss[it];
+                garray[15][it] = g->g.w2ds[it];
+                garray[16][it] = g->g.w2dd[it];
+                garray[17][it] = g->g.w2ex[it];
+
+                garray[18][it] = g->g.w3ss[it];
+                garray[19][it] = g->g.w3ds[it];
+		garray[20][it] = g->g.w3ss[it];
+                garray[21][it] = g->g.w3ds[it];
+
+
         }
 }
 
@@ -662,6 +811,7 @@ void special_load( char *station_name, char *network_name, Greens *g )
 	/********************************************************/
 		strncpy( g->stnm, s->kstnm, 8 );
 		strncpy( g->net, s->knetwk, 8 );
+		strncpy( g->loc, s->khole, 8 );
 
 		for( i=0; i<8; i++ )
 		{

@@ -4,7 +4,7 @@
 #include <math.h>
 #include "hist.h"
 
-char progname[128];
+extern char progname[128];
 	
 void makehist( float *data, int npts, float xstart, float xstop, float binwidth, Histogram *h, int verbose )
 {

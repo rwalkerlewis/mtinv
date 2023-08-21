@@ -6,7 +6,7 @@
 #include "../include/nrutil.h"     /** numerical recipes **/
 #include "../include/mt.h"         /** global datatype and structure declarations **/
 
-char progname[128];
+extern char progname[128];
 
 #define NUM_COMP 4
 

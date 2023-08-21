@@ -15,7 +15,7 @@
 #include <math.h>
 #include "../../include/mt.h"
                                                                                                                               
-char progname[128];
+extern char progname[128];
  
 /***************************************************************************/
 /*** calculates the take off angle given the ray parameter and srcz      ***/

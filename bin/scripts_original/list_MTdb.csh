@@ -1,21 +1,28 @@
 #!/bin/csh
 
 if( $#argv == 0 ) then
-	set DATABASE=/Users/ichinose1/Work/mtinv.v3.0.6/data/mt.db
+	echo "User Environment:"
+	echo "MTINV_PATH          = ${MTINV_PATH}"
+	echo "MT_DATABASE_FILE    = ${MT_DATABASE_FILE}"
+	set DATABASE=${MT_DATABASE_FILE}
 	echo "Default Database = ${DATABASE} "
+	echo ""
+
 else if ( $#argv == 1 ) then
 	set DATABASE=$argv[1]
-	echo "Database = ${DATABASE} "
+	echo "Cmdline Arg Database = ${DATABASE} "
+	echo ""
 else
-        echo "$0 needs 1 argument"
-	echo " Usage : $0 ${DATABASE}"
-	echo "Default Database = ${DATABASE} "
+        echo "$0 needs zero or 1 argument"
+	echo " Usage : $0"
+	echo "or" 
+	echo " Usage : $0 sqlite3_database.db"
         exit
 endif
 
 sqlite3 ${DATABASE} << EOF
 .headers on
-.mode col
+.mode column
 .stats off
 .timer off
 
@@ -48,7 +55,8 @@ where
 	( ( a.grn = g.grn ) or ( a.grn is NULL ) ) and
 	a.orid = b.orid and
 	b.fpid = c.fpid
-order by time;
+order by a.lddate;
+/* order by time; */
 
 .print "\n"
 

@@ -11,6 +11,7 @@ Sun Feb 21 09:56:31 PST 2021 ichinose1 - removed evla,evlo star when undef in sa
 
 #include "sac.h"
 #include "mytime.h"
+#include "version.h"
 
 char progname[128];
 
@@ -25,7 +26,7 @@ int main( int ac, char **av )
 	FILE *fp;
 
 	int verbose = 0;
-	int igmt5 = 0;
+	int igmt5 = 1;
 	int include_epicenter = 0;
 	int include_sta_label = 0;
 	float xybuffer_in_degrees = 1.0;
@@ -41,16 +42,27 @@ int main( int ac, char **av )
 	void make_gmt4_map( Sac_Header *s, int nsta, char *script_filename,
 		int include_epicenter, float xybuffer_in_degrees, int include_sta_label, int verbose );
 
-/*** start progname ***/
-	strcpy( progname, av[0] );
+/********************/
+/*** program name ***/
+/********************/
+        strcpy( progname, av[0] );
+
+        fprintf( stderr, "%s: %s: %s: Version      = %s\n", progname, __FILE__, __func__, Version_Label );
+	fprintf( stderr, "%s: %s: %s: Version Date = %s\n", progname, __FILE__, __func__, Version_Date );
+	fprintf( stderr, "%s: %s: %s: Source       = %s\n", progname, __FILE__, __func__, Version_SrcDir );
+	fprintf( stderr, "\n\n\n" );
+
+/*** Usage ***/
 
 	if( ac <= 1 )
 	{
 		fprintf( stderr,
-	"Usage %s -gmt5 -verbose -xybuffer_in_degrees %%f -include-epicenter -include-sta-label -rdseed.station [sac files]\n", 
+	"Usage:\n\t %s -gmt5 -verbose -xybuffer_in_degrees %%f -include-epicenter -include-sta-label -rdseed.station [sac files]\n", 
 			progname );
 		exit(-1);
 	}
+
+/*** begin ***/
 
 	s = (Sac_Header *)malloc( ac * sizeof(Sac_Header) );
 
@@ -254,7 +266,7 @@ void make_gmt4_map( Sac_Header *s, int nsta, char *script_filename,
         fprintf( fp, "gmtset BASEMAP_TYPE plain\n" );
         fprintf( fp, "\n");
 
-        fprintf( fp, "pscoast -R%g/%g/%g/%g -JM6i -Di ", minlon, maxlon, minlat, maxlat );
+        fprintf( fp, "gmt pscoast -R%g/%g/%g/%g -JM6i -Di ", minlon, maxlon, minlat, maxlat );
         fprintf( fp, " -N1/1.2p,black,5_2:0p -N2/0.8p,black,5_2:0p " );
         fprintf( fp, " -A1000 -W1p,black -Glightgray -P -K >! %s\n", PS_filename );
         fprintf( fp, "\n");
@@ -382,13 +394,33 @@ void make_gmt5_map( Sac_Header *s, int nsta, char *script_filename,
 	int i = 1;
 	float maxlat = -999, maxlon = -999;
 	float minlat = +999, minlon = +999;
+	float aspect_ratio, tmp;
 	float sumlat = 0, sumlon = 0;
         float ticklength = 0.5, annotation = 1.0;
 	char PS_filename[128], JPG_filename[128];
 	char command_line[512];
 
+	void convert_colatlon( float *la, float *lo, int mode ); /*** mode = 1 forward; mode = -1 reverse ***/
+
+/***************/
+/*** start   ***/
+/***************/
+
 	sprintf( PS_filename, "sac2gmtmap.ps" );
 	sprintf( JPG_filename, "sac2gmtmap.jpg" );
+
+	if( s[0].evla == -12345. || s[0].evlo == -12345. )
+        {       
+                fprintf( stderr, "%s: %s: %s: warning evla and evlo is null\n",
+                        progname, __FILE__, __func__ );
+
+		if( include_epicenter )
+		{
+			fprintf( stderr, "%s: %s: %s: ERROR include_epicenter=%d and evla and evlo is null. Turn off include_epicenter and rerun.\n",
+				progname, __FILE__, __func__ , include_epicenter);
+			exit(-1);
+		}
+	}
 
 	if( (fp=fopen( script_filename,"w" )) == NULL )
 	{
@@ -397,19 +429,33 @@ void make_gmt5_map( Sac_Header *s, int nsta, char *script_filename,
 		exit(-1);
 	}
 
+	for( i = 0; i < nsta; i++ )
+        {
+                convert_colatlon( &(s[i].stla), &(s[i].stlo), 1 );
+                convert_colatlon( &(s[i].evla), &(s[i].evlo), 1 );
+        }
+
 	if( include_epicenter )
         {
-                maxlat = s[1].evla;
-                minlat = s[1].evla;
-                maxlon = s[1].evlo;
-                minlon = s[1].evlo;
+                maxlat = s[0].evla;
+                minlat = s[0].evla;
+                maxlon = s[0].evlo;
+                minlon = s[0].evlo;
         }
         else
         {
-                maxlat = s[1].stla;
-                minlat = s[1].stla;
-                maxlon = s[1].stlo;
-                minlon = s[1].stlo;
+		for( i = 0; i < nsta; i++ )
+	        {
+        	        sumlat += s[i].stla;
+               		sumlon += s[i].stlo;
+        	}
+        	sumlat /= nsta;
+        	sumlon /= nsta;
+
+                maxlat = sumlat;
+                minlat = sumlat;
+                maxlon = sumlon;
+                minlon = sumlon;
         }
 	
 	for( i = 0; i < nsta; i++ )
@@ -420,8 +466,50 @@ void make_gmt5_map( Sac_Header *s, int nsta, char *script_filename,
                 if(  s[i].stlo < minlon ) minlon = s[i].stlo;
 
         }
-	fprintf( stderr, "%s: minlon = %g maxlon = %g minlat = %g maxlat = %g\n",
-		progname, minlon, maxlon, minlat, maxlat );
+	maxlat =  ceil( maxlat ) + 1;
+        minlat = floor( minlat ) - 1;
+        maxlon =  ceil( maxlon ) + 1;
+        minlon = floor( minlon ) - 1;
+
+	aspect_ratio = fabs(maxlat - minlat) / fabs( maxlon - minlon );
+	fprintf( stderr, "%s: aspect_ratio = %g\n", progname, aspect_ratio );
+
+	if( fabs( maxlon - minlon ) < 3 )
+        {
+                maxlon += 2;
+                minlon -= 2;
+        }
+
+/*** convert back ***/
+
+	for( i = 0; i < nsta; i++ )
+        {
+                convert_colatlon( &(s[i].stla), &(s[i].stlo), -1 );
+                convert_colatlon( &(s[i].evla), &(s[i].evlo), -1 );
+        }
+
+	convert_colatlon( &minlat, &minlon, -1 );
+        convert_colatlon( &maxlat, &maxlon, -1 );
+
+/*** if the region box in GMT spans the +180/-180 long then fix ***/
+
+        if( maxlon < 0 && minlon > 0 )
+        {
+                maxlon += 360;
+        }
+
+        if( maxlat < minlat )
+        {
+                tmp = minlat;
+                minlat = maxlat;
+                maxlat = tmp;
+        }
+
+	fprintf( stderr, "%s: %s: %s: minlon = %g maxlon = %g minlat = %g maxlat = %g\n",
+		progname, __FILE__, __func__, 
+		minlon, maxlon, minlat, maxlat );
+
+/*** map edge buffer ***/
 
 	if( xybuffer_in_degrees == 1 ) 
 	{
@@ -439,12 +527,10 @@ void make_gmt5_map( Sac_Header *s, int nsta, char *script_filename,
 		minlat -= xybuffer_in_degrees;
         }
 
-	if( maxlon > +180.0 ) maxlon = +180.0;
-        if( maxlat > +90.0 )  maxlat = +89.0;
-        if( minlat < -90.0 )  minlat = -89.0;
-        if( minlon < -180.0 ) minlon = -180.0;
-	fprintf( stderr, "%s: minlon = %g maxlon = %g minlat = %g maxlat = %g\n",
-                progname, minlon, maxlon, minlat, maxlat );
+	fprintf( stderr, "%s: %s: %s: xybuffer_in_degrees=%g minlon = %g maxlon = %g minlat = %g maxlat = %g\n",
+                progname, __FILE__, __func__,
+		xybuffer_in_degrees,
+		minlon, maxlon, minlat, maxlat );
 
 /*** make GMT version 5.x.x map ***/
 
@@ -465,14 +551,14 @@ void make_gmt5_map( Sac_Header *s, int nsta, char *script_filename,
         fprintf( fp, "gmt set FORMAT_GEO_MAP DG\n" );
         fprintf( fp, "\n");
 
-	fprintf( fp, "pscoast -R%g/%g/%g/%g -JM6i -Di ", minlon, maxlon, minlat, maxlat );
+	fprintf( fp, "gmt pscoast -R%g/%g/%g/%g -JM6i -Di ", minlon, maxlon, minlat, maxlat );
 	fprintf( fp, " -N1/1.2p,black,5_2:0p -N2/0.8p,black,5_2:0p " );
 	fprintf( fp, " -A1000 -W1p,black -Glightgray -P -K >! %s\n", PS_filename );
 	fprintf( fp, "\n");
 
 	if(include_epicenter)
 	{
-         fprintf( fp, "psxy -R -JM -O -K >> %s << EOF\n", PS_filename );
+         fprintf( fp, "gmt psxy -R -JM -O -K >> %s << EOF\n", PS_filename );
          for( i = 0; i < nsta; i++ )
          {
                 fprintf( fp, "> -W1p,black %s.%s.%s%s\n", 
@@ -484,7 +570,7 @@ void make_gmt5_map( Sac_Header *s, int nsta, char *script_filename,
 	 fprintf( fp, "\n");
 	}
 
-        fprintf( fp, "psxy -R -JM -St0.15i -W1p,black -Gred -O -K >> %s << EOF\n", PS_filename );
+        fprintf( fp, "gmt psxy -R -JM -St0.15i -W1p,black -Gred -O -K >> %s << EOF\n", PS_filename );
         for( i = 0; i < nsta; i++ )
         {
                 fprintf( fp, "%12.8f %12.8f %s.%s.%s%s\n", 
@@ -498,7 +584,7 @@ void make_gmt5_map( Sac_Header *s, int nsta, char *script_filename,
 	if(include_sta_label)
 	{
 	 fprintf( fp, "### Reads (x,y[,fontinfo,angle,justify],text) from <table> [or stdin].\n" );
-         fprintf( fp, "pstext -R -JM -C0.01i/0.01i -N -D0.05i/0.1i -W0p,white -Gwhite " );
+         fprintf( fp, "gmt pstext -R -JM -C0.01i/0.01i -N -D0.05i/0.1i -W0p,white -Gwhite " );
 	 fprintf( fp, "  -F+f%dp,Times-Roman,blue+jBL -O -K >> %s << EOF\n", font_size, PS_filename );
          for( i = 0; i < nsta; i++ )
          {
@@ -540,7 +626,7 @@ void make_gmt5_map( Sac_Header *s, int nsta, char *script_filename,
 	  if(include_epicenter)
 	  {
            fprintf( fp, "echo %12.8f %12.8f | ", s[0].evlo, s[0].evla );
-	   fprintf( fp, "psxy -R -JM -Sa0.2i -W1p,black -Gmagenta -O -K >> %s\n", PS_filename );
+	   fprintf( fp, "gmt psxy -R -JM -Sa0.2i -W1p,black -Gmagenta -O -K >> %s\n", PS_filename );
 	  }
 	}
 	fprintf( fp, "\n");
@@ -560,19 +646,19 @@ void make_gmt5_map( Sac_Header *s, int nsta, char *script_filename,
 
 	if( s[0].evla == -12345. )
 	{
-		fprintf( fp, "psbasemap -R -JM -Bxf%ga%g -Byf%ga%g -BNSEW -O >> %s\n",
+		fprintf( fp, "gmt psbasemap -R -JM -Bxf%ga%g -Byf%ga%g -BNSEW -O >> %s\n",
 			ticklength, annotation, ticklength, annotation, PS_filename );
 	}
 	else
 	{
-        	fprintf( fp, "psbasemap -R -JM -Bxf%ga%g -Byf%ga%g -BNSEW -Lx1/1/%g/%g -O >> %s\n",
+        	fprintf( fp, "gmt psbasemap -R -JM -Bxf%ga%g -Byf%ga%g -BNSEW -Lx1/1/%g/%g -O >> %s\n",
                 	ticklength, annotation, ticklength, annotation, s[0].evla,
 			xybuffer_in_degrees * 10.0, PS_filename );
 	}
 
 	fprintf( fp, "\n");
 
-        fprintf( fp, "psconvert -A -Z -Tj -E300 -V %s\n", PS_filename );
+        fprintf( fp, "gmt psconvert -A -Z -Tj -E300 -V %s\n", PS_filename );
 	fprintf( fp, "/bin/rm -f gmt.conf gmt.history\n" );
 	fprintf( fp, "#echo use eog xv open to view jpg\n" );
 	if( interactive )
@@ -587,4 +673,39 @@ void make_gmt5_map( Sac_Header *s, int nsta, char *script_filename,
 	sprintf( command_line, "./%s", script_filename ); 
 	fprintf( stderr, "%s: running command %s\n", progname, command_line );
        	system( command_line );
+}
+
+/*** mode = 1 forward; mode = -1 reverse ***/
+void convert_colatlon( float *lat, float *lon, int mode )
+{
+        float la;
+        float lo;
+
+/*** initalize output with input ***/
+        la = *lat;
+        lo = *lon;
+
+/** lat to colat is the same as colat to lat **/
+        la = 90 - *lat;
+
+        if( mode == 1 ) /**long(-180/+180 to 0-360) **/
+        {
+                if( *lon < 0 ) lo = 360 + *lon;
+        }
+        else if( mode == -1 ) /**long(0-360 to -180/+180) **/
+        {
+                if( *lon > 180 ) lo = *lon - 360;
+        }
+        else
+        {
+                fprintf( stderr, "%s: %s: %s: error unknown mode=%d\n",
+                        progname, __FILE__, __func__, mode );
+                exit(-1);
+        }
+/**
+        fprintf( stderr, "%s: %s: %s: mode=%d inlat=%g inlon=%g outlat=%g outlon=%g\n",
+                progname, __FILE__, __func__, mode, *lat, *lon, la, lo );
+**/
+        *lat = la;
+        *lon = lo;
 }

@@ -19,7 +19,8 @@ INSTALL_BIN = ../../../bin
 .c.o :
 	$(CC) $(CFLAGS) -c $< -o $@
 
-all : sacqc hist switch_color
+# all : sacqc switch_color hist
+all : sacqc switch_color
 
 hist : hist.o histsub.o
 	$(CC) $(CFLAGS) -o $@ hist.o histsub.o $(LIBDIRS) $(LIBS)

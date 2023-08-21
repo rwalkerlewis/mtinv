@@ -3,7 +3,7 @@
 #include <math.h>
 #include "../../include/nrutil.h"     /** numerical recipes **/
 
-char progname[128];
+extern char progname[128];
 
 float **matrix( int nrl, int nrh, int ncl, int nch )
 {

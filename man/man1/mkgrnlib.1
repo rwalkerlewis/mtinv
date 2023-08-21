@@ -1,44 +1,67 @@
-.TH MKGRNLIB 1 "20 Feb 2009"  "MTINV version 2.0" "MTINV Toolkit V2.0"
+.TH mkgrnlib 1 "27 April 2023" "MTINV Version 4.0.1" "MTINV Toolkit"
+
 .SH NAME 
-mkgrnlib  \- Makes the Green's function library for a single source station pair
+mkgrnlib  \- Makes the Green's function library with multiple source depths for a single source-to-receiver station 
+
 .SH SYNOPSIS
-mkgrnlib par= stnm= net=
-.br
- 
-.br
-
-or
-.br
-
-.br
-
-mkgrnlib stnm= net= velmod= zrange= evla= evlo= dt= nt= fmax= t0= redv= damp= kmax= eps= smin=
-modeldb= stadb= [no]verbose [no]dump
+mkgrnlib
+stnm=(string)
+net=(string)
+loc=(string)
+velmod=(string)
+modeldb=(string)
+stadb=(string)
+[ zrange=(float,float,float) or z_depth_km=(float) or nz=(int) z_multiple=(float,float,...)]
+evla=(float)
+evlo=(float)
+dt=(float)
+nt=(integer)
+fmax=(float)
+t0=(float)
+rdev=(float)
+damp=(float)
+kmax=(integer)
+eps=(float)
+smin=(float)
+[no]dump
+[no]verbose
+.sp
+or... 
+.sp
+mkgrnlib par=model.par
 
 .SH DESCRIPTION
-mkgrnlib reads in a parameter file and/or command line arguments which points to a station database file in rdseed format, a 1D velocity
-model file in simple ASCII column format, and several parameters including source and receiver
-latitude and longitude, number of points, sampling rate, and source depth interval.  The program then computes
-the Green's functions using the f-k reflectivity methodology of Zeng and Anderson (1995).  The output is a
-binary formatted file with the Green's functions as a function of depth and the ten (ZSS, ZDS, ZDD, ZEP, RSS, RDS, RDD, REP, TSS, TDS) 
-fundamental faulting orientations.  
+.B mkgrnlib 
+.R computes a Green's function (GF) library (*.glib) over a range of source depths for a single source-to-receiver pair. 
+A Green's function is an impulse response of the Earth 
+propagation differential operator on a domain with specified inital and boundary conditions.  
+Green's functions are computed using the frequency-wavenumber reflectivity method (Zeng and Anderson, 1995). 
+We use the 3 fundamental faulting orientations (SS-strike-slip, DS-45deg dip slip, DD-vertical dip) and Isotropic component (EP)
+This results in 10 Green's functions per station and depth:  
+(ZSS, ZDS, ZDD, ZEP, RSS, RDS, RDD, REP, TSS, TDS).
+The first letter is the component (Z, R, T) Z-vertical, R-radial, T-transverse or tangential components. 
+This application reads in a parameter file and/or command line arguments for the 
+1D earth velocity model, receiver coordinates, and source coordinates.
+The model file is in simple ASCII column format (see below). 
+The station latitude and longitude are stored in a file (rdseed.stations) provided by RDSEED (now depricated).  
+See sac2gmtmap to create an eqivalent file using the -rdseed.station flag.  
 
 .SH REQUIRED PARAMETERS
 
 .TP
 .B stnm={string}
-The station code name in the same capitalization and spelling
-as typed in column one of the station database file [required no default].  The path to
-the station database for is defined by the parameter \fIstadb\fP.  The station
-database file is in rdseed format.  Try \fIrdseed -S -f foobar.seed\fP to extract the station file.  The station code has 
-an eight character length limit.
+Station Code, required cannot be NULL. The station code must be in the same capitalization and spelling as typed in column one of the station database file, see \fIstadb\fP parameter. The station code has an eight character length limit.
 
 .TP
 .B net={string}
-The network code name (see www.FDSN.org) in the same capitalization and spelling as
-typed in column 2 of the the station database file [required no default]. The station
-database file is in rdseed format.  Try \fIrdseed -S -f foobar.seed\fP to extract the station file.  The network code 
+Network Code, required cannot be NULL (see www.FDSN.org). The network code must be in the same capitalization and spelling as
+typed in column 2 of the the station database file, see \fIstadb\fP parameter. The network code
 has an eight character length limit.
+
+.TP
+.B loc={string}
+Location Code, required (for null use empty quotes i.e., loc=""). 
+When not NULL, the location code is usually a two digit number, e.g., 00, 10, 20, 01, 02, 60, etc...
 
 .TP
 .B velmod={string}
@@ -46,35 +69,42 @@ The file name of the velocity model without the .mod extension.  The path is def
 [required no default].
 
 .TP
-.B zrange={floating point number},{floating point number},{floating point number}
-The minimum, interval and maximum values of the centroid source depth in (kilometers) for 
-the Green's function library [required no default].  
+.B zrange={float},{float},{float}
+The range of source depths to compute in the Green's function library.  
+The zrange is a comma seperated vector represented by 
+the minimum depth, increment, and maximum depth values in (kilometers). The alternative is to
+supply a single depth using \fIz_depth_km=(float)\fP parameter.  If this is set then zrange is skipped. 
 
 .TP
-.B evla={floating point number}
+.B nz=(integer) z_multiple=(float,float,...)
+The range of any source depths to compute in the Green's function library. For example, nz=6 z_multiple=1,5,8,14,32,50.
+If this is set then \fIzrange\fP and \fIz_depth_km\fP are skipped. 
+
+.TP
+.B evla={float}
 The earthquake latitude in decimal degrees format [required no default].
 
 .TP
-.B evlo={floating point number}
+.B evlo={float}
 The earthquake longitude in decimal degrees format [required no default].
 
 .TP
-.B dt={floating point number}
+.B dt={float}
 The Green's function sampling rate in seconds per sample  [required no default].
 
 .TP
-.B nt={integer number}
+.B nt={integer}
 The number of points for the Green's functions.  Must be a power of 2 (i.e., 64, 128, 256, 512, 1024, 2048(maximum))
 [required no default].
 
 .TP
-.B eps={floating point number}
+.B eps={float}
 Error tolerance.  Typically values of \fIeps\fP=0.001 to \fIeps\fP=0.000001 are adequate.  When \fIkmax\fP or \fIfmax\fP are not set 
 properly mkgrnlib will exit and ask to reset these values.  This feature can be controlled by \fIeps\fP and \fIsmin\fP.
 [required no default].
 
 .TP
-.B smin={floating point number}
+.B smin={float}
 Error tolerance.  Typically values of \fIsmin\fP=0.001 to \fIsmin\fP=0.000001 are adequate.  When \fIkmax\fP or \fIfmax\fP are not set properly mkgrnlib will exit and ask to reset these values.  This feature can be controlled by \fIeps\fP and \fIsmin\fP.
 [required no default].
 
@@ -162,9 +192,10 @@ Write out "Dump" the Green's functions as SAC formatted binary files [optional, 
 .SH Example entries in the station database file
 GSC CI +35.301800 -116.805700  +954.0 "BHE BHN BHZ" "Goldstone, California, USA" 1990,220,00:00:00 2599,365,23:59:59
 .br
-.sp
 BAR CI +32.680100 -116.672200  +496.0 "BHE BHN BHZ" "Barrett, California, USA" 1992,275,00:00:00 2599,365,23:59:59
 .br
+.sp
+only columns 1, 2, 3, 4, and 5 are read by mkgrnlib. 
 
 .SH EXAMPLE
 To calculate the Green's functions of an earthquake in Anza, California (latitude=33.529, longitude=-116.573) 
@@ -192,8 +223,10 @@ smin=0.0005 \\
   stadb=/Users/ichinose/mtinv.v0.9/stadb/station_database.txt
 
 .SH "SEE ALSO"
+.IR sac2gmtmap (1),
+.IR multithread_mkgrnlib (1),
 .IR glib2inv (1),
-.IR grnlib2sac (1),
 .IR sacdata2inv (1),
-.IR mtinv (1)
-.IR rdseed (1)
+.IR mtinv (1),
+.IR grnlib2sac (1),
+.IR grn2Mxy (1)

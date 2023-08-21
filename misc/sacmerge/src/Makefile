@@ -7,7 +7,7 @@ INSTALL_BIN = ../../../bin
 
 all : sacmerge
 
-sacmerge : sacmerge.o
+sacmerge : sacmerge.o version.h
 	$(CC) $(CFLAGS) -o $@ sacmerge.o $(LIBDIRS) $(LIBS)
 	mv $@ $(INSTALL_BIN)
 

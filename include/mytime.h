@@ -87,20 +87,11 @@ static int day_tab[2][13] = {
 	{0,31,29,31,30,31,30,31,31,30,31,30,31}
 };
 
-static char *mname[] = {
-	"   ", "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
-	"JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
-};
+static char mname[][4] = { "0", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC" };
 
-static char *FullMonthName[] = {
-        "   ", "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-};
+static char FullMonthName[][12] = { "0", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" };
 
-static char *weekday[] = {
-	"Sunday   ", "Monday   ", "Tuesday  ",
-	"Wednesday", "Thursday ", "Friday   ", "Saturday "
-};
+static char weekday[][12] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
 
 /********* get time from system **********/
 MyTime *mylocaltime();

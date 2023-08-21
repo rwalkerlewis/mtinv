@@ -4,6 +4,7 @@
 #include <strings.h>
 
 char *shorten_path( char *pathname, char *filename );
+
 int test_shorten_path_main( int ac, char **av );
 
 /********* test driver ********/

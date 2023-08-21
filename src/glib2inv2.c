@@ -90,7 +90,8 @@ int main( int ac, char **av )
 				float b, int new_nt, float new_dt, int verbose );
 
 	/*** wrtgrn2sac.c ***/
-	void wrtgrn2sac( Greens *g, int ista );
+	/* void wrtgrn2sac( Greens *g, int ista ); */
+	void wrtgrn2sac( Greens *g, int ista, char *wavetype );
 
 	/*** glib2inv_subs.c ***/
 	void split2grn( Greens *g, float **garray );
@@ -438,7 +439,7 @@ int main( int ac, char **av )
 
 			if( idump_grnsfunc )
 			{
-				wrtgrn2sac( &grn[ista][iz], ista );
+				wrtgrn2sac( &grn[ista][iz], ista, "Surf/Pnl" );
 			}
 			
                 /*******************************************************/

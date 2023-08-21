@@ -360,5 +360,5 @@ public class FlinnEngdahlTest
 	}
 
 	private static boolean verbose;
-	private static final String ascpath="/Users/ichinose/Work/mtinv.v3.0.6/misc/Flinn_Engdahl/src/";
+	private static final String ascpath="/Users/ichinose1/Work/mtinv.v3.0.5/misc/Flinn_Engdahl/src/";
 }

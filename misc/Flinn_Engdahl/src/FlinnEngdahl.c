@@ -67,6 +67,7 @@ int main( int ac, char **av )
 		sprintf( ASC_DIR_PATH, "/Users/ichinose/Work/mtinv.v3.0.6/misc/Flinn_Engdahl/src" );
 		fprintf( stderr, "%s: %s: enviromental variable MTINV_PATH not set! using hardwired default %s.\n",
 			__FILE__, __func__, ASC_DIR_PATH );
+		exit(-1);
 	}
 	else
 	{

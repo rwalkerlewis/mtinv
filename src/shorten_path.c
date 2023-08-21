@@ -33,7 +33,7 @@ char *shorten_path( char *pathname, char *filename )
 {
 	char tok[] = { "/\0" };
 	char *ptr, tmp[1024];
-	
+
 /*** copy the pathname to tmp so no overwrie on pathname ***/
 	strcpy( tmp, pathname );
 

@@ -34,7 +34,10 @@ void make_amatrix2( Greens **grn, EventInfo *ev, int nsta, int iz, float **a_mat
 	float *b_vector, int mtdegfree, int Distance_Normalize, float DistNormR0, FixISOZ myfixisoz )
 {
 	int it, nt, ista, irow;
-	float fi, d2r;
+	float fi;
+	static float d2r = 0.017453292519943295;
+	static float r2d = 57.29577951308232;
+
 	float *rss, *rds, *rdd, *rep, *zss, *zds, *zdd, *zep, *tss, *tds;
 	float Rnorm = 1;
 	float wt = 1;
@@ -45,7 +48,6 @@ void make_amatrix2( Greens **grn, EventInfo *ev, int nsta, int iz, float **a_mat
 /*** set some constants                       ***/
 /************************************************/
 
-	d2r = M_PI/180;
 	if(verbose)fprintf(stderr, "make_amatrix2(iz=%d)\n", iz );
 
 /************************************************/
@@ -161,6 +163,12 @@ void make_amatrix2( Greens **grn, EventInfo *ev, int nsta, int iz, float **a_mat
 /***********************************************************************************/
 /*** this version of make_amatrix uses the formaution of Herrmann and Hutchenson ***/
 /*** (1993) and can be used for both deviatoric and full moment tensors          ***/
+/***  not Jost&Herrmann(1989) - see Minson and Dreger (2008) GJI                 ***/
+/***                                                                             ***/
+/*** G.Ichinose Nov  7 2019  - Added support for rotational GFs w1, w2, w3       ***/
+/*** Rotational component about EW         x1-axis U -> w1                       ***/
+/*** Rotational component about NS         x2-axis V -> w2                       ***/
+/*** Rotational component about z-vertical x3-axis W -> w3                       ***/
 /***********************************************************************************/
 
 void make_amatrix(
@@ -176,27 +184,34 @@ void make_amatrix(
 	FixISOZ myfixisoz )
 {
 	int it = 0, nt = 0, ista = 0, irow = 0;
-	float fi, d2r;
-	float *rss, *rds, *rdd, *rep, *zss, *zds, *zdd, *zep, *tss, *tds;
+	float fi;
+
+	static float d2r = 0.017453292519943295;
+	static float r2d = 57.29577951308232;
+
+	float *rss, *rds, *rdd, *rep;
+	float *zss, *zds, *zdd, *zep;
+	float *tss, *tds;
+
+	float *w1ss, *w1ds, *w1dd, *w1ex;
+	float *w2ss, *w2ds, *w2dd, *w2ex;
+	float *w3ss, *w3ds, *w3dd, *w3ex;
+
         float Rnorm = 1.0;
 	float wt = 1.0;
-        int verbose = 0;
+        int verbose = 0; /****** this is fixed and not a functional argument ************/
         int ziso = 0;
 
 	void  writesacfile( EventInfo *ev );
 
-	d2r = M_PI/180;
-
-	/* for( ista = 0; ista < nsta; ista++ ) writesacfile( &ev[ista] ); */
-
 	if(verbose)
 	{
 		if( mtdegfree == FORCE_EXPLOSION )
-			printf("inversion = FORCE_EXPLOSION\n");
+			fprintf( stdout, "%s: %s: %s: mtdegfree = FORCE_EXPLOSION\n", progname, __FILE__, __func__ );
 		if( mtdegfree == DEVIATORIC_MOMENT_TENSOR ) 
-			printf("inversion = DEVIATORIC_MOMENT_TENSOR\n");
+			fprintf( stdout, "%s: %s: %s: mtdegfree = DEVIATORIC_MOMENT_TENSOR\n", progname, __FILE__, __func__ );
 		if( mtdegfree == FULL_MOMENT_TENSOR )
-			printf("inversion = FULL_MOMENT_TENSOR\n");
+			fprintf( stdout, "%s: %s: %s: mtdegfree = FULL_MOMENT_TENSOR\n", progname, __FILE__, __func__ );
 	}
 
 /************************************************/
@@ -246,12 +261,15 @@ void make_amatrix(
 				Rnorm );
                         }
                 }
-                                                                                                                                    
+
                 if( myfixisoz.iswitch )
                         ziso = myfixisoz.indexz;
                 else
                         ziso = iz;
-                                                                                                                                    
+                 
+		if(verbose) fprintf( stdout, "%s: %s: %s: myfixisoz.iswitch=%d myfixisoz.indexz=%d ziso=%d iz=%d\n",
+				progname, __FILE__, __func__, myfixisoz.iswitch, myfixisoz.indexz, ziso, iz );
+                                                                                                                   
         /************************************************/
         /*** create pointers to the Green's functions ***/
         /************************************************/
@@ -260,14 +278,33 @@ void make_amatrix(
                 rds = grn[ista][iz].g.rds;
                 rdd = grn[ista][iz].g.rdd;
                 rep = grn[ista][ziso].g.rep;
+
                 zss = grn[ista][iz].g.zss;
                 zds = grn[ista][iz].g.zds;
                 zdd = grn[ista][iz].g.zdd;
                 zep = grn[ista][ziso].g.zep;
+
                 tss = grn[ista][iz].g.tss;
                 tds = grn[ista][iz].g.tds;
 
-		fprintf(stdout,
+		w1ss = grn[ista][iz].g.w1ss; 
+		w1ds = grn[ista][iz].g.w1ds; 
+		w1dd = grn[ista][iz].g.w1dd; 
+		w1ex = grn[ista][ziso].g.w1ex;
+
+		w2ss = grn[ista][iz].g.w2ss;
+		w2ds = grn[ista][iz].g.w2ds;
+		w2dd = grn[ista][iz].g.w2dd;
+		w2ex = grn[ista][ziso].g.w2ex;
+
+		w3ss = grn[ista][iz].g.w3ss; 
+		w3ds = grn[ista][iz].g.w3ds;
+		w3dd = grn[ista][iz].g.w3dd;
+		w3ex = grn[ista][ziso].g.w3ex;
+
+		if(verbose)
+		{
+		  fprintf(stdout,
   "%s: %s: %s: sta(ista=%d)=%s z(iz=%d)=%g dist=%g Distance_Normalize=%d DistNormR0=%g Rnorm=%g ziso=%d iz=%d mtdegfree=%d nt=%d fi=%g wt=%g\n",
 			progname, 
 			__FILE__,
@@ -284,13 +321,20 @@ void make_amatrix(
 			iz,
 			mtdegfree,
 			nt,
-			fi*(180/M_PI),
+			fi*(r2d),
 			wt );
+		}
 
-        /************************************************/
-        /*** transverse/tangential component          ***/
-        /************************************************/
-		                                                          
+        /****************************************************/
+        /*** transverse/tangential component BHT BHE BHW w3**/
+	/*** or w3 rotation about the vertical axis       ***/
+        /****************************************************/
+/***
+U -> w1  z z
+V -> w2  r ns
+W -> w3  t ew
+***/
+		
                 for( it = 0; it < nt; it++ )
                 {
 		  if( mtdegfree == FORCE_EXPLOSION )
@@ -304,87 +348,200 @@ void make_amatrix(
 		  }
 		  else
 		  {
-                     a_matrix[irow][1] = (  half * sin(2*fi) * tss[it] ) * Rnorm * wt;  /* Mxx */
-                     a_matrix[irow][2] = ( -half * sin(2*fi) * tss[it] ) * Rnorm * wt;  /* Myy */
-                     a_matrix[irow][3] = (        -cos(2*fi) * tss[it] ) * Rnorm * wt;  /* Mxy */
-                     a_matrix[irow][4] = (           sin(fi) * tds[it] ) * Rnorm * wt;  /* Mxz */
-                     a_matrix[irow][5] = (          -cos(fi) * tds[it] ) * Rnorm * wt;  /* Myz */
-                     a_matrix[irow][6] = 0;                                             /* Mzz */
+		     if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+		     {
+                       a_matrix[irow][1] = (  half * sin(2*fi) * tss[it] ) * Rnorm * wt;  /* Mxx */
+                       a_matrix[irow][2] = ( -half * sin(2*fi) * tss[it] ) * Rnorm * wt;  /* Myy */
+                       a_matrix[irow][3] = (        -cos(2*fi) * tss[it] ) * Rnorm * wt;  /* Mxy */
+                       a_matrix[irow][4] = (           sin(fi) * tds[it] ) * Rnorm * wt;  /* Mxz */
+                       a_matrix[irow][5] = (          -cos(fi) * tds[it] ) * Rnorm * wt;  /* Myz */
+                       a_matrix[irow][6] = 0;                                             /* Mzz */
+		     }
+
+		     if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		     {
+		       a_matrix[irow][1] = -(  half * sin(2*fi) * w3ss[it] ) * Rnorm * wt; /* Mxx */
+                       a_matrix[irow][2] = -( -half * sin(2*fi) * w3ss[it] ) * Rnorm * wt; /* Myy */
+                       a_matrix[irow][3] = -(        -cos(2*fi) * w3ss[it] ) * Rnorm * wt; /* Mxy */
+                       a_matrix[irow][4] = -(           sin(fi) * w3ds[it] ) * Rnorm * wt; /* Mxz */
+                       a_matrix[irow][5] = -(          -cos(fi) * w3ds[it] ) * Rnorm * wt; /* Myz */
+                       a_matrix[irow][6] = 0;
+    		     }
 		  }
+
                   b_vector[irow]    = ev[ista].ew.data_safe[it] * Rnorm * wt;
+
                   irow++;
 		}
 
         /************************************************/
-        /*** radial components ***/
+        /*** radial components BHR, HHR, BHN, BHV w2  ***/
+	/*** or rotation w2 about north-south axis    ***/
         /************************************************/
-                                                                                                                                    
+/***
+U -> w1  z z
+V -> w2  r ns
+W -> w3  t ew
+***/
+
                 for( it = 0; it < nt; it++ )
                 {
 		  if( mtdegfree == FORCE_EXPLOSION )
 		  {
+		    if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+		    {
 			a_matrix[irow][1] = ( third * rep[it] ) * Rnorm * wt;
 			a_matrix[irow][2] = ( third * rep[it] ) * Rnorm * wt;
-			a_matrix[irow][3] = 0;
-			a_matrix[irow][4] = 0;
-			a_matrix[irow][5] = 0;
 			a_matrix[irow][6] = ( third * rep[it] ) * Rnorm * wt;
+		    }
+
+		    if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		    {
+			a_matrix[irow][1] = ( third * w2ex[it] ) * Rnorm * wt;
+                        a_matrix[irow][2] = ( third * w2ex[it] ) * Rnorm * wt;
+                        a_matrix[irow][6] = ( third * w2ex[it] ) * Rnorm * wt;
+		    }
+
+		    a_matrix[irow][3] = 0;
+		    a_matrix[irow][4] = 0;
+		    a_matrix[irow][5] = 0;
 		  }
 		  else if( mtdegfree == DEVIATORIC_MOMENT_TENSOR )
 		  {
-                    a_matrix[irow][1] = ( +half*cos(2*fi) * rss[it] -half*rdd[it] ) * Rnorm * wt; /* Mxx */
-                    a_matrix[irow][2] = ( -half*cos(2*fi) * rss[it] -half*rdd[it] ) * Rnorm * wt; /* Myy */
-                    a_matrix[irow][3] = (       sin(2*fi) * rss[it] ) * Rnorm * wt;               /* Mxy */
-                    a_matrix[irow][4] = (         cos(fi) * rds[it] ) * Rnorm * wt;               /* Mxz */
-                    a_matrix[irow][5] = (         sin(fi) * rds[it] ) * Rnorm * wt;               /* Myz */
-                    a_matrix[irow][6] = 0;                                                        /* Mzz */
+
+		    if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+		    {
+                      a_matrix[irow][1] = ( +half*cos(2*fi) * rss[it] -half*rdd[it] ) * Rnorm * wt; /* Mxx */
+                      a_matrix[irow][2] = ( -half*cos(2*fi) * rss[it] -half*rdd[it] ) * Rnorm * wt; /* Myy */
+                      a_matrix[irow][3] = (       sin(2*fi) * rss[it] ) * Rnorm * wt;               /* Mxy */
+                      a_matrix[irow][4] = (         cos(fi) * rds[it] ) * Rnorm * wt;               /* Mxz */
+                      a_matrix[irow][5] = (         sin(fi) * rds[it] ) * Rnorm * wt;               /* Myz */
+                      a_matrix[irow][6] = 0;                                                        /* Mzz */
+		    }
+
+		    if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		    {
+		      a_matrix[irow][1] = ( +half*cos(2*fi) * w2ss[it] -half*w2dd[it] ) * Rnorm * wt; /* Mxx */
+                      a_matrix[irow][2] = ( -half*cos(2*fi) * w2ss[it] -half*w2dd[it] ) * Rnorm * wt; /* Myy */
+                      a_matrix[irow][3] = (       sin(2*fi) * w2ss[it] ) * Rnorm * wt;                /* Mxy */
+                      a_matrix[irow][4] = (         cos(fi) * w2ds[it] ) * Rnorm * wt;                /* Mxz */
+                      a_matrix[irow][5] = (         sin(fi) * w2ds[it] ) * Rnorm * wt;                /* Myz */
+                      a_matrix[irow][6] = 0;                                                          /* Mzz */
+		    }
+
 		  }
 		  else if( mtdegfree == FULL_MOMENT_TENSOR )
 		  {
-		    a_matrix[irow][1] = ( +half*cos(2*fi) * rss[it] -sixth*rdd[it] + third*rep[it] ) * Rnorm * wt;
-                    a_matrix[irow][2] = ( -half*cos(2*fi) * rss[it] -sixth*rdd[it] + third*rep[it] ) * Rnorm * wt;
-                    a_matrix[irow][3] = (       sin(2*fi) * rss[it] ) * Rnorm * wt;
-                    a_matrix[irow][4] = (         cos(fi) * rds[it] ) * Rnorm * wt;
-                    a_matrix[irow][5] = (         sin(fi) * rds[it] ) * Rnorm * wt;
-                    a_matrix[irow][6] = ( third * rdd[it] + third * rep[it] ) * Rnorm * wt;
+
+		    if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+		    {
+		      a_matrix[irow][1] = ( +half*cos(2*fi) * rss[it] -sixth*rdd[it] + third*rep[it] ) * Rnorm * wt;
+                      a_matrix[irow][2] = ( -half*cos(2*fi) * rss[it] -sixth*rdd[it] + third*rep[it] ) * Rnorm * wt;
+                      a_matrix[irow][3] = (       sin(2*fi) * rss[it] ) * Rnorm * wt;
+                      a_matrix[irow][4] = (         cos(fi) * rds[it] ) * Rnorm * wt;
+                      a_matrix[irow][5] = (         sin(fi) * rds[it] ) * Rnorm * wt;
+                      a_matrix[irow][6] = ( third * rdd[it] + third * rep[it] ) * Rnorm * wt;
+		    }
+
+		    if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		    {
+			a_matrix[irow][1] = ( +half*cos(2*fi) * w2ss[it] -sixth*w2dd[it] + third*w2ex[it] ) * Rnorm * wt;
+                        a_matrix[irow][2] = ( -half*cos(2*fi) * w2ss[it] -sixth*w2dd[it] + third*w2ex[it] ) * Rnorm * wt;
+                        a_matrix[irow][3] = (       sin(2*fi) * w2ss[it] ) * Rnorm * wt;
+                        a_matrix[irow][4] = (         cos(fi) * w2ds[it] ) * Rnorm * wt;
+                        a_matrix[irow][5] = (         sin(fi) * w2ds[it] ) * Rnorm * wt;
+                        a_matrix[irow][6] = ( third * w2dd[it] + third * w2ex[it] ) * Rnorm * wt;
+		    }
+
 		  }
+
                   b_vector[irow]    = ev[ista].ns.data_safe[it] * Rnorm * wt;
+
                   irow++;
                 }
 
         /************************************************/
-        /*** vertical component ***/
+        /*** vertical component HHZ BHZ BHU w1        ***/
+	/*** or w1 rotation about the east-west axis  ***/
         /************************************************/
+/***
+U -> w1  z z
+V -> w2  r ns
+W -> w3  t ew
+***/
+
                 for( it = 0; it < nt; it++ )
                 {
 		  if( mtdegfree == FORCE_EXPLOSION )
 		  {
-                        a_matrix[irow][1] = ( third * zep[it] ) * Rnorm * wt;
-                        a_matrix[irow][2] = ( third * zep[it] ) * Rnorm * wt;
-                        a_matrix[irow][3] = 0;
-                        a_matrix[irow][4] = 0;
-                        a_matrix[irow][5] = 0;
-                        a_matrix[irow][6] = ( third * zep[it] ) * Rnorm * wt;
+		    if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )	
+		    {
+                      a_matrix[irow][1] = ( third * zep[it] ) * Rnorm * wt;
+                      a_matrix[irow][2] = ( third * zep[it] ) * Rnorm * wt;
+		      a_matrix[irow][6] = ( third * zep[it] ) * Rnorm * wt;
+		    }
+
+		    if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		    {
+		       a_matrix[irow][1] = ( third * w1ex[it] ) * Rnorm * wt;
+                       a_matrix[irow][2] = ( third * w1ex[it] ) * Rnorm * wt;
+                       a_matrix[irow][6] = ( third * w1ex[it] ) * Rnorm * wt;
+		    }
+
+                    a_matrix[irow][3] = 0;
+                    a_matrix[irow][4] = 0;
+                    a_matrix[irow][5] = 0;
                   }
                   else if( mtdegfree == DEVIATORIC_MOMENT_TENSOR )
                   {
-                    a_matrix[irow][1] = ( +half*cos(2*fi) * zss[it] -half*zdd[it] ) * Rnorm * wt; /* Mxx */
-                    a_matrix[irow][2] = ( -half*cos(2*fi) * zss[it] -half*zdd[it] ) * Rnorm * wt; /* Myy */
-                    a_matrix[irow][3] = (       sin(2*fi) * zss[it] ) * Rnorm * wt;               /* Mxy */
-                    a_matrix[irow][4] = (         cos(fi) * zds[it] ) * Rnorm * wt;               /* Mxz */
-                    a_matrix[irow][5] = (         sin(fi) * zds[it] ) * Rnorm * wt;               /* Myz */
-                    a_matrix[irow][6] = 0;                                                        /* Mzz */
+		    if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )  
+		    {
+                      a_matrix[irow][1] = ( +half*cos(2*fi) * zss[it] -half*zdd[it] ) * Rnorm * wt; /* Mxx */
+                      a_matrix[irow][2] = ( -half*cos(2*fi) * zss[it] -half*zdd[it] ) * Rnorm * wt; /* Myy */
+                      a_matrix[irow][3] = (       sin(2*fi) * zss[it] ) * Rnorm * wt;               /* Mxy */
+                      a_matrix[irow][4] = (         cos(fi) * zds[it] ) * Rnorm * wt;               /* Mxz */
+                      a_matrix[irow][5] = (         sin(fi) * zds[it] ) * Rnorm * wt;               /* Myz */
+                      a_matrix[irow][6] = 0;                                                        /* Mzz */
+		    }
+
+		    if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		    {
+		      a_matrix[irow][1] = ( +half*cos(2*fi) * w1ss[it] -half*w1dd[it] ) * Rnorm * wt; /* Mxx */
+                      a_matrix[irow][2] = ( -half*cos(2*fi) * w1ss[it] -half*w1dd[it] ) * Rnorm * wt; /* Myy */
+                      a_matrix[irow][3] = (       sin(2*fi) * w1ss[it] ) * Rnorm * wt;               /* Mxy */
+                      a_matrix[irow][4] = (         cos(fi) * w1ds[it] ) * Rnorm * wt;               /* Mxz */
+                      a_matrix[irow][5] = (         sin(fi) * w1ds[it] ) * Rnorm * wt;               /* Myz */
+                      a_matrix[irow][6] = 0;                                                        /* Mzz */
+		    }
+
 		  }
 		  else if( mtdegfree == FULL_MOMENT_TENSOR )
                   {
-                    a_matrix[irow][1] = ( +half*cos(2*fi) * zss[it] -sixth*zdd[it] + third*zep[it] ) * Rnorm * wt;
-                    a_matrix[irow][2] = ( -half*cos(2*fi) * zss[it] -sixth*zdd[it] + third*zep[it] ) * Rnorm * wt;
-                    a_matrix[irow][3] = (       sin(2*fi) * zss[it] ) * Rnorm * wt;
-                    a_matrix[irow][4] = (         cos(fi) * zds[it] ) * Rnorm * wt;
-                    a_matrix[irow][5] = (         sin(fi) * zds[it] ) * Rnorm * wt;
-                    a_matrix[irow][6] = ( third * zdd[it] + third * zep[it] ) * Rnorm * wt;
+
+		    if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 ) 
+		    {
+                      a_matrix[irow][1] = ( +half*cos(2*fi) * zss[it] -sixth*zdd[it] + third*zep[it] ) * Rnorm * wt;
+                      a_matrix[irow][2] = ( -half*cos(2*fi) * zss[it] -sixth*zdd[it] + third*zep[it] ) * Rnorm * wt;
+                      a_matrix[irow][3] = (       sin(2*fi) * zss[it] ) * Rnorm * wt;
+                      a_matrix[irow][4] = (         cos(fi) * zds[it] ) * Rnorm * wt;
+                      a_matrix[irow][5] = (         sin(fi) * zds[it] ) * Rnorm * wt;
+                      a_matrix[irow][6] = ( third * zdd[it] + third * zep[it] ) * Rnorm * wt;
+		    }
+
+		    if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		    {
+		      a_matrix[irow][1] = ( +half*cos(2*fi) * w1ss[it] -sixth*w1dd[it] + third*w1ex[it] ) * Rnorm * wt;
+                      a_matrix[irow][2] = ( -half*cos(2*fi) * w1ss[it] -sixth*w1dd[it] + third*w1ex[it] ) * Rnorm * wt;
+                      a_matrix[irow][3] = (       sin(2*fi) * w1ss[it] ) * Rnorm * wt;
+                      a_matrix[irow][4] = (         cos(fi) * w1ds[it] ) * Rnorm * wt;
+                      a_matrix[irow][5] = (         sin(fi) * w1ds[it] ) * Rnorm * wt;
+                      a_matrix[irow][6] = ( third * w1dd[it] + third * w1ex[it] ) * Rnorm * wt;
+		    }
+
                   }
-                  b_vector[irow]    = ev[ista].z.data_safe[it] * Rnorm * wt;
+
+		  b_vector[irow]    = ev[ista].z.data_safe[it] * Rnorm * wt;
+
                   irow++;
                 }
 	}
@@ -410,20 +567,21 @@ void make_amatrix_special(
 	FixISOZ myfixisoz )
 {
 	int it = 0, nt = 0, ista = 0, irow;
-	float fi, d2r;
+	float fi;
+
 	float *rss, *rds, *rdd, *rep, *zss, *zds, *zdd, *zep, *tss, *tds;
 	float Rnorm = 1.0;
 	float wt = 1.0;
 	int verbose = 0;
 	int ziso = 0;
-	
+	static float d2r = 0.017453292519943295;
+	static float r2d = 57.29577951308232;
+
 	void  writesacfile( EventInfo *ev );
 	
         int ncmp = 17;
         int icmp = 0;        /* 0      1      2      3       4     5      6      7      8      9     10     11     12     13     14     15     16 ***/
         const char *cmp[] = { "rxx", "rxy", "rxz", "ryy", "ryz", "rzz", "txx", "txy", "txz", "tyy", "tyz", "zxx", "zxy", "zxz", "zyy", "zyz", "zzz" };
-
-	d2r = M_PI/180;
 
 /***
 	for( ista = 0; ista < nsta; ista++ )
@@ -532,7 +690,7 @@ void make_amatrix_special(
                         iz,
                         mtdegfree,
                         nt,
-                        fi*(180/M_PI),
+                        fi*(r2d),
                         wt );
 
 /************************************************/

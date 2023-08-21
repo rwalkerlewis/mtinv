@@ -23,6 +23,10 @@ char progname[128];
 #define SDR_MISO_INPUT	2
 #define ISO_CLVD_INPUT	3
 
+#define FIBER_NONE 0
+#define FIBER_PSV  1 /* longitudinal waves */
+#define FIBER_SH   2 /* transverse waves */
+
 int main( int ac, char **av )
 {
         Greens grn;
@@ -38,12 +42,21 @@ int main( int ac, char **av )
 	int ifoundz=0;
 	int input_type;
 	int idumpgrn=0;
-	int inoise;
-	int iseed;
+	int inoise = 0;
+	int iseed = 1;
 	int dounits_cm2m = 1;
 	int dointerp = 0;
-	float noise_Mw;
+	float noise_Mw = 3.8;
 	float my_src_to_rec_azimuth_override = -999;
+
+	char wavetype[32];
+
+/******************************************************************************/
+/*** radiation_pattern.o ***/
+/******************************************************************************/
+	int fiber = FIBER_NONE; /**** 0 no fiber, 1=longitudinal, 2=shear ***/
+	char wave_type_fiber[32]; /* l,longitudinal or t,transverse,shear */
+	float azi_fiber = 0; /*** or phi0d ***/
 
 /******************************************************************************/
 /*** timesubs.o ***/
@@ -57,11 +70,11 @@ int main( int ac, char **av )
 /******************************************************************************/
 /*** function prototypes ***/
 /******************************************************************************/
-	void wrtgrn2sac( Greens *g, int verbose );
+	void wrtgrn2sac( Greens *g, int verbose, char *wavetype );
 	void grn2disp2( Greens *grn, struct event ev, int verbose,
 		int mtdegfree, int inoise, float noise_Mw, int iseed,
 		int input_type, int dounits_cm2m, int dointerp,
-		float my_src_to_rec_azimuth_override );
+		float my_src_to_rec_azimuth_override, int fiber, float azi_fiber );
 
 	int setpar(int,char **), mstpar(), getpar();
 	void endpar();
@@ -99,7 +112,8 @@ int main( int ac, char **av )
 	if( !idumpgrn )
 	{
 	  	if(verbose)
-		  fprintf(stderr, "%s: idumpgrn is off\n", progname );
+		  fprintf(stderr, "%s: %s: %s: idumpgrn is off\n",
+			progname, __FILE__, __func__ );
 
 		input_type = SDR_MO_INPUT;  /*** default ***/
 		mstpar("type", "d", &input_type );
@@ -148,14 +162,14 @@ int main( int ac, char **av )
 		{
 		  if( ( fabs(ev.Pclvd) + fabs(ev.Pdc) ) == ev.Pdev )
 		  {
-			fprintf(stdout, "%s: Pdev= %g Pclvd+Pdc=%g\n",
-				progname, ev.Pdev, fabs(ev.Pclvd) + fabs(ev.Pdc)  );
+			fprintf(stdout, "%s: %s: %s: Pdev= %g Pclvd+Pdc=%g\n",
+			  progname, __FILE__, __func__, ev.Pdev, fabs(ev.Pclvd) + fabs(ev.Pdc)  );
 		  }
 		  else
 		  {
 			fprintf(stderr,
-				"%s: ERROR Percent Deviatoric does not equal 100%% - Isotropic: Pdev= %g Pclvd+Pdc=%g\n",
-				progname, ev.Pdev, fabs(ev.Pclvd) + fabs(ev.Pdc)  );
+			  "%s: %s: %s: ERROR Percent Deviatoric does not equal 100%% - Isotropic: Pdev= %g Pclvd+Pdc=%g\n",
+			  progname, __FILE__, __func__, ev.Pdev, fabs(ev.Pclvd) + fabs(ev.Pdc)  );
 			/* exit(-1); */
 		  }
 
@@ -163,14 +177,15 @@ int main( int ac, char **av )
 
 		  if( ( fabs(ev.Piso) + fabs(ev.Pclvd) + fabs(ev.Pdc) ) == 1.0 )
 		  {
-			fprintf(stdout, "%s: Piso=%g Pclvd=%g Pdc=%g\n", progname,
+			fprintf(stdout, "%s: %s: %s: Piso=%g Pclvd=%g Pdc=%g\n",
+				progname, __FILE__, __func__, 
 				ev.Piso, ev.Pclvd, ev.Pdc );
 		  }
 		  else
 		  {
 			fprintf(stderr,
-				"%s: ERROR Percent Iso+Clvd+DC greater than 100%% Piso=%g Pclvd=%g Pdc=%g\n",
-				progname, ev.Piso, ev.Pclvd, ev.Pdc );
+			  "%s: %s: %s: ERROR Percent Iso+Clvd+DC greater than 100%% Piso=%g Pclvd=%g Pdc=%g\n",
+				progname, __FILE__, __func__, ev.Piso, ev.Pclvd, ev.Pdc );
 			/* exit(-1); */
 		  }
 		}
@@ -180,11 +195,45 @@ int main( int ac, char **av )
 		getpar("tr",    "f", &ev.tr );
 		getpar("tt",    "f", &ev.tt );
 	}
-	else
+	else /* if !idumpgrn */
 	{
 		if(verbose)
-		 fprintf(stderr, "%s: dumpgrn is on\n", progname );
+		 fprintf(stderr, "%s: %s: %s: dumpgrn is on\n",
+			progname, __FILE__, __func__ );
 	}
+
+	strcpy( wave_type_fiber, "none" );
+	getpar( "wave_type_fiber", "s", wave_type_fiber );
+
+	if( strcmp( wave_type_fiber, "none" ) == 0 ) 
+	{
+		fiber = FIBER_NONE;
+		fprintf( stderr, "%s: %s: %s: wave_type_fiber=%s fiber=%d FIBER_NONE\n", 
+			progname, __FILE__, __func__, wave_type_fiber, fiber );
+
+	}
+	else if( strcmp( wave_type_fiber, "l" ) == 0 || strcmp( wave_type_fiber, "long" ) == 0 || 
+		strcmp( wave_type_fiber, "longitudinal" ) == 0 || strcmp( wave_type_fiber, "compressional" ) == 0 )
+	{
+		fiber = FIBER_PSV;
+		fprintf( stderr, "%s: %s: %s: wave_type_fiber=%s fiber=%d FIBER_PSV \n", 
+			progname, __FILE__, __func__, wave_type_fiber, fiber );
+	}
+	else if( strcmp( wave_type_fiber, "t" ) == 0 || strcmp( wave_type_fiber, "shear" ) == 0 || 
+		strcmp( wave_type_fiber, "transverse" ) == 0 || strcmp( wave_type_fiber, "trans" ) == 0 )
+	{
+		fiber = FIBER_SH;
+		fprintf( stderr, "%s: %s: %s: wave_type_fiber=%s fiber=%d FIBER_SH \n",
+			progname, __FILE__, __func__, wave_type_fiber, fiber );
+	}
+	else
+	{
+		fiber = FIBER_NONE;
+	}
+	
+	if( fiber == FIBER_PSV || fiber == FIBER_SH )
+		mstpar( "azi_fiber", "f", &azi_fiber );
+
 	endpar();
 
 
@@ -196,25 +245,34 @@ int main( int ac, char **av )
 /*** parse dateid string  and put into event structure ***/
 /*********************************************************/
 	if(verbose) 
-		fprintf( stdout, "%s: dateid=%s\n", progname, dateid ); 
+		fprintf( stdout, "%s: %s: %s: dateid=%s\n",
+			progname, __FILE__, __func__, dateid ); 
 
 	parsestring( &ot, dateid );
 	clone_mytime( &ot, &(ev.ot) );
-	if(verbose) { fprintf( stdout, "%s: origin time=", progname ); WriteMyTime2STDOUT( &(ev.ot) ); }
+	if(verbose)
+	{
+	  fprintf( stdout, "%s: %s: %s: origin time=", progname, __FILE__, __func__ );
+	  WriteMyTime2STDOUT( &(ev.ot) ); 
+	}
 
 	clone_mytime( &ot, &(ev.beg) );
-	if(verbose) { fprintf( stdout, "%s: beginn time=", progname ); WriteMyTime2STDOUT( &(ev.beg) ); }
+	if(verbose)
+	{
+	  fprintf( stdout, "%s: %s: %s: beginn time=", progname, __FILE__, __func__ );
+	  WriteMyTime2STDOUT( &(ev.beg) ); 
+	}
 
 	if( verbose )
-		fprintf(stderr, "%s: verbose is on\n", progname );
+		fprintf(stderr, "%s: %s: %s: verbose is on\n", progname, __FILE__, __func__ );
 
 /**********************************************/
 /*** open green's function file and read in ***/
 /**********************************************/
 	if( (fp = fopen( filename, "rb" ) ) == NULL )
 	{
-		fprintf(stderr, "%s: Fatal Error, cannot open file %s\n", 
-			progname, filename );
+		fprintf(stderr, "%s: %s: %s: Fatal Error, cannot open file %s\n", 
+			progname, __FILE__, __func__, filename );
 		exit(-1);
 	}
 
@@ -224,7 +282,7 @@ int main( int ac, char **av )
 
 	if(verbose)
 	{
-	  fprintf( stdout, "%s: nz=%d ", progname, nz );
+	  fprintf( stdout, "%s: %s: %s: nz=%d ", progname, __FILE__, __func__, nz );
 	  for(iz=0;iz<nz;iz++)printf(" z[%d]=%g ", iz, z[iz] );
 	  printf("\n");
 	}
@@ -237,21 +295,21 @@ int main( int ac, char **av )
 		{
 			ifoundz = iz;
 			if(verbose)
-			  fprintf( stdout, "%s: found iz=%d z=%g\n", 
-			    progname,  ifoundz, z[ifoundz] );
+			  fprintf( stdout, "%s: %s: %s: found iz=%d z=%g\n", 
+			    progname, __FILE__, __func__, ifoundz, z[ifoundz] );
 			break;
 		}
 	}
 	if( ifoundz < 0 )
 	{
-		fprintf( stderr, "%s: Fatal ERROR My_z=%g not found in z=",
-			progname, my_z );
+	  fprintf( stderr, "%s: %s: %s: Fatal ERROR My_z=%g not found in z=",
+		progname, __FILE__, __func__, my_z );
 	}
 	else
 	{
 		if(verbose)
-		  fprintf(stderr, "%s: found my_z=%g ifoundz=%d iz=%d z=%g\n",
-			progname, my_z, ifoundz, iz, z[ifoundz] );
+		  fprintf(stderr, "%s: %s: %s: found my_z=%g ifoundz=%d iz=%d z=%g\n",
+			progname, __FILE__, __func__, my_z, ifoundz, iz, z[ifoundz] );
 	}
 
 	for( iz=0; iz<nz; iz++ )
@@ -259,8 +317,8 @@ int main( int ac, char **av )
 		fread(&grn,sizeof(Greens),1,fp);
 		if(verbose)
 		{
-		  fprintf( stdout, "%s: iz=%d z=%g rdist=%g az=%g evdp=%g t0=%g dt=%g nt=%d %s\n",
-			progname, 
+		  fprintf( stdout, "%s: %s: %s: iz=%d z=%g rdist=%g az=%g evdp=%g t0=%g dt=%g nt=%d %s\n",
+			progname, __FILE__, __func__,
 			iz, z[iz], grn.rdist, grn.az, grn.evdp, grn.t0, 
 			grn.dt, grn.nt, grn.filename );
 		}
@@ -270,19 +328,24 @@ int main( int ac, char **av )
 		  ista = 0;
 		  if( idumpgrn == 1 ) 
 		  {
+
+			strcpy(wavetype,"Rotational");
 			if(verbose)
-			  fprintf( stdout, "%s: calling wrtgrn2sac: \n", progname );
-			wrtgrn2sac( &grn, ista );
+			  fprintf( stdout, "%s: %s: %s: calling wrtgrn2sac: wavetype=%s\n",
+				progname, __FILE__, __func__, wavetype );
+
+			wrtgrn2sac( &grn, ista, wavetype );
 		  }
 		  if( idumpgrn == 0 ) 
 		  {
 		    if(verbose)
-			fprintf( stdout, "%s: %s: %s: calling grn2disp2:\n",
+			fprintf( stdout, "%s: %s: %s: calling grn2disp2():\n",
 				progname, __FILE__, __func__ );
 
 		    grn2disp2( &grn, ev, verbose, mtdegfree, inoise,
 				noise_Mw, iseed, input_type, dounits_cm2m,
-				dointerp, my_src_to_rec_azimuth_override );
+				dointerp, my_src_to_rec_azimuth_override,
+				fiber, azi_fiber );
 		  }
 	          break;
 		}
@@ -298,7 +361,7 @@ int main( int ac, char **av )
 
 void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree, 
   int inoise, float noise_Mw, int iseed, int input_type, int dounits_cm2m,
-  int dointerp, float my_src_to_rec_azimuth_override )
+  int dointerp, float my_src_to_rec_azimuth_override, int fiber, float azi_fiber )
 {
 	float *tra, *rad, *ver, *ns, *ew;
 	float *rss, *rds, *rdd, *rep, *zss, *zds, *zdd, *zep, *tss, *tds;
@@ -312,19 +375,27 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 	char sacfile[256];
 	FILE *fp;
 	int it;
-	float pi, d2r, dt, t0, e, tt, tr, fi, twin, r, dist, azimuth;
+	float pi, d2r, dt, t0, e, tt, tr, fi, twin, r, dist, azimuth, baz;
 	float slip4pi_iso, slip4pi_dev, slip4pi_tot;
 	float third, half, sixth;
 	int nt;
 	float cm2m = 0.01;
+
+	float radpat_fiber_long_degrees( float thetad, float phi0d );
+	float radpat_fiber_trans_degrees( float thetad, float phi0d );
+	float tmpr, tmpt, tmpz;
+
 /* see include/mt.h Mo = math.pow( 10.0, 1.5*(Mw+10.73) ) = 1.2445146117713818e+16; Reference Mw = 0.0 */
 
 	int new_nt;
 	float new_dt;
 	float *xtra, *xrad, *xver, *xns, *xew;
 
-	float fac, noise_moment, peak;
-	float gasdev( int * );
+	float fact = 1, facl = 1; /* for fiber */
+	float fac = 1; /* for noise */
+
+	float noise_moment, peak;
+	float gasdev( int *iseed );
 	void source_time_function( float *, int, float, float, float );
 	void  rotate( float *, int, float *, float, float *, int, float *, float, float, int );
 	void interpolate_wiggins( float *, int, float, float, float *, int, float );
@@ -422,8 +493,8 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 
 	if( my_src_to_rec_azimuth_override != -999 )
 	{
-		fprintf( stdout, "%s: *** my_src_to_rec_azimuth_override = %g ***\n",
-			progname, my_src_to_rec_azimuth_override );
+		fprintf( stdout, "%s: %s: %s: *** my_src_to_rec_azimuth_override = %g ***\n",
+			progname, __FILE__, __func__, my_src_to_rec_azimuth_override );
 		g->az = my_src_to_rec_azimuth_override;
 		fi = my_src_to_rec_azimuth_override * d2r;
 	}
@@ -435,7 +506,8 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 	if( input_type == SDR_MO_INPUT || input_type == SDR_MISO_INPUT )
 	{
 		if(verbose)
-			fprintf( stdout, "%s: SDR_MO_INPUT or SDR_MISO_INPUT format\n", progname );
+			fprintf( stdout, "%s: %s: %s: SDR_MO_INPUT or SDR_MISO_INPUT format\n",
+				progname, __FILE__, __func__ );
 
 		ev.Mo = pow( 10., (1.5*(ev.Mw + 10.73)));
 
@@ -449,8 +521,8 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 
 		if(verbose) 
 		{
-		  fprintf( stdout, "%s: Mw=%g Mo=%g Miso=%g(%0.f%%) Mclvd=%g(%0.f%%) Mdc=%g(%0.f%%) Mtotal=%g\n",
-			progname, 
+		  fprintf( stdout, "%s: %s: %s: Mw=%g Mo=%g Miso=%g(%0.f%%) Mclvd=%g(%0.f%%) Mdc=%g(%0.f%%) Mtotal=%g\n",
+			progname, __FILE__, __func__,
 			ev.Mw, 
 			ev.Mo, 
 			ev.Miso   * base_moment, ev.Piso  * 100, 
@@ -474,10 +546,13 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 
 		if(verbose)
 		{
-		  fprintf( stdout, "%s: str=%g dip=%g rak=%g Mw=%g Mo=%g\n",
-		    progname, ev.str, ev.dip, ev.rak, ev.Mw, ev.Mo );
-		  fprintf( stdout, "%s: az=%g fi=%g strr=%g dipr=%g rakr=%g Mxx=%g Myy=%g Mzz=%g Mxy=%g Mxz=%g Myz=%g\n",
-		    progname, g->az, fi, strr, dipr, rakr, M.xx, M.yy, M.zz, M.xy, M.xz, M.yz);
+		  fprintf( stdout, "%s: %s: %s: str=%g dip=%g rak=%g Mw=%g Mo=%g\n",
+		    progname, __FILE__, __func__,
+			ev.str, ev.dip, ev.rak, ev.Mw, ev.Mo );
+
+		  fprintf( stdout, "%s: %s: %s: az=%g fi=%g strr=%g dipr=%g rakr=%g Mxx=%g Myy=%g Mzz=%g Mxy=%g Mxz=%g Myz=%g\n",
+		    progname, __FILE__, __func__,
+			g->az, fi, strr, dipr, rakr, M.xx, M.yy, M.zz, M.xy, M.xz, M.yz);
 		}
 
 	/*************************************************************************************************************/
@@ -487,7 +562,6 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 		HelmbergerCoef( 0.0, 90.0,  0.0, &aa1, &aa2, &aa3, &aa4, &aa5 );
 		HelmbergerCoef( 0.0, 45.0, 90.0, &aa1, &aa2, &aa3, &aa4, &aa5 );
 		HelmbergerCoef( 0.0, 90.0, 90.0, &aa1, &aa2, &aa3, &aa4, &aa5 );
-
 		HelmbergerCoef( ev.str, ev.dip, ev.rak, &aa1, &aa2, &aa3, &aa4, &aa5 );
 	*/
 
@@ -521,11 +595,11 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
  
 		if( verbose )
 		{
-	 	  fprintf( stdout, "%s: MT  a1=%g a2=%g a3=%g a4=%g a5=%g\n", 
-			progname, a1, a2, a3, a4, a5 );
+	 	  fprintf( stdout, "%s: %s: %s: MT  a1=%g a2=%g a3=%g a4=%g a5=%g\n", 
+			progname, __FILE__, __func__, a1, a2, a3, a4, a5 );
 
-		  fprintf( stdout, "%s: SDR a1=%g a2=%g a3=%g a4=%g a5=%g\n",
-			progname, aa1, aa2, aa3, aa4, aa5 );
+		  fprintf( stdout, "%s: %s: %s: SDR a1=%g a2=%g a3=%g a4=%g a5=%g\n",
+			progname, __FILE__, __func__, aa1, aa2, aa3, aa4, aa5 );
 		}
 		for( it=0; it<nt; it++)
 		{
@@ -539,7 +613,8 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 	{
 		ev.Mtotal = ev.Mo/base_moment;
 		if( verbose ) 
-		  fprintf( stdout, "%s: Mtotal=%e Mo=%e\n", progname, ev.Mtotal, ev.Mo );
+		  fprintf( stdout, "%s: %s: %s: Mtotal=%e Mo=%e\n",
+			progname, __FILE__, __func__, ev.Mtotal, ev.Mo );
 
 		M.xx = ev.Mxx;
 		M.yy = ev.Myy;
@@ -549,8 +624,8 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 		M.yz = ev.Myz;
 
 		if( verbose )
-                  fprintf( stdout, "%s: az=%g fi=%g MT_INPUT format Mxx=%g Mxx=%g Mzz=%g Mxy=%g Mxz=%g Myz=%g\n",
-                        progname, g->az, fi,
+                  fprintf( stdout, "%s: %s: %s: az=%g fi=%g MT_INPUT format Mxx=%g Mxx=%g Mzz=%g Mxy=%g Mxz=%g Myz=%g\n",
+                        progname, __FILE__, __func__, g->az, fi,
                         M.xx, M.yy, M.zz, M.xy, M.xz, M.yz );
 
 	/*** just to display and compare ***/	
@@ -562,8 +637,9 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
                 a5 = -M.yz * cos( fi ) + M.xz * sin( fi );
 
                 if( verbose )
-                  fprintf( stdout, "%s: a1=%g a2=%g a3=%g a4=%g a5=%g\n",
-                        progname, a1, a2, a3, a4, a5 );
+                  fprintf( stdout, "%s: %s: %s: a1=%g a2=%g a3=%g a4=%g a5=%g\n",
+                        progname, __FILE__, __func__, a1, a2, a3, a4, a5 );
+
 	/*** just to display and compare ***/
 
 	/**** Hutchenson and Herrmann (1993) - not Jost&Herrmann(1989) - see Minson and Dreger (2008) GJI ***/
@@ -592,25 +668,75 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 		}
 	}
 
+	if( fiber == FIBER_SH )
+	{
+		fact = radpat_fiber_trans_degrees( g->baz, azi_fiber );
+
+		fprintf( stderr, "%s: %s: %s: called radpat_fiber_trans_degrees() fiber=%d(FIBER_SH) fact=%g gbaz=%g azi_fiber=%g\n",
+                        progname, __FILE__, __func__, fiber,
+                        fact, g->baz, azi_fiber );
+
+		for( it=0; it<nt; it++ )
+                {
+                        tmpt = fact * tra[it];
+                        tmpr = fact * rad[it];
+                        tmpz = fact * ver[it];
+                        tra[it] = tmpt;
+                        rad[it] = tmpr;
+                        ver[it] = tmpz;
+                }
+	}
+	else if( fiber == FIBER_PSV )
+	{
+		facl = radpat_fiber_long_degrees( g->baz, azi_fiber );
+
+		fprintf( stderr, "%s: %s: %s: called radpat_fiber_long_degrees() fiber=%d(FIBER_PSV) facl=%g gbaz=%g azi_fiber=%g\n",
+			progname, __FILE__, __func__, fiber, 
+			facl, g->baz, azi_fiber );
+
+		for( it=0; it<nt; it++ )
+		{
+			tmpt = facl * tra[it];
+			tmpr = facl * rad[it];
+			tmpz = facl * ver[it];
+			tra[it] = tmpt;
+			rad[it] = tmpr;
+			ver[it] = tmpz;
+		}
+	}
+	else if( fiber == FIBER_NONE )
+	{
+		fprintf( stderr, "%s: %s: %s: fiber=%d(FIBER_NONE) not using fiber correction\n",
+			progname, __FILE__, __func__, fiber );
+	}
+	else
+	{
+		fprintf( stderr, "%s: %s: %s: unknown fiber = %d option\n",
+			progname, __FILE__, __func__, fiber );
+	}
+
 	if( inoise )
 	{
 		noise_moment = pow( 10, (1.5*(noise_Mw + 10.73)));
 		fac = 0.1 * peak * ( noise_moment/base_moment );
-		if(verbose) 
-		  fprintf( stdout, "%s: fac=%e peak=%e noise_moment=%e noise_Mw=%g iseed=%d\n",
-			progname, fac, peak, noise_moment, noise_Mw, iseed );
+
+		fprintf( stdout, "%s: %s: %s: fac=%e peak=%e noise_moment=%e noise_Mw=%g iseed=%d\n",
+			progname, __FILE__, __func__,
+			fac, peak, noise_moment, noise_Mw, iseed );
+
 		for( it=0; it<nt; it++ )
 		{
-			tra[it] += fac*gasdev(&iseed);
-			rad[it] += fac*gasdev(&iseed);
-			ver[it] += fac*gasdev(&iseed);
+			tra[it] += fac*gasdev( &iseed );
+			rad[it] += fac*gasdev( &iseed );
+			ver[it] += fac*gasdev( &iseed );
 		}
 	}
 
 /**************************************************************************************************/
 /*** convert displacement from meters to cm ***/
 /**************************************************************************************************/
-	fprintf( stdout, "%s: %s: %s: dounits_cm2m=%d\n", progname, __FILE__, __func__, dounits_cm2m );
+	fprintf( stdout, "%s: %s: %s: dounits_cm2m=%d\n",
+		progname, __FILE__, __func__, dounits_cm2m );
 
 	if( dounits_cm2m )
 	{
@@ -656,14 +782,17 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 
 	if(verbose) 
 	{
-	  fprintf( stdout, "%s: rotated to RADIAL(%g)->NS TRANSVERSE(%g)->EW by angle = %g\n",
-		progname, g->az, tmpaz, angle );
+	  fprintf( stdout, "%s: %s: %s: rotated to RADIAL(%g)->NS TRANSVERSE(%g)->EW by angle = %g\n",
+		progname, __FILE__, __func__, g->az, tmpaz, angle );
 	}
 
 /**************************************************************************************************/
 /*** interpolate to dt = 0.05 sec/sample using wiggins interpolation scheme ***/
 /**************************************************************************************************/
 
+	if(verbose)
+		fprintf( stdout, "%s: %s: %s: dointerp=%d interpolate using wiggins\n",
+			progname, __FILE__, __func__, dointerp );
 	if( dointerp )
 	{
 	 new_dt = 0.05;
@@ -703,8 +832,12 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 		duplicate_vector(  ew,  xew, new_nt );
 		duplicate_vector(  ns,  xns, new_nt );
 	}
+
 	nt = new_nt;
 	dt = new_dt;
+
+	if(verbose)
+		fprintf( stdout, "%s: %s: %s: nt=%d dt=%g\n", progname, __FILE__, __func__, nt, dt );
 
 /*****************************************/
 /**** SAC HEADER                     *****/
@@ -751,15 +884,20 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 	sp.stlo = g->stlo;
 	sp.stel = g->stel;
 
+	/*** Reduction Velocity km/sec ***/
 	if( g->redv > 0 )
 	{
+         fprintf( stderr, "%s: %s: %s: setting reduced velocity redv=%g (km/sec) rdist=%g\n",
+		progname, __FILE__, __func__, g->redv, g->rdist );
+
 	 sprintf( sp.kt1, "%.1fkps", g->redv ); 
-	 sp.t1 = g->rdist/g->redv;  /*** Reduction Velocity km/km/sec ***/
+
+	 sp.t1 = g->rdist / g->redv;
 	}
-	
-	sp.user0 = ev.str; strcpy( sp.kuser0, "Strike" );
-	sp.user1 = ev.dip; strcpy( sp.kuser0, "Dip" );
-	sp.user2 = ev.rak; strcpy( sp.kuser0, "Rake" );
+	sp.user0 = ev.str; strcpy( sp.kuser0, "Str" );
+	sp.user1 = ev.dip; strcpy( sp.kuser1, "Dip" );
+	sp.user2 = ev.rak; strcpy( sp.kuser2, "Rak" );
+
 	sp.user3 = ev.Mo;
 	sp.user4 = ev.Mw;
 	sp.user5 = ev.tr;
@@ -783,9 +921,11 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
                 sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin, sp.nzsec,
                 sp.knetwk, sp.kstnm, sp.kcmpnm );
 
-	printf( "%s: writting file %s\n", progname, sacfile );
+	fprintf( stdout, "%s: %s: %s: writting file %s\n",
+		progname, __FILE__, __func__, sacfile );
 
-	if( (fp=fopen(sacfile,"w")) == NULL ) printf("ERROR cannot write to file\n" );
+	if( (fp=fopen(sacfile,"w")) == NULL )
+		fprintf( stderr, "%s: %s: %s: ERROR cannot write to file\n", progname, __FILE__, __func__ );
 	fwrite( &sp, sizeof(Sac_Header), 1, fp );
 	fwrite( &xew[0], sp.npts*sizeof(float), 1, fp );
 	fclose(fp);
@@ -804,9 +944,11 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
                 sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin, sp.nzsec,
                 sp.knetwk, sp.kstnm, sp.kcmpnm );
 
-	printf( "%s: writting file %s\n", progname, sacfile );
+	fprintf( stdout, "%s: %s: %s: writting file %s\n",
+                progname, __FILE__, __func__, sacfile );
 
-	if( (fp=fopen(sacfile,"w")) == NULL ) printf("ERROR cannot write to file\n" );
+	if( (fp=fopen(sacfile,"w")) == NULL )
+		fprintf( stderr, "%s: %s: %s: ERROR cannot write to file\n", progname, __FILE__, __func__ );
 	fwrite( &sp, sizeof(Sac_Header), 1, fp );
 	fwrite( &xns[0], sp.npts*sizeof(float), 1, fp );
         fclose(fp);
@@ -825,9 +967,11 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
                 sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin, sp.nzsec,
 		sp.knetwk, sp.kstnm, sp.kcmpnm );
 
-	printf( "%s: writting file %s\n", progname, sacfile );
+	fprintf( stdout, "%s: %s: %s: writting file %s\n",
+                progname, __FILE__, __func__, sacfile );
 
-	if( (fp=fopen(sacfile,"w")) == NULL ) printf("ERROR cannot write to file\n" );
+	if( (fp=fopen(sacfile,"w")) == NULL )
+		fprintf( stderr, "%s: %s: %s: ERROR cannot write to file\n", progname, __FILE__, __func__ );
 	fwrite( &sp, sizeof(Sac_Header), 1, fp );
 	fwrite( &xrad[0], sp.npts*sizeof(float), 1, fp );
 	fclose(fp);
@@ -846,9 +990,11 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
                 sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin, sp.nzsec,
 		sp.knetwk, sp.kstnm, sp.kcmpnm );
 
-	printf( "%s: writting file %s\n", progname, sacfile );
+	fprintf( stdout, "%s: %s: %s: writting file %s\n",
+                progname, __FILE__, __func__, sacfile );
 
-	if( (fp=fopen(sacfile,"w")) == NULL ) printf("ERROR cannot write to file\n" );
+	if( (fp=fopen(sacfile,"w")) == NULL ) 
+		fprintf( stderr, "%s: %s: %s: ERROR cannot write to file\n", progname, __FILE__, __func__ );
 	fwrite( &sp, sizeof(Sac_Header), 1, fp );
 	fwrite( &xver[0], sp.npts*sizeof(float), 1, fp );
 	fclose(fp);
@@ -869,8 +1015,10 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
                 sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin, sp.nzsec,
                 sp.knetwk, sp.kstnm, sp.kcmpnm );
 
-        printf( "%s: writting file %s\n", progname, sacfile );
-        if( (fp=fopen(sacfile,"w")) == NULL ) printf("ERROR cannot write to file\n" );
+        fprintf( stdout, "%s: %s: %s: writting file %s\n",
+                progname, __FILE__, __func__, sacfile );
+        if( (fp=fopen(sacfile,"w")) == NULL ) 
+		fprintf( stderr, "%s: %s: %s: ERROR cannot write to file\n", progname, __FILE__, __func__ );
         fwrite( &sp, sizeof(Sac_Header), 1, fp );
         fwrite( &xtra[0], sp.npts*sizeof(float), 1, fp );
         fclose(fp);
@@ -896,33 +1044,36 @@ void Usage_Print()
 	fprintf(stderr, "  type=[no default see below for additional options]\n\n" );
 
 	fprintf(stderr, "\t REQUIRED ARGUMENTS:\n");
-	fprintf(stderr, "\t\t glib= Green's function library (GLIB) name computed from mkgrnlib.c\n");
-	fprintf(stderr, "\t\t z= the depth of the source to look up in the GLIB file\n");
+	fprintf(stderr, "\t\t glib= Green's function library (GLIB) name computed from mkgrnlib.c [string required]\n");
+	fprintf(stderr, "\t\t z= the depth of the source to look up in the GLIB file [float required]\n");
 	fprintf(stderr, "\n");
 
 	fprintf(stderr, "\t OPTIONAL PARAMETERS:\n");
-	fprintf(stderr, "\t\t [no]dumpgrn write out only Green's functions\n");
-	fprintf(stderr, "\t\t [no]verbose verbosy output for diagnosis\n");
-	fprintf(stderr, "\t\t date=YYYY/MM/DD,HH24:mm:ss.ss  origin time Default = [2008/01/01:00:00:00.00]\n");
-	fprintf(stderr, "\t\t dounits_cm2m   multiply ground motion output by 0.01 to convert cm to meters boolean [default off]\n" );
+	fprintf(stderr, "\t\t [no]dumpgrn  write out only Green's functions [boolean default off]\n");
+	fprintf(stderr, "\t\t [no]verbose  verbosy output for diagnosis [boolean default off]\n");
+	fprintf(stderr, "\t\t date         origin-time format: YYYY/MM/DD,HH24:mm:ss.ss [string default \"2008/01/01:00:00:00.00\"]\n");
+	fprintf(stderr, "\t\t dounits_cm2m multiply ground motion output by 0.01 to convert cm to meters boolean [boolean default off]\n" );
+	fprintf(stderr, "\t\t dointerp     do Wiggins interpolation to new sampling rate [boolean default off] new dt = 0.02 sec/samp\n" );
 	fprintf(stderr, "\n");
 
-	fprintf(stderr, "\t\t tr=0.0      Rise time in seconds (triangle or trapazoid src time func)\n");
-	fprintf(stderr, "\t\t tt=0.0      source duration in sec.  =0 if triangle, or >0 if trapazoid\n");
+	fprintf(stderr, "\t\t OPTIONAL NOISE PARAMETERS:\n");
+	fprintf(stderr, "\t\t [no]noise    add white Gaussian noise (default off)\n");
+        fprintf(stderr, "\t\t nMw=3.8      level of the noise in units of Mw for freq band of interest [no default required]\n");
+        fprintf(stderr, "\t\t seed=1       random seed default 1\n");
+        fprintf(stderr, "\n");
+
+	fprintf(stderr, "\t\t OPTIONAL SOURCE TIME FUNCTION:\n" );
+	fprintf(stderr, "\t\t tr=0.0      Rise time in seconds (triangle or trapazoid src time func) [float default 0]\n");
+	fprintf(stderr, "\t\t tt=0.0      source duration in sec.  tt=0 if triangle, or tt>0 if trapazoid [float default 0]\n");
 	fprintf(stderr, "\n");
 
-	fprintf(stderr, "\t\t [no]noise   add white Gaussian noise\n");
-	fprintf(stderr, "\t\t nMw=3.8     level of the noise in units of Mw for freq band of interest\n");
-	fprintf(stderr, "\t\t seed=1      random seed\n");
-	fprintf(stderr, "\n");
+	fprintf(stderr, "\t\t OPTIONAL Source Input Mode Type\n");
+	fprintf(stderr, "\t\t\t =0   Input Moment Tensor + Mw\n");
+	fprintf(stderr, "\t\t\t =1   Input Double-Couple Source (Strike/Dip/Rake) + Mw\n");
+	fprintf(stderr, "\t\t\t =2   Input Deviatoric source plus isotropic component\n");
+	fprintf(stderr, "\n"); 
 
-	fprintf(stderr, "\t\t type=       Source Input Mode Type\n");
-	fprintf(stderr, "\t\t\t =0   Input Moment Tensor\n");
-	fprintf(stderr, "\t\t\t =1   Input Pure Deviatoric Source (Strike/Dip/Rake)\n");
-	fprintf(stderr, "\t\t\t =2   Input Pure Deviatoric source plus isotropic component\n");
-	fprintf(stderr, "\n");
-
-	fprintf(stderr, "\t\t if type=0 \n");
+	fprintf(stderr, "\t\t Input Moment Tensor (type=0)\n");
 	fprintf(stderr, "\t\t\t Mxx=Normalized Element\n");
 	fprintf(stderr, "\t\t\t Myy=Normalized Element\n");
 	fprintf(stderr, "\t\t\t Mzz=Normalized Element\n");
@@ -931,13 +1082,15 @@ void Usage_Print()
 	fprintf(stderr, "\t\t\t Myz=Normalized Element\n");
 	fprintf(stderr, "\t\t\t Mo=Total Moment\n");
 	fprintf(stderr, "\n");
-	fprintf(stderr, "\t\t if type=1 \n");
+
+	fprintf(stderr, "\t\t Input Pure Double-Couple Source (type=1)\n");
 	fprintf(stderr, "\t\t\t str= fault strike\n");
 	fprintf(stderr, "\t\t\t dip= fault dip\n");
 	fprintf(stderr, "\t\t\t rak= fault rake\n");
 	fprintf(stderr, "\t\t\t Mw= Total Moment Magnitude\n");
 	fprintf(stderr, "\n");
-	fprintf(stderr, "\t\t if type=2 \n");
+
+	fprintf(stderr, "\t\t Input Deviatoric source plus isotropic component (type=2)\n");
 	fprintf(stderr, "\t\t\t str= fault strike\n");
 	fprintf(stderr, "\t\t\t dip= fault dip\n");
 	fprintf(stderr, "\t\t\t rak= fault rake\n");
@@ -947,8 +1100,12 @@ void Usage_Print()
 	fprintf(stderr, "\t\t\t Pdc=   [0..1] The percent of the total moment allocated to double-couple\n");
 	fprintf(stderr, "\t\t\t Piso+Pclvd+Pdc must add up to 1.0 \n" );
 	fprintf(stderr, "\n");
+	
+	fprintf(stderr, "\t\t OPTIONAL DAS ARRAY PROCESSING:\n" );
+	fprintf(stderr, "\t az=%%f  source-to-receiver azimuth override [float default -999 off], good for simulating array processing\n" );
+	fprintf(stderr, "\t wave_type_fiber=%%s  [default: none] options=none,long,l,lognitudinal,shear,t,compressional,transverse,trans\n");
+	fprintf(stderr, "\t azi_fiber=%%f direction of the cable (0-360 degrees)\n");
 	fprintf(stderr, "\n");
-	fprintf(stderr, "Below mstpar will guide you:\n");
 
 } /*** end of Print_Usage.c  ***/
 

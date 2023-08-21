@@ -28,7 +28,8 @@ void fft( int lx, Dcomplex *cx, double signi, double dt )
 /*** check lx is power of 2 ***/
 	if( lx != get_pow_2(lx) )
 	{
-		fprintf(stderr, "fft error: lx=%d must be power of 2\n", lx);
+		fprintf(stderr, "%s: %s: fft error: lx=%d must be power of 2\n", 
+			__FILE__, __func__, lx);
 		exit(-1);
 	}
 

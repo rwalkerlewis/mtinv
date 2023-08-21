@@ -19,12 +19,12 @@ getarg.o : getarg.c
 getlocation.o : getlocation.c
 
 # fgetpar.o : getpar.c
-# 	cp getpar.c fgetpar.c
-# 	$(CC) $(CFLAGS) -DFORTRAN -c fgetpar.c
-# 	$(RM) -f fgetpar.c
+#	cp getpar.c fgetpar.c
+#	$(CC) $(CFLAGS) -DFORTRAN -c fgetpar.c
+#	$(RM) -f fgetpar.c
 
 # fgetarg.o : getarg.c
-# 	cp getarg.c fgetarg.c
+#	cp getarg.c fgetarg.c
 #	$(CC) $(CFLAGS) -DFORTRAN -c fgetarg.c
 #	$(RM) -f fgetarg.c
 

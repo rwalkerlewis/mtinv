@@ -1,9 +1,9 @@
 CC	= gcc
-FC 	= g77
+FC 	= gfortran
 INCLUDE = -I../../include
-FFLAGS  = -g $(INCLUDE)
-CFLAGS  = -g $(INCLUDE)
-INSTALL = $(HOME)/bin
+FFLAGS  = $(INCLUDE)
+CFLAGS  = $(INCLUDE)
+INSTALL = ../../bin
 
 .f.o: ; $(FC) $(FFLAGS) -c $*.f
 .c.o: ; $(CC) $(CFLAGS) -c $*.c
@@ -14,7 +14,7 @@ OBJS    = interpolate_drv.o interpolate_subs.o
 all : $(EXEC)
 
 $(EXEC) : $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS) -lm -lget
+	$(CC) $(CFLAGS) -o $@ $(OBJS) -lm -L../../lib -lget
 	mv $(EXEC) $(INSTALL)
 
 clean :

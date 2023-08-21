@@ -36,9 +36,9 @@ void tpdss( Solution *sol, int iz )
 
 	deg=M_PI/180.0;
 
-	if(stkt < -999.)
+	if( sol[iz].stkt < -999.)
 	{
-		printf("something went wrong in tpdss\n");
+		fprintf( stderr, "something went wrong in tpdss\n" );
 		exit(-1);
 	}
 

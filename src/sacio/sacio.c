@@ -28,7 +28,7 @@
 
 #include "sacfile.h"  /*** includes sac.h and mytime.h ***/
 
-char progname[128];
+extern char progname[128];
 
 #ifndef LITTLE_ENDIAN
 #define LITTLE_ENDIAN 0
@@ -121,20 +121,21 @@ float *readsac( Sac_Header *s, char *filename, int verbose )
 	fprintf( stdout, " khole=(%s)\n", s->khole );
 	fprintf( stdout, "kcmpnm=(%s)\n", s->kcmpnm );
 ****/
-	truncate_string( s->knetwk, 3 );
+	truncate_string( s->knetwk, 6 );
         truncate_string( s->kstnm,  6 );
-        truncate_string( s->khole,  8 );
-        truncate_string( s->kcmpnm, 4 );
+        truncate_string( s->khole,  6 );
+        truncate_string( s->kcmpnm, 6 );
 
 /*** fix old sac null -12345 for khole ***/
-	if( strcmp( s->khole, "-12345" ) == 0 ) strcpy( s->khole, "\0"  );
+	if( strncmp( s->khole, "-12345", 6 ) == 0 ) strcpy( s->khole, ""  );
 
-/***
-	fprintf( stdout, "knetwk=(%s)\n", s->knetwk );
-        fprintf( stdout, " kstnm=(%s)\n", s->kstnm );
-        fprintf( stdout, " khole=(%s)\n", s->khole );
-        fprintf( stdout, "kcmpnm=(%s)\n", s->kcmpnm );
-***/
+	if(verbose)
+	{
+	 fprintf( stdout, "knetwk=(%s)\n", s->knetwk );
+         fprintf( stdout, " kstnm=(%s)\n", s->kstnm );
+         fprintf( stdout, " khole=(%s)\n", s->khole );
+         fprintf( stdout, "kcmpnm=(%s)\n", s->kcmpnm );
+	}
 
         return (float *)data;
 }
@@ -209,14 +210,23 @@ int readsacfile( SacFile *sf, int verbose )
 	/* dt = sf->s.delta; */
 	/* nt = sf->s.npts; */
 	fclose(fp);
-	
-	truncate_string( sf->s.knetwk, 3 );
-	truncate_string( sf->s.kstnm,  6 );
-	truncate_string( sf->s.khole,  3 );
-	truncate_string( sf->s.kcmpnm, 4 );
 
-	if( verbose )
+        truncate_string( sf->s.knetwk, 6 );
+        truncate_string( sf->s.kstnm,  6 );
+        truncate_string( sf->s.khole,  6 );
+        truncate_string( sf->s.kcmpnm, 6 );
+
+/*** fix old sac null -12345 for khole ***/
+
+        if( strncmp( sf->s.khole, "-12345", 6 ) == 0 ) strcpy( sf->s.khole, ""  );
+
+	if(verbose)
 	{
+          fprintf( stdout, "knetwk=(%s)\n", sf->s.knetwk );
+          fprintf( stdout, " kstnm=(%s)\n", sf->s.kstnm );
+          fprintf( stdout, " khole=(%s)\n", sf->s.khole );
+          fprintf( stdout, "kcmpnm=(%s)\n", sf->s.kcmpnm );
+
 		fprintf( stdout, "%s: %s year=%d jday=%d hour=%d min=%d sec=%d msec=%d\n",
 			progname,
 			sf->filename,
@@ -229,6 +239,7 @@ int readsacfile( SacFile *sf, int verbose )
 	}
 
 /*** set the begin time (time of first sample) ***/
+
 	sac2mytime( &(sf->beg), &(sf->s) );
 	if(verbose) WriteMyTime2STDOUT( &(sf->beg) );
 	

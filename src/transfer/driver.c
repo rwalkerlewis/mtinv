@@ -18,7 +18,10 @@ int main(int ac, char **av)
 	void fft( int, Dcomplex *, double, double );
 	int get_pow_2(int);
 	int i;
+	int setpar(),mstpar();
+	void endpar();
 
+/*** begin main ***/
 	setpar(ac,av);
 	mstpar("f","s",filename);
 	endpar();

@@ -3,7 +3,7 @@
 #include <math.h>
 #include "../include/mt.h"   /*** global datatype and structure declaration ***/
 
-char progname[128];
+extern char progname[128];
 
 int eig2lune_driver_main()
 {
@@ -37,21 +37,52 @@ int eig2lune_driver_main()
 
 void eig2lune( float *eig, float *latitude, float *longitude, int verbose )
 {
-	int   NUM_EIG = 3;
 	float lammag  = 0.0;
 	float bdot    = 0.0;
 	float rad2deg = 180.0f/M_PI;
 
-	lammag = sqrt( eig[0] * eig[0] + eig[1] * eig[1] + eig[2] * eig[2] );
+	float lune_lat = 0.0;
+        float lune_lon = 0.0;
 
-	bdot = ( eig[0] + eig[1] + eig[2] ) / ( sqrt(3) * lammag );
+        float tmpflt   = 0.0;
+	float norm = 1;
+	float *EigenValues     = (float *)calloc(4, sizeof(float));
+
+	void floatsort( float *eig, int neig );
+	float Zero = 1.0E-09;
+
+/*** begin subroutinue ****/
+	EigenValues[0] = 0;
+	EigenValues[1] = eig[0];
+	EigenValues[2] = eig[1];
+	EigenValues[3] = eig[2];
+
+/* Sorts ascending; ignores value in the zeroth */
+/* index.  Need it however in ascending order   */
+	floatsort( EigenValues, 3 );
+	tmpflt         = EigenValues[1];
+	EigenValues[1] = EigenValues[3];
+	EigenValues[3] = tmpflt;
+
+/*** normalize the eigenvalues because it is now in units of dyne*cm ***/
+        norm = fabs( EigenValues[1] );
+        EigenValues[1] /= norm;
+        EigenValues[2] /= norm;
+        EigenValues[3] /= norm;
+
+	lammag = sqrt( EigenValues[1] * EigenValues[1] + EigenValues[2] * EigenValues[2] + EigenValues[3] * EigenValues[3] );
+
+	bdot = ( EigenValues[1] + EigenValues[2] + EigenValues[3] ) / ( sqrt(3) * lammag );
 
 	if( bdot > 1 ) bdot = 1;
 	if( bdot < -1 ) bdot = -1;
 
 	*latitude  = (float)( 90.0f - acosf( bdot ) * rad2deg );
 
-	*longitude = (float)( atan((-eig[0] + 2 * eig[1] - eig[2]) / (sqrt(3)*(eig[0]-eig[2]))) * rad2deg );
+	if( (EigenValues[1] - EigenValues[3]) != 0 )
+		*longitude = atanf((-EigenValues[1] + 2 * EigenValues[2] - EigenValues[3]) / (sqrt(3)*(EigenValues[1] - EigenValues[3]) ) ) * rad2deg;
+	else
+		*longitude = atanf((-EigenValues[1] + 2 * EigenValues[2] - EigenValues[3]) / (sqrt(3)*(Zero) )) * rad2deg;
 
 	if(verbose)
 	{
@@ -62,7 +93,7 @@ void eig2lune( float *eig, float *latitude, float *longitude, int verbose )
 			__func__,
 			*longitude,
 			*latitude,
-			eig[0], eig[1], eig[2] );
+			EigenValues[1], EigenValues[2], EigenValues[3] );
 	}
 
 	return;
@@ -102,7 +133,7 @@ void eig2lune_4mtinv( Solution *sol, int iz, int verbose )
 	float lune_lat = 0.0;
 	float lune_lon = 0.0;
 	float tmpflt   = 0.0;
-         float norm = 1;
+	float norm = 1;
 
 	eig[0] = 0.0f;
 	eig[1] = sol[iz].FullMT.eig[1].val;

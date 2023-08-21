@@ -340,6 +340,8 @@ int main( int ac, char **av )
 	}
 	free(filen);
 	free(ev);
+
+	exit(0);
 }
 
 FileNameList *scandir_for_file_ext( char *pathname, char *extension, int *count, FileNameList *filen )

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../include/mt.h"
-char progname[128];
+extern char progname[128];
 
 void check_iso_depth( FixISOZ *myfixisoz, float *z, int nz, int verbose )
 {

@@ -21,7 +21,7 @@ typedef struct { char fn[256]; } FileNameList;
 /*** differences between standard libc and BSD Unix is too great between platforms ***/
 /*************************************************************************************/
 
-void getrespfile( char *pathname, char *sta, char *net, char *cmp, 
+void getrespfile( char *pathname, char *sta, char *net, char *loc, char *cmp, 
                   char *khole, int verbose, char respfile[256] )
 {
 	int i, count=0;
@@ -31,9 +31,8 @@ void getrespfile( char *pathname, char *sta, char *net, char *cmp,
 	int my_file_name_cmp( char *, char * );
 	void fatal_error( char *, char * );
 
-	if(verbose)
-	  printf("respdir=%s sta=%s net=%s cmp=%s khole=%s\n",
-		pathname, sta, net, cmp, khole );
+	  fprintf(stdout, "%s: %s: %s: respdir=%s sta=%s net=%s cmp=%s loc=(%s) khole=(%s)\n",
+		progname, __FILE__, __func__, pathname, sta, net, cmp, loc, khole );
 	
 /*************************************************************************************/
 /*** allocate space for filename list                                              ***/
@@ -91,11 +90,10 @@ void getrespfile( char *pathname, char *sta, char *net, char *cmp,
 						  	i, ptr, cmp, filen[i].fn, khole );
 						}
 
-						/**********************************************/
-						/*** first check to see if khole is defined ***/
-						/**********************************************/
-						if( khole[0] == '\0' || 
-							strncmp(khole, "-12345", 6 ) == 0 )
+						/*** location code - not khole ***/
+						ptr = strtok( NULL, tok );
+						
+						if( strcmp( ptr, loc ) == 0 || strcmp( loc, "" ) == 0 )
 						{
 							sprintf( respfile, "%s/%s", 
 								pathname, filen[i].fn );
@@ -152,9 +150,9 @@ void getrespfile( char *pathname, char *sta, char *net, char *cmp,
 /*** looped over all SAC_PZs_* files and did not return a vaild 
 	SAC Pole Zero response file for sta,net,cmp,khole set ***/
 
-	fprintf(stderr, "%s: getrespfile.c: ERROR Respfile not found %s.%s.%s.%s\n", 
+	fprintf(stderr, "%s: getrespfile.c: ERROR Respfile not found SNCL=(%s.%s.%s.%s)\n", 
 		progname, sta,net,cmp,khole );
-	fprintf(stdout, "%s: getrespfile.c: ERROR Respfile not found %s.%s.%s.%s\n", 
+	fprintf(stdout, "%s: getrespfile.c: ERROR Respfile not found SNCL=(%s.%s.%s.%s)\n", 
 		progname, sta,net,cmp,khole );
 
 	exit(-1);

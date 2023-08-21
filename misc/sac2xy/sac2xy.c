@@ -5,7 +5,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
+#include <strings.h>
+
 #include "sac.h"
+#include "mytime.h"
+#include "version.h"
 
 char progname[256];
 
@@ -15,7 +20,7 @@ int main( int ac, char **av)
 	int i, xreset=FALSE;
 	float *x, *y;
 	int norm = 0, xdeg = 0, xkm = 0;
-	float ymax, scale = 1.0, ydist;
+	float ymax, scale = 1.0, ydist = 0;
 	int setpar(int, char **);
 	int getpar();
 	void endpar();
@@ -25,7 +30,24 @@ int main( int ac, char **av)
 	float xmax;
 	float tshift = 0;
 
+/*** timesubs.c ***/
+	MyTime ref; /*** sac file reference time ***/
+	MyTime ot;  /*** the zero time on the plot ***/
+	char ot_string[32];
+	void WriteMyTime2STDOUT( MyTime *t );
+	void WriteMyTime2STDERR( MyTime *t );
+	void parsestring( MyTime *t, char *str );
+	MyTime *sac2mytime( MyTime *t, Sac_Header *sp );
+
+	strcpy( ot_string, "\0" );
+
+/*** begin main ***/
+
 	sprintf( progname, "%s", av[0] );
+
+	fprintf( stderr, "%s: %s: %s: Version      = %s\n", progname, __FILE__, __func__, Version_Label );
+        fprintf( stderr, "%s: %s: %s: Version Date = %s\n", progname, __FILE__, __func__, Version_Date );
+        fprintf( stderr, "%s: %s: %s: Source       = %s\n", progname, __FILE__, __func__, Version_SrcDir );
 
 	setpar( ac, av );
 	getpar( "xreset", "b", &xreset);
@@ -37,7 +59,10 @@ int main( int ac, char **av)
 	getpar( "normfac", "b", &normfac );
 	getpar( "verbose", "b", &verbose );
 	getpar( "fixZeroDiv", "b", &ifixZeroDiv );
+	getpar( "ot", "s", ot_string );
 	endpar();
+
+/*** end getpar ***/
 
 	if( xdeg && xkm )
 	{
@@ -62,9 +87,23 @@ int main( int ac, char **av)
 	if(verbose) fprintf( stderr, "%s: npts=%d delta=%g b=%g sta=%s\n",
 		progname, s.npts, s.delta, s.b, s.kstnm );
 
-/*** reset the x-axes to 0 and add the tshift - time shift ***/
+/*** set the zero time ***/
+	if( strcmp( ot_string, "\0" ) != 0 )
+        {
+                parsestring( &ot, ot_string );
+                sac2mytime( &ref, &s );
+	/*
+		WriteMyTime2STDERR( &ot );
+		WriteMyTime2STDERR( &ref );
+	*/
+		s.b = (ref.epoch - ot.epoch) + s.b + tshift;
+        }
+        else
+        {
+	/*** reset the x-axes to 0 and add the tshift - time shift ***/
+        	s.b = s.b + tshift;
+        }
 
-	s.b = s.b + tshift;
 	/* if( s.iftype == ITIME ) s.b=0; */
 	if( xreset == TRUE ) s.b=0;
 	xmax = s.b + ( s.delta * (float)s.npts );
@@ -81,14 +120,22 @@ int main( int ac, char **av)
 	
 	if( normfac )
 	{
-		fprintf( stdout, "%6.3e %e %g", ymax, 1.0/ymax, xmax );
+		fprintf( stdout, "%s: normfac=%d norm=%d ymax=%6.3e %e %g", 
+			progname, normfac, norm, ymax, 1.0/ymax, xmax );
 		exit(0);
 	}
 
 /*** write the results ***/
 
-	fprintf( stdout, ">  %-8.8s %-8.8s %-8.8s %-8.8s %g\n",
-		s.knetwk, s.kstnm, s.khole, s.kcmpnm, s.dist );
+	if( xdeg == 1 )
+                ydist = s.gcarc;
+	else if( xkm == 1 )
+		ydist = s.dist;
+	else
+		ydist = 0;
+
+	fprintf( stdout, ">  %-8.8s %-8.8s %-8.8s %-8.8s dist=%g gcarc=%g xkm=%d xdeg=%d norm=%d ymax=%g ydist=%g\n",
+                s.knetwk, s.kstnm, s.khole, s.kcmpnm, s.dist, s.gcarc, xkm, xdeg, norm, ymax, ydist );
 
         for( i=0; i<s.npts; i++)
 	{
@@ -100,16 +147,6 @@ int main( int ac, char **av)
 		 if( x[i] == 0 ) x[i]=1.0e-9; 
 		 if( y[i] == 0 ) y[i]=1.0e-9; 
 		}
-
-		if( xdeg )
-			ydist = s.gcarc;
-		else
-			ydist = 0;
-
-		if( xkm ) 
-			ydist = s.dist;
-		else
-			ydist = 0;
 
 		if( norm )
 			fprintf( stdout, "%g %g\n", x[i], scale*(y[i]/ymax) + ydist );

@@ -110,7 +110,7 @@ setarg(char *list, char *subname)
    {
 	register char *pl, *pn, *pv;
 	/* register i; */
-	register int i;
+	int i;
 	int      lenlist;
 	char t, name[MAXNAME], value[MAXVALUE];
 	

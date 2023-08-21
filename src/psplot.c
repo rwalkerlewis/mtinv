@@ -46,7 +46,7 @@ static Color Orange= { 0.3, 1.0,  0.64, 0.0  };
 static Color Cyan  = { 0.3, 0.0,  1.0,  1.0  };
 static Color Yellow= { 0.3, 1.0,  1.0,  0.0  };
 
-char progname[128];
+extern char progname[128];
 
 	/***************************/
 	/*** the main subroutine ***/
@@ -71,6 +71,7 @@ int psplot(
 /*****************************/
 	
 	extern char progname[128];
+	char myloc[8];
 
 	float scale=1.0;   /*** inches=1.0  0.39370=cm ***/
 	extern Color Red, Black, Green, Blue, White, Gray, Brown;
@@ -107,7 +108,9 @@ int psplot(
 /******************************************/
 
 	void ps_line( float *, float *, int, float, float, int, Color, char * );
-	void plot_dc_clvd_mech( float, float, float, Solution *, Greens **, int, int, int, int, int, int );
+
+	void plot_dc_clvd_mech( float xc, float yc, float rad, Solution *sol, EventInfo *ev,
+ 	       Greens **grn, int iz, int nsta, int iplanes, int ifill, int imode, int verbose );
 
 	void ps_axes( float xmin, float xmax, float ymax, float xax_size, float yax_size,
                                    float line_width, Color col, char *xlabel, char *ylabel );
@@ -250,7 +253,7 @@ int psplot(
 			rad = 2.7;
 			planes = 1;
 			ifill = 1;
-			plot_dc_clvd_mech( xc, yc, rad, sol, grn, iz, nsta, planes, ifill, FULLMT, verbose );
+			plot_dc_clvd_mech( xc, yc, rad, sol, ev, grn, iz, nsta, planes, ifill, FULLMT, verbose );
 
 		/********************************************************/
 		/*** plot the major double couple if not an explosion ***/
@@ -264,7 +267,7 @@ int psplot(
 				planes = 1;
 				ifill = 1;
 				/*** nsta = 0 do not plot ***/
-				plot_dc_clvd_mech( xc, yc, rad, sol, grn, iz, 0, planes, ifill, MAJORDC, verbose );
+				plot_dc_clvd_mech( xc, yc, rad, sol, ev, grn, iz, 0, planes, ifill, MAJORDC, verbose );
 				sprintf( label, "Major" );
 				cg_text( 7, 10.5, 0, label );
 			}
@@ -285,7 +288,7 @@ int psplot(
 				planes = 1;
 				ifill = 1;
 				/*** nsta = 0 do not plot takeoff angles ***/
-				plot_dc_clvd_mech( xc, yc, rad, sol, grn, iz, 0, planes, ifill, MINORDC, verbose );
+				plot_dc_clvd_mech( xc, yc, rad, sol, ev, grn, iz, 0, planes, ifill, MINORDC, verbose );
 				sprintf( label, "Minor" );
 				cg_text( 11, 10, 0, label );
 			}
@@ -459,22 +462,21 @@ int psplot(
 		  fflush( stdout );
 		}
 
+/***
+U -> w1  z z
+V -> w2  r ns
+W -> w3  t ew
+***/
 		for( it=0; it<npts; it++ )
 		{
 			/* dat_t[it] = ev[ista].ew.data[it]    * cm2microns; */
-			dat_t[it] = ev[ista].ew.data_safe[it] * cm2microns;
-
-			/*debug*/
-			/*
-			fprintf(stdout, "%s: %s: %s: ista=%d it=%d dat_t[it]=%g ev[ista].ew.data[it]=%g cm2microns=%g\n",
-				progname, __FILE__, __func__, ista, it, dat_t[it], ev[ista].ew.data[it], cm2microns );
-			fflush(stdout);
-			*/
+			dat_t[it] = ev[ista].ew.data_safe[it]  * cm2microns;
 
 			/* dat_r[it] = ev[ista].ns.data[it]    * cm2microns; */
-			dat_r[it] = ev[ista].ns.data_safe[it] * cm2microns; 
+			dat_r[it] = ev[ista].ns.data_safe[it]  * cm2microns; 
+
 			/* dat_z[it] = ev[ista].z.data[it]     * cm2microns; */
-			dat_z[it] = ev[ista].z.data_safe[it]     * cm2microns; 
+			dat_z[it] = ev[ista].z.data_safe[it]   * cm2microns; 
 
 			syn_t[it] = ev[ista].syn_t.data[it] * cm2microns;
 			syn_r[it] = ev[ista].syn_r.data[it] * cm2microns;
@@ -539,11 +541,23 @@ int psplot(
 	/*******************************************/
 
 		if( ev[ista].grd_mo_type == DISPLACEMENT ) 
-			sprintf( ylabel, "DISP (microns)" );
+		{
+			if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+				sprintf( ylabel, "DISP (microns)" );
+			if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+				sprintf( ylabel, "Rotation (microradians)" );
+		}
 		else if( ev[ista].grd_mo_type == VELOCITY ) 
-			sprintf( ylabel, "VEL (microns/sec)" );
+		{
+			if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+				sprintf( ylabel, "VEL (microns/sec)" );
+			if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+				sprintf( ylabel, "Rot Vel (microrads/sec)" );
+		}
 		else	
+		{
 			sprintf( ylabel, "unknown" );
+		}
 
 		if( ev[ista].redv > 0 )
 			sprintf( xlabel, "reduced travel time [T-R/%4.1f] (sec)",
@@ -574,9 +588,20 @@ int psplot(
 		if( ev[ista].iused == 1 ) line_col = Red;
 		if( ev[ista].iused == -1 ) line_col = Yellow;
 
-	/*** Transverse component synthetics and data ***/
+/***
+U -> w1  z z
+V -> w2  r ns
+W -> w3  t ew
+***/
+
+	/*** Transverse component or W -> w3 vertical rotational synthetics and data ***/
 		y0_shift = fabs( ev[ista].ew.s.depmin );
-		ps_line(x, dat_t, npts, y0_shift, DATA_LINE_WIDTH, SOLID,  Black,    "T"  );
+
+		if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+		 ps_line(x, dat_t, npts, y0_shift, DATA_LINE_WIDTH, SOLID,  Black,    "T"  );
+	 	if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		 ps_line(x, dat_t, npts, y0_shift, DATA_LINE_WIDTH, SOLID,  Black,    "W"  );
+
 		ps_line(x, syn_t, npts, y0_shift, SYN_LINE_WIDTH,  DOTTED, line_col, "\0" );
 
 		cg_fontbyname( 10, "NewCenturySchlbk-Roman" );
@@ -586,9 +611,15 @@ int psplot(
 		sprintf( label, "%g/%.2f", ev[ista].ttlag, ev[ista].txcor );
 		if(PltXcorLabel) cg_text( x[0], y0_shift + fabs(ev[ista].ew.s.depmax)/2, 0, label );
 
-	/*** radial component ***/
+	/*** radial component or V -> w2 horizontal rotational synthetics and data***/
 		y0_shift = y0_shift + 1.1*( fabs( ev[ista].ns.s.depmin ) + fabs( ev[ista].ew.s.depmax ) );
-		ps_line( x, dat_r, npts, y0_shift, DATA_LINE_WIDTH,  SOLID, Black,    " R" ); /*Dat*/
+
+		if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+		ps_line( x, dat_r, npts, y0_shift, DATA_LINE_WIDTH,  SOLID, Black,    "R" ); /*Dat*/
+
+		if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		ps_line( x, dat_r, npts, y0_shift, DATA_LINE_WIDTH,  SOLID, Black,    "V" ); /*Dat*/
+
                 ps_line( x, syn_r, npts, y0_shift, SYN_LINE_WIDTH,  DOTTED, line_col, "\0" ); /*Syn*/
 
 		cg_fontbyname( 10, "NewCenturySchlbk-Roman" );
@@ -597,9 +628,15 @@ int psplot(
 		sprintf( label, "%g/%.2f", ev[ista].rtlag, ev[ista].rxcor );
 		if(PltXcorLabel) cg_text( x[0], y0_shift + fabs(ev[ista].ns.s.depmax)/2, 0, label );
 
-	/*** vertical component ***/
+	/*** vertical component U -> w1 synthetics and data ***/
 		y0_shift = y0_shift + 1.1*( fabs( ev[ista].z.s.depmin ) + fabs( ev[ista].ns.s.depmax ) );
-		ps_line( x, dat_z, npts, y0_shift, DATA_LINE_WIDTH,  SOLID, Black,    " Z" ); /*Dat*/
+
+		if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+		ps_line( x, dat_z, npts, y0_shift, DATA_LINE_WIDTH,  SOLID, Black,    "Z" ); /*Dat*/
+
+		if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		ps_line( x, dat_z, npts, y0_shift, DATA_LINE_WIDTH,  SOLID, Black,    "U" ); /*Dat*/
+
 		ps_line( x, syn_z, npts, y0_shift, SYN_LINE_WIDTH,  DOTTED, line_col, "\0" ); /*Syn*/
 
 		cg_fontbyname( 10, "NewCenturySchlbk-Roman" );
@@ -624,8 +661,16 @@ int psplot(
 			grn[ista][iz].rdist, grn[ista][iz].az,
 			ev[ista].time_shift_all, ev[ista].weight );
 		*/
-		sprintf(label, "%s.%s R=%.0f km Az=%.0f ts=%g",
-			grn[ista][iz].stnm, grn[ista][iz].net, 
+
+		if( strcmp( grn[ista][iz].loc, "" ) == 0 )	
+			strcpy( myloc, "--" );
+		else
+			strcpy( myloc, grn[ista][iz].loc );
+
+		sprintf(label, "%s.%s.%s R=%.0f km Az=%.0f ts=%g",
+			grn[ista][iz].net,
+			grn[ista][iz].stnm, 
+			myloc,
                         grn[ista][iz].rdist, grn[ista][iz].az,
 			ev[ista].time_shift_all
 		 );

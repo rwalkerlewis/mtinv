@@ -11,7 +11,7 @@ damp=1.
 kmax=20000
 eps=0.0005
 smin=0.0005
-modeldb=/Users/ichinose/mtinv.v2.0/data/modeldb/
+modeldb=../../data/modeldb
 stadb=./rdseed.stations
 verbose
 nodump

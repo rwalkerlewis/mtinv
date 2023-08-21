@@ -7,10 +7,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <dirent.h>
-
 #include "../include/mt.h"
 
-char progname[128];
+extern char progname[128];
 
 /*** my own array of file names for myscandir() and getsacfiles()  ***/
 
@@ -28,13 +27,14 @@ int my_file_name_cmp( const void *a, const void *b )
 	return strcmp( c1->fn, c2->fn );
 }
 
-void getsacfiles( char *stnm, char *net, char *pathname, char sacfiles[256][2048], int *nfiles, int verbose )
+void getsacfiles( char *stnm, char *net, char *loc, char *pathname, char sacfiles[256][2048], int *nfiles, int verbose )
 {
-	int i, count=0, iword, ifile=0;
+	int i, count=0, ifile=0;
 	FileNameList *filen;
 	FileNameList *myscandir( char *, int *, FileNameList * );
 	extern char progname[128];
 
+	int iword;
 	/** dont need, defined in stdlib.h **/
 /***
      void qsort(void *base, size_t nel, size_t width, int (*compar)(const void *, const void *));
@@ -46,8 +46,8 @@ void getsacfiles( char *stnm, char *net, char *pathname, char sacfiles[256][2048
 
 	if( verbose )
 	{
-	  printf("%s: getsacfiles(): sta=%s net=%s calling directory %s\n", 
-		progname, stnm, net, pathname );
+	  fprintf( stdout, "%s: %s: %s: sta=%s net=%s loc=(%s) calling directory %s\n", 
+		progname, __FILE__, __func__, stnm, net, loc, pathname );
 	}
 
 /*** allocate space for filename list ***/
@@ -69,25 +69,27 @@ void getsacfiles( char *stnm, char *net, char *pathname, char sacfiles[256][2048
 	for( i=0; i < count; i++ )
 	{
 		strcpy( tmp, filen[i].fn );
-		iword = 1;
+		
 		ptr = strtok( tmp, tok );
 		while( (ptr = strtok( NULL, tok )) != NULL )
 		{
-			iword++;
 			if( strcmp( ptr, net ) == 0 )
 			{
 				ptr = strtok( NULL, tok );
-				iword++;
 				if( strcmp( ptr, stnm ) == 0 )
 				{
-					strcpy( sacfiles[ifile], filen[i].fn );
-					if( verbose )
+					ptr = strtok( NULL, tok );
+					if( strcmp( ptr, loc ) == 0 || strcmp( loc, "" ) == 0 )
 					{
-					  fprintf( stdout, 
-					    "%s: getsacfiles(): Found station=%s net=%s ifile=%d file=%s\n",
-						progname, stnm, net, ifile, sacfiles[ifile] );
+						ptr = strtok( NULL, tok );
+						strcpy( sacfiles[ifile], filen[i].fn );
+					
+						fprintf( stdout,
+				    			"%s: %s: %s: Found station=%s net=%s loc=(%s) ifile=%d file=%s\n",
+							progname, __FILE__, __func__, stnm, net, loc, ifile, sacfiles[ifile] );
+
+						ifile++;
 					}
-					ifile++;
 				}
 			}
 		}
@@ -148,6 +150,34 @@ void fatal_error( char *msg1, char *msg2 )
 }
 
 
+void print_found_SAC_file( Sac_Header *sp, char *cmp, char *filename )
+{
+	fprintf( stdout, 
+	  "%s: %s: %s: cmp=%-3s net=%s sta=%s loc=(%s) chan=%s az=%7.2f inc=%7.2f filename=%s\n",
+                progname,
+                __FILE__,
+                __func__,
+                cmp,
+		sp->knetwk,
+                sp->kstnm,
+                sp->khole,
+                sp->kcmpnm,
+                sp->cmpaz,
+                sp->cmpinc,
+                filename );
+}
+
+/*******************************************************************************************************/
+/**** 
+   from the list of SAC files in the data directory 
+      determine automatically the 3-C components/channels - translational (ew,ns,z) 
+     or rotational (u,v,w) -> (w1,w2,w3) -> (ew,ns,z) 
+     for this station based on the SAC header values kcmpnm cmpaz and cmpinc 
+   load the SAC vector waveform data and header variables 
+   readsac() - autodetects byteorder and loads sac file does swapbytes 
+***/
+/*******************************************************************************************************/
+      
 float *getsacdata( 
 	char *cmp,
 	float *x,
@@ -162,24 +192,24 @@ float *getsacdata(
 	FILE *fp;
 	Sac_Header *a;
 
+	void print_found_SAC_file( Sac_Header *sp, char *cmp, char *filename );
+
 	float *readsac( Sac_Header *s, char *filename, int verbose );
 
+/***********************************************************************************/
+/*** G.Ichinose Nov  7 2019  - Added support for rotational GFs w1, w2, w3       ***/
+/*** Rotational component about EW         x1-axis U -> w1                       ***/
+/*** Rotational component about NS         x2-axis V -> w2                       ***/
+/*** Rotational component about z-vertical x3-axis W -> w3                       ***/
+/***********************************************************************************/
+
+/*** read NULL for float * waveform data, just get header to compare the channel info ***/
+	
 	a = (Sac_Header *)malloc(sizeof(Sac_Header));
-
-/*** readsac() - autodetects byteorder and loads sac file does swapbytes ***/
-
 	readsac( a, sacfile, verbose );
 
-/*** due to readsac, no longer needed ***/
-/***
-        if( (fp = fopen( sacfile, "rb" )) == NULL )
-	{
-		printf("error cannot open file %s\n", sacfile );
-		exit(-1);
-	}
-        fread( a, sizeof(Sac_Header), 1, fp );
-	rewind(fp);
-****/
+	if(verbose)
+         fprintf( stdout, "%s: %s: %s: looking for cmp=%s chan=%c\n", progname, __FILE__, __func__, cmp, a->kcmpnm[2] );
 
 	*ifound = 0;
 
@@ -190,31 +220,8 @@ float *getsacdata(
 		  ( a->cmpinc == 180 && a->cmpaz == 0 && a->kcmpnm[2] == 'Z' ))
 		{
 			strcpy( filename, sacfile );
-
-		/*** readsac() - autodetects byteorder and loads sac file does swapbytes ***/
 			x = readsac( sp, sacfile, verbose );
-
-		/*** due to readsac, no longer needed ***/
-		/***
-			fread( sp, sizeof( Sac_Header), 1, fp );
-			x = (float *)realloc( x, sp->npts*sizeof(float) );
-			fread( &x[0], sp->npts * sizeof(float), 1, fp );
-		***/
-			for( kk=0; kk<8; kk++ )
-			{
-				if( sp->kstnm[kk]  == ' ' ) sp->kstnm[kk]='\0';
-				if( sp->kcmpnm[kk] == ' ' ) sp->kcmpnm[kk]='\0';
-				if( sp->knetwk[kk] == ' ' ) sp->knetwk[kk]='\0';
-			}
-
-			printf("%s: getsacdata(): VER sta=%s net=%s cmp=%s az=%7.2f inc=%7.2f %s\n",
-				progname, 
-				sp->kstnm, 
-				sp->knetwk, 
-				sp->kcmpnm,
-				sp->cmpaz, 
-				sp->cmpinc, 
-				filename );
+			print_found_SAC_file( sp, cmp, filename );
 			*ifound = 1;
 		}
 	}
@@ -225,32 +232,8 @@ float *getsacdata(
                   ( a->cmpinc == 90 && a->kcmpnm[2] == '1' ))
 		{
 			strcpy( filename, sacfile );
-
-		/*** readsac() - autodetects byteorder and loads sac file does swapbytes ***/
                         x = readsac( sp, sacfile, verbose );
-                                                                                                                                                         
-                /*** due to readsac, no longer needed ***/
-		/***
-			fread( sp, sizeof(Sac_Header), 1, fp );
-			x = (float *)realloc( x, sp->npts*sizeof(float) );
-			fread( &x[0], sp->npts * sizeof(float), 1, fp );
-		***/
-
-			for( kk=0; kk<8; kk++ )
-			{
-				if( sp->kstnm[kk]  == ' ' ) sp->kstnm[kk]='\0';
-				if( sp->kcmpnm[kk] == ' ' ) sp->kcmpnm[kk]='\0';
-				if( sp->knetwk[kk] == ' ' ) sp->knetwk[kk]='\0';
-			}
-
-			printf("%s: getsacdata(): NS  sta=%s net=%s cmp=%s az=%7.2f inc=%7.2f %s\n",
-                                progname,
-                                sp->kstnm,
-                                sp->knetwk,
-                                sp->kcmpnm,
-                                sp->cmpaz,
-                                sp->cmpinc,
-                                filename );
+                	print_found_SAC_file( sp, cmp, filename );
 			*ifound = 1;
 		}
 	}
@@ -261,95 +244,53 @@ float *getsacdata(
                   ( a->cmpinc == 90 && a->kcmpnm[2] == '2' ))
                 {
 			strcpy( filename, sacfile );
-
-		/*** readsac() - autodetects byteorder and loads sac file does swapbytes ***/
 			x = readsac( sp, sacfile, verbose );
-
-		/*** due to readsac, no longer needed ***/
-		/***
-			fread( sp, sizeof(Sac_Header), 1, fp );
-			x = (float *)realloc( x, sp->npts*sizeof(float) );
-			fread( &x[0], sp->npts * sizeof(float), 1, fp );
-		***/
-			for( kk=0; kk<8; kk++ )
-			{
-				if( sp->kstnm[kk]  == ' ' ) sp->kstnm[kk]='\0';
-				if( sp->kcmpnm[kk] == ' ' ) sp->kcmpnm[kk]='\0';
-				if( sp->knetwk[kk] == ' ' ) sp->knetwk[kk]='\0';
-			}
-
-			printf("%s: getsacdata(): EW  sta=%s net=%s cmp=%s az=%7.2f inc=%7.2f %s\n",
-                                progname,
-                                sp->kstnm,
-                                sp->knetwk,
-                                sp->kcmpnm,
-                                sp->cmpaz,
-                                sp->cmpinc,
-                                filename );
+			print_found_SAC_file( sp, cmp, filename );
                         *ifound = 1;
 		}
+	}
+	else if( strncmp( cmp, "W1", 2 ) == 0 )
+	{
+		if( a->kcmpnm[2] == 'U' )
+		{
+			strcpy( filename, sacfile );
+			x = readsac( sp, sacfile, verbose );
+			print_found_SAC_file( sp, cmp, filename );
+			*ifound = 1;
+		}
+	}
+	else if( strncmp( cmp, "W2", 2 ) == 0 )
+	{
+		if( a->kcmpnm[2] == 'V' )
+                {       
+                        strcpy( filename, sacfile );
+                        x = readsac( sp, sacfile, verbose );
+                        print_found_SAC_file( sp, cmp, filename );
+                        *ifound = 1;
+                }
+	}
+	else if( strncmp( cmp, "W3", 2 ) == 0 )
+	{
+		if( a->kcmpnm[2] == 'W' )
+                {       
+                        strcpy( filename, sacfile );
+                        x = readsac( sp, sacfile, verbose );
+                        print_found_SAC_file( sp, cmp, filename );
+                        *ifound = 1;
+                }
 	}
 	else
 	{
 		x = (float *)NULL;
 		*ifound = 0;
 	}
+
+	if(verbose)
+	{
+	  fprintf( stderr, "%s: %s: %s:  freeing memory tmp space a\n",
+		progname, __FILE__, __func__ );
+	  fflush(stderr);
+	}
 	free(a);
-	/* fclose(fp); */
         return (float *)x;
-}
-
-void fix_component_names( EventInfo *ev )
-{
-      if( strncmp( ev->z.s.kcmpnm,  "LHZ", 3 ) == 0 ) sprintf( ev->z.s.kcmpnm,  "LHZ" );
-      if( strncmp( ev->ns.s.kcmpnm, "LHN", 3 ) == 0 ) sprintf( ev->ns.s.kcmpnm, "LHN" );
-      if( strncmp( ev->ew.s.kcmpnm, "LHE", 3 ) == 0 ) sprintf( ev->ew.s.kcmpnm, "LHE" );
-      if( strncmp( ev->ns.s.kcmpnm, "LH1", 3 ) == 0 ) sprintf( ev->ns.s.kcmpnm, "LH1" );
-      if( strncmp( ev->ew.s.kcmpnm, "LH2", 3 ) == 0 ) sprintf( ev->ew.s.kcmpnm, "LH2" );
-                
-      if( strncmp( ev->z.s.kcmpnm,  "BHZ", 3 ) == 0 ) sprintf( ev->z.s.kcmpnm,  "BHZ" );
-      if( strncmp( ev->ns.s.kcmpnm, "BHN", 3 ) == 0 ) sprintf( ev->ns.s.kcmpnm, "BHN" );
-      if( strncmp( ev->ew.s.kcmpnm, "BHE", 3 ) == 0 ) sprintf( ev->ew.s.kcmpnm, "BHE" );
-      if( strncmp( ev->ns.s.kcmpnm, "BH1", 3 ) == 0 ) sprintf( ev->ns.s.kcmpnm, "BH1" );
-      if( strncmp( ev->ew.s.kcmpnm, "BH2", 3 ) == 0 ) sprintf( ev->ew.s.kcmpnm, "BH2" );
-               
-      if( strncmp( ev->z.s.kcmpnm,  "BLZ", 3 ) == 0 ) sprintf( ev->z.s.kcmpnm,  "BLZ" );
-      if( strncmp( ev->ns.s.kcmpnm, "BLN", 3 ) == 0 ) sprintf( ev->ns.s.kcmpnm, "BLN" );
-      if( strncmp( ev->ew.s.kcmpnm, "BLE", 3 ) == 0 ) sprintf( ev->ew.s.kcmpnm, "BLE" );
-      if( strncmp( ev->ns.s.kcmpnm, "BL1", 3 ) == 0 ) sprintf( ev->ns.s.kcmpnm, "BL1" );
-      if( strncmp( ev->ew.s.kcmpnm, "BL2", 3 ) == 0 ) sprintf( ev->ew.s.kcmpnm, "BL2" );
-              
-      if( strncmp( ev->z.s.kcmpnm,  "SHZ", 3 ) == 0 ) sprintf( ev->z.s.kcmpnm,  "SHZ" );
-      if( strncmp( ev->ns.s.kcmpnm, "SHN", 3 ) == 0 ) sprintf( ev->ns.s.kcmpnm, "SHN" );
-      if( strncmp( ev->ew.s.kcmpnm, "SHE", 3 ) == 0 ) sprintf( ev->ew.s.kcmpnm, "SHE" );
-      if( strncmp( ev->ns.s.kcmpnm, "SH1", 3 ) == 0 ) sprintf( ev->ns.s.kcmpnm, "SH1" );
-      if( strncmp( ev->ew.s.kcmpnm, "SH2", 3 ) == 0 ) sprintf( ev->ew.s.kcmpnm, "SH2" );
-             
-      if( strncmp( ev->z.s.kcmpnm,  "HHZ", 3 ) == 0 ) sprintf( ev->z.s.kcmpnm,  "HHZ" );
-      if( strncmp( ev->ns.s.kcmpnm, "HHN", 3 ) == 0 ) sprintf( ev->ns.s.kcmpnm, "HHN" );
-      if( strncmp( ev->ew.s.kcmpnm, "HHE", 3 ) == 0 ) sprintf( ev->ew.s.kcmpnm, "HHE" );
-      if( strncmp( ev->ns.s.kcmpnm, "HH1", 3 ) == 0 ) sprintf( ev->ns.s.kcmpnm, "HH1" );
-      if( strncmp( ev->ew.s.kcmpnm, "HH2", 3 ) == 0 ) sprintf( ev->ew.s.kcmpnm, "HH2" );
-
-      if( strncmp( ev->z.s.kcmpnm,  "HLZ", 3 ) == 0 ) sprintf( ev->z.s.kcmpnm,  "HLZ" );
-      if( strncmp( ev->ns.s.kcmpnm, "HLN", 3 ) == 0 ) sprintf( ev->ns.s.kcmpnm, "HLN" );
-      if( strncmp( ev->ew.s.kcmpnm, "HLE", 3 ) == 0 ) sprintf( ev->ew.s.kcmpnm, "HLE" );
-      if( strncmp( ev->ns.s.kcmpnm, "HL1", 3 ) == 0 ) sprintf( ev->ns.s.kcmpnm, "HL1" );
-      if( strncmp( ev->ew.s.kcmpnm, "HL2", 3 ) == 0 ) sprintf( ev->ew.s.kcmpnm, "HL2" );
-
-      if( strncmp( ev->ns.s.khole, "-12345", 6 ) == 0 ) ev->ns.s.khole[0]='\0';
-      if( strncmp( ev->ew.s.khole, "-12345", 6 ) == 0 ) ev->ew.s.khole[0]='\0';
-      if( strncmp( ev->z.s.khole,  "-12345", 6 ) == 0 ) ev->z.s.khole[0]='\0';
-
-      if( strncmp( ev->ns.s.khole, "  ", 2 ) == 0 ) ev->ns.s.khole[0]='\0';
-      if( strncmp( ev->ew.s.khole, "  ", 2 ) == 0 ) ev->ew.s.khole[0]='\0';
-      if( strncmp( ev->z.s.khole,  "  ", 2 ) == 0 ) ev->z.s.khole[0]= '\0';
-
-      if( strncmp( ev->ns.s.khole, "00", 2 ) == 0 ) sprintf( ev->ns.s.khole, "00" );
-      if( strncmp( ev->ew.s.khole, "00", 2 ) == 0 ) sprintf( ev->ew.s.khole, "00" );
-      if( strncmp( ev->z.s.khole,  "00", 2 ) == 0 ) sprintf( ev->z.s.khole,  "00" );
-
-      if( strncmp( ev->ns.s.khole, "10", 2 ) == 0 ) sprintf( ev->ns.s.khole, "10" );
-      if( strncmp( ev->ew.s.khole, "10", 2 ) == 0 ) sprintf( ev->ew.s.khole, "10" );
-      if( strncmp( ev->z.s.khole,  "10", 2 ) == 0 ) sprintf( ev->z.s.khole,  "10" );
 }

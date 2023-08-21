@@ -9,7 +9,7 @@
 #include "../include/mt.h"         /** global datatype and structure declarations **/
 #include "../include/nrutil.h"     /** numerical recipes **/
 
-char progname[128];
+extern char progname[128];
 
 typedef struct thread_data
 {
@@ -41,13 +41,17 @@ void sacdata2inv_parallel(
 /*** start the subroutine                                          ***/
 /*********************************************************************/
 
-	fprintf( stdout,
-	  "%s: sacdata2inv_parallel(): nsta=%d ienvelope=%d dumpsac=%d verbose=%d\n",
+	if(verbose)
+	{
+	  fprintf( stdout,
+	    "%s: %s: %s: nsta=%d ienvelope=%d dumpsac=%d verbose=%d\n",
 		progname,
+		__FILE__, __func__, 
 		nsta,
 		ienvelope,
 		dumpsac,
 		verbose );
+	}
 
 	thread = (pthread_t *)malloc( nsta * sizeof(pthread_t) );
 
@@ -64,9 +68,12 @@ void sacdata2inv_parallel(
 
 	for( ista = 0; ista < nsta; ista++ )
 	{
-		fprintf( stderr,
-		  "%s: ista=%d stnm=%s net=%s nt=%d dt=%g lf=%g hf=%g npts=%d delta=%g ienvelope=%d dumpsac=%d verbose=%d\n",
+		if(verbose)
+		{
+		  fprintf( stderr,
+		    "%s: %s: %s: ista=%d stnm=%s net=%s nt=%d dt=%g lf=%g hf=%g npts=%d delta=%g ienvelope=%d dumpsac=%d verbose=%d\n",
 			progname,
+			__FILE__, __func__, 
 			ista,
 			td[ista].ev[ista].stnm,
 			td[ista].ev[ista].net,
@@ -79,6 +86,7 @@ void sacdata2inv_parallel(
                 	td[ista].ienvelope, 
                 	td[ista].dumpsac, 
                 	td[ista].verbose );
+		}
 	}
 
 /*********************************************************************/
@@ -94,8 +102,9 @@ void sacdata2inv_parallel(
 	for( ista = 0; ista < nsta; ista++ )
 	{
 		fprintf( stderr,
-		  "%s: pthread_create(): ista=%d stnm=%s net=%s nt=%d dt=%g \n", 
+		  "%s: %s: %s: ista=%d stnm=%s net=%s nt=%d dt=%g \n", 
 			progname, 
+			__FILE__, __func__, 
 			ista,
 			td[ista].ev[ista].stnm,
 			td[ista].ev[ista].net,
@@ -276,8 +285,9 @@ void *sacdata2inv_staproc_thread( void *ptr )
 	if(verbose)
 	{
 	  fprintf( stdout,
-		"%s: sacdata2inv_staproc_thread(): ista=%d ienvelope=%d dumpsac=%d verbose=%d\n",
+		"%s: %s: %s: ista=%d ienvelope=%d dumpsac=%d verbose=%d\n",
 			progname, 
+			__FILE__, __func__, 
 			ista,
 			ienvelope,
 			dumpsac,
@@ -292,8 +302,8 @@ void *sacdata2inv_staproc_thread( void *ptr )
 	if( verbose )
 	{
 		fprintf( stdout,
-		  "%s: sacdata2inv_staproc_thread(): ista=%03d sta=%s net=%s data=%s glib=%s ginv=%s\n",
-			progname, 
+		  "%s: %s: %s: ista=%03d sta=%s net=%s data=%s glib=%s ginv=%s\n",
+			progname, __FILE__, __func__, 
 			ista, 
 			ev[ista].stnm, 
 			ev[ista].net,
@@ -303,8 +313,9 @@ void *sacdata2inv_staproc_thread( void *ptr )
 		fflush( stdout );
 
 		fprintf( stdout,
-		  "%s: sacdata2inv_staproc_thread(): npole=%d pass=%d lf=%g hf=%g nt=%d dt=%g tr=%g tt=%g\n",
+		  "%s: %s: %s: npole=%d pass=%d lf=%g hf=%g nt=%d dt=%g tr=%g tt=%g\n",
 			progname, 
+			__FILE__, __func__, 
 			ev[ista].npole, 
 			ev[ista].npass, 
 			ev[ista].lf,
@@ -322,7 +333,7 @@ void *sacdata2inv_staproc_thread( void *ptr )
 
 	if( verbose )
 	{
-	  fprintf( stdout, "%s: sacdata2inv_staproc_thread(): converting from meters to cm\n", progname );
+	  fprintf( stdout, "%s: %s: %s: converting from meters to cm\n", progname, __FILE__, __func__ );
 	  fflush( stdout );
 	}
 
@@ -339,8 +350,9 @@ void *sacdata2inv_staproc_thread( void *ptr )
 	  if( verbose )
 	  {
 		fprintf( stdout,
-			"%s: sacdata2inv_staproc_thread(): scaling my mul_factor=%g\n", 
+			"%s: %s: %s: scaling my mul_factor=%g\n", 
 			progname,
+			__FILE__, __func__, 
 			ev[ista].mul_factor );
 		fflush( stdout );
 	  }
@@ -359,8 +371,8 @@ void *sacdata2inv_staproc_thread( void *ptr )
 	  if(verbose)
 	  {
 	    fprintf( stdout,
-	      "%s: sacdata2inv_staproc_thread(): calling rtrend() ista=%d stnm=%s.%s nt=%d dt=%g b=%g\n",
-		progname, 
+	      "%s: %s: %s: calling rtrend() ista=%d stnm=%s.%s nt=%d dt=%g b=%g\n",
+		progname, __FILE__, __func__, 
 		ista,
 		ev[ista].stnm,
 		ev[ista].net,
@@ -381,8 +393,8 @@ void *sacdata2inv_staproc_thread( void *ptr )
 	if( verbose )
 	{
 	  fprintf( stdout,
-	    "%s: sacdata2inv_staproc_thread(): calling set_sac_time_marker(): adding origin time to sac files: ", 
-			progname);
+	    "%s: %s: %s: calling set_sac_time_marker(): adding origin time to sac files: ", 
+			progname, __FILE__, __func__ );
 	  WriteMyTime2STDOUT( &(ev[ista].ot) );
 	  fflush( stdout );
 	}
@@ -401,8 +413,8 @@ void *sacdata2inv_staproc_thread( void *ptr )
 
 	if( verbose )
 	{
-		fprintf( stdout, "%s: sacdata2inv_staproc_thread(): redv=%g ts0=%g tstart=%g tend=%g\n",
-			progname, 
+		fprintf( stdout, "%s: %s: %s: redv=%g ts0=%g tstart=%g tend=%g\n",
+			progname, __FILE__, __func__, 
 			ev[ista].redv, 
 			ev[ista].ts0,
 			ev[ista].tstart, 
@@ -418,8 +430,10 @@ void *sacdata2inv_staproc_thread( void *ptr )
 	{
 		if(verbose)
 		{
-			fprintf( stdout, "%s: sacdata2inv_staproc_thread(): calling set_sac_time_marker(): ",
-				progname );
+			fprintf( stdout, "%s: %s: %s: calling set_sac_time_marker(): ",
+				progname, __FILE__, __func__ );
+			fflush( stdout );
+
 			fprintf( stdout, " adding reduction velocity to sac files rdev=%g rdist=%g\n",
 				ev[ista].redv, ev[ista].rdist );
 			fflush( stdout );
@@ -455,12 +469,12 @@ void *sacdata2inv_staproc_thread( void *ptr )
 
 	if( verbose )
 	{
-		fprintf( stdout, "%s: calling cut_sac(): cutting %g sec before and\n",
-			progname, precut );
+		fprintf( stdout, "%s: %s: %s: calling cut_sac(): cutting %g sec before and\n",
+			progname, __FILE__, __func__,  precut );
 		fflush( stdout );
 
-		fprintf( stdout, "%s:   %g sec after the origin time marker\n",
-			progname, twincut );
+		fprintf( stdout, "%s: %s: %s:  %g sec after the origin time marker\n",
+			progname, __FILE__, __func__, twincut );
 		fflush( stdout );
 	}
 
@@ -472,6 +486,13 @@ void *sacdata2inv_staproc_thread( void *ptr )
 /*** construct SAC Poles and Zeros instrument response file ***/
 /***   and apply correction by convolution (mul spec)       ***/
 /**************************************************************/
+
+	if(verbose)
+	{
+	  fprintf( stdout, "%s: %s: %s: calling transfer_response() \n", 
+		progname, __FILE__, __func__ );
+	  fflush( stdout );
+	}
 
 	transfer_response(
 		ev[ista].ew.data, 
@@ -499,6 +520,13 @@ void *sacdata2inv_staproc_thread( void *ptr )
 /*** perhaps a taper is a better method?        ***/
 /**************************************************/
 
+	if(verbose)
+	{
+	  fprintf( stdout, "%s: %s: %s: calling ampshift() \n", 
+                progname, __FILE__, __func__ );
+          fflush( stdout );
+	}
+
 	ampshift( ev[ista].ew.data, ev[ista].ew.s.npts, verbose );
 	ampshift( ev[ista].ns.data, ev[ista].ns.s.npts, verbose );
 	ampshift( ev[ista].z.data,  ev[ista].z.s.npts, verbose );
@@ -509,7 +537,8 @@ void *sacdata2inv_staproc_thread( void *ptr )
 
 	if(verbose)
 	{
-	  fprintf( stdout, "%s: sacdata2inv_staproc_thread() bandpass filtering data \n", progname );
+	  fprintf( stdout, "%s: %s: %s: bandpass filtering data \n",
+		progname, __FILE__, __func__ );
 	  fflush( stdout );
 	}
 
@@ -561,7 +590,7 @@ void *sacdata2inv_staproc_thread( void *ptr )
 		if(verbose)
                 {
                   fprintf( stdout,
-			"%s: sacdata2inv_staproc_thread(): converting data to velocity\n", progname );
+			"%s: %s: %s: converting data to velocity\n", progname, __FILE__, __func__ );
 		  fflush( stdout );
                 }
 
@@ -602,16 +631,25 @@ void *sacdata2inv_staproc_thread( void *ptr )
 	  fflush( stdout );
 	}
 
-	interpolate_fft( ev[ista].ew.data, ev[ista].ew.s.npts, ev[ista].ew.s.delta, &old_nt, ev[ista].dt );
-	interpolate_fft( ev[ista].ns.data, ev[ista].ns.s.npts, ev[ista].ns.s.delta, &old_nt, ev[ista].dt );
-	interpolate_fft( ev[ista].z.data,  ev[ista].z.s.npts,  ev[ista].z.s.delta,  &old_nt, ev[ista].dt );
+	if( ev[ista].dt >= ev[ista].z.s.delta )
+	{
+		interpolate_fft( ev[ista].ew.data, ev[ista].ew.s.npts, ev[ista].ew.s.delta, &old_nt, ev[ista].dt );
+		interpolate_fft( ev[ista].ns.data, ev[ista].ns.s.npts, ev[ista].ns.s.delta, &old_nt, ev[ista].dt );
+		interpolate_fft( ev[ista].z.data,  ev[ista].z.s.npts,  ev[ista].z.s.delta,  &old_nt, ev[ista].dt );
                                                                                                                                                                 
-	ev[ista].ew.s.npts  = ev[ista].nt;
-	ev[ista].ew.s.delta = ev[ista].dt;
-	ev[ista].ns.s.npts  = ev[ista].nt;
-	ev[ista].ns.s.delta = ev[ista].dt;
-	ev[ista].z.s.npts   = ev[ista].nt;
-	ev[ista].z.s.delta  = ev[ista].dt;
+		ev[ista].ew.s.npts  = ev[ista].nt;
+		ev[ista].ew.s.delta = ev[ista].dt;
+		ev[ista].ns.s.npts  = ev[ista].nt;
+		ev[ista].ns.s.delta = ev[ista].dt;
+		ev[ista].z.s.npts   = ev[ista].nt;
+		ev[ista].z.s.delta  = ev[ista].dt;
+	}
+	else
+	{
+	/*** never be here. should of check this in loadsacdata ***/
+		fprintf( stderr, "%s: %s: %s: Error reset dt\n", progname, __FILE__, __func__ );
+		fflush(stderr);
+	}
 
 /****************************************************************************************/
 /*** taper the ends using Hanning taper width = 0.1 to 0.3 depending on sampling rate ***/
@@ -679,8 +717,16 @@ void *sacdata2inv_staproc_thread( void *ptr )
 /***  EW coordinate system                                                            ***/
 /****************************************************************************************/
 
-	if( ev[ista].ns.s.cmpaz != 0. && ev[ista].ew.s.cmpaz != 90. )
+
+/****************************************************************************************/
+/*** do not rotate the rotational data                                                ***/
+/****************************************************************************************/
+
+	if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
 	{
+
+	  if( ev[ista].ns.s.cmpaz != 0. && ev[ista].ew.s.cmpaz != 90. )
+	  {
 		if(verbose)
 		{
 		  fprintf( stdout, "%s: sacdata2inv_staproc_thread() ista=%d horizontals az not 0 and 90. ", 
@@ -696,7 +742,7 @@ void *sacdata2inv_staproc_thread( void *ptr )
 		rotate( ev[ista].ns.data, ev[ista].ns.s.npts, &(ev[ista].ns.s.cmpaz), ev[ista].ns.s.cmpinc,
                         ev[ista].ew.data, ev[ista].ew.s.npts, &(ev[ista].ew.s.cmpaz), ev[ista].ew.s.cmpinc,
                         angle, verbose );
-	}
+	  }
 
 /***********************************************************************/
 /*** rotate the horizontals to get radial and transverse             ***/
@@ -704,21 +750,23 @@ void *sacdata2inv_staproc_thread( void *ptr )
 /*** transverse/tangential component is written over the ew          ***/
 /***********************************************************************/
 
-	/* angle = ev[ista].ns.s.az; */
+	  /* angle = ev[ista].ns.s.az; */
 
-	angle = ev[ista].ns.s.baz + 180;
+	  angle = ev[ista].ns.s.baz + 180;
 
-	rotate( ev[ista].ns.data, ev[ista].ns.s.npts, &(ev[ista].ns.s.cmpaz), ev[ista].ns.s.cmpinc,
+	  rotate( ev[ista].ns.data, ev[ista].ns.s.npts, &(ev[ista].ns.s.cmpaz), ev[ista].ns.s.cmpinc,
                 ev[ista].ew.data, ev[ista].ew.s.npts, &(ev[ista].ew.s.cmpaz), ev[ista].ew.s.cmpinc,
                 angle, verbose );
 
-	if(verbose)
-	{
+	  if(verbose)
+	  {
 		fprintf( stdout, 
 		  "%s: sacdata2inv_staproc_thread(): ista=%d horizontals rotated by angle=%g\n",
                      progname, ista, angle );
 		fflush( stdout );
-	}
+	  }
+
+	}  /*** rotate only if ev->wavetype == Surf/Pnl ... NOT Rotational! ***/
 
 /***********************************************************************/
 /*** compute peak to peak of signal and noise to measure SNR         ***/
@@ -738,10 +786,28 @@ void *sacdata2inv_staproc_thread( void *ptr )
         	&(ev[ista].ew.pha[NOISE].amp),  &(ev[ista].ew.pha[NOISE].time),
         	&(ev[ista].ew.pha[NOISE].duration), NOISE, verbose );
 
+	if(verbose)
+	fprintf( stderr, "%s: %s: %s: noise-EW-ista=%d per=%g gvlo=%g gvhi=%g amp=%g time=%g dur=%g\n",
+		progname, __FILE__, __func__, ista, (1/ev[ista].lf), 
+		ev[ista].ew.pha[NOISE].gvlo,  
+		ev[ista].ew.pha[NOISE].gvhi, 
+		ev[ista].ew.pha[NOISE].amp,
+		ev[ista].ew.pha[NOISE].time, 
+		ev[ista].ew.pha[NOISE].duration );
+
 	compute_Peak_to_Peak( &(ev[ista].ew.s), ev[ista].ew.data, 1/ev[ista].lf,
         	ev[ista].ew.pha[SIGNAL].gvlo, ev[ista].ew.pha[SIGNAL].gvhi,
         	&(ev[ista].ew.pha[SIGNAL].amp), &(ev[ista].ew.pha[SIGNAL].time),
         	&(ev[ista].ew.pha[SIGNAL].duration), SIGNAL, verbose );
+
+	if(verbose)
+	fprintf( stderr, "%s: %s: %s: signal-EW-ista=%d per=%g gvlo=%g gvhi=%g amp=%g time=%g dur=%g\n",
+                progname, __FILE__, __func__, ista, (1/ev[ista].lf),
+                ev[ista].ew.pha[SIGNAL].gvlo,
+                ev[ista].ew.pha[SIGNAL].gvhi,
+                ev[ista].ew.pha[SIGNAL].amp,
+                ev[ista].ew.pha[SIGNAL].time,
+                ev[ista].ew.pha[SIGNAL].duration );
 
 	ev[ista].ew.pha[NOISE].period     = 2 * ev[ista].ew.pha[NOISE].duration;
 	ev[ista].ew.pha[NOISE].frequency  = 1 / ev[ista].ew.pha[NOISE].period;

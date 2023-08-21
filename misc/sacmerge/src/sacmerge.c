@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-
+#include <unistd.h>
+#include "version.h"
 #include "sacfile.h"
 
 char progname[128];
@@ -10,13 +11,14 @@ char progname[128];
 int main(int ac, char **av)
 {
 	SacFile *sf;
+	int i, nfiles = 0;
 	double mintime, maxtime, totaltime;
-	int nfiles = 0;
+	
 	float dt;
 	float *data;
 	int rank = 1;    /** this is the sac file that is the 1st (earliest start time) ***/
-	int i, j, it;
-	int ndata;
+	int j, it, ndata = 0;
+	char output_sac_filename[128];
 
 	int verbose = 1; /*** for debug ***/
 
@@ -33,6 +35,10 @@ int main(int ac, char **av)
 
 	strcpy( progname, av[0] );
 
+	fprintf( stderr, "%s: %s: %s: Version      = %s\n", progname, __FILE__, __func__, Version_Label );
+        fprintf( stderr, "%s: %s: %s: Version Date = %s\n", progname, __FILE__, __func__, Version_Date );
+        fprintf( stderr, "%s: %s: %s: Source       = %s\n", progname, __FILE__, __func__, Version_SrcDir );
+
 	sf = malloc(sizeof(SacFile));
 	maxtime = 0;
 	mintime = 9e+25;
@@ -45,25 +51,31 @@ int main(int ac, char **av)
 
 		if(verbose)	
 		{
-		  fprintf( stderr, "%s: opening file %d %s\n",
-                        progname, i, sf[i].filename );
+		  fprintf(stderr, "%s: %s: %s: opening file i=%d filename=%s\n",
+			progname, __FILE__, __func__, i, sf[i].filename );
 		}
 
-		readsacfile( &sf[i], verbose );
+		readsacfile( &sf[i], 0 /*verbose*/ );
 
-		fprintf( stdout, "%s: %s: nt=%d dt=%g b=%g e=%g dur=%g \n",
-			progname,
-			sf[i].filename,
-			sf[i].s.npts,
-			sf[i].s.delta,
-			sf[i].s.b,
-			sf[i].s.e,
-			(sf[i].s.e - sf[i].s.b) );
-			
-		/*
-                       WriteMyTime2STDOUT( &(sf[i].beg) );
-                       WriteMyTime2STDOUT( &(sf[i].end) );
-		*/
+		if( verbose )
+		{
+			fprintf( stdout, "%s: %s: %s: %s nt=%d dt=%g b=%g e=%g dur=%g \n",
+				progname,
+                                __FILE__,
+                                __func__,
+                                sf[i].filename,
+                                sf[i].s.npts,
+                                sf[i].s.delta,
+                                sf[i].s.b,
+                                sf[i].s.e, 
+                                (sf[i].s.e - sf[i].s.b) );
+                        
+			fprintf( stdout, "%s: %s: %s: start=", progname, __FILE__, __func__ );
+                        WriteMyTime2STDOUT( &(sf[i].beg) );
+
+			fprintf( stdout, "%s: %s: %s:  stop=", progname, __FILE__, __func__ );
+                        WriteMyTime2STDOUT( &(sf[i].end) );
+                }
 
 	/** rank: find the sac file with minimum(earliest) start time */
 
@@ -84,7 +96,8 @@ int main(int ac, char **av)
 
 	if( nfiles == 0 ) 
 	{
-		fprintf(stderr, "%s: Fatal error no files read\n", progname );
+		fprintf( stderr, "%s: %s: %s: Error no files read\n",
+                        progname, __FILE__, __func__ );
 		exit(-1);
 	}
 
@@ -92,8 +105,11 @@ int main(int ac, char **av)
 	totaltime = maxtime - mintime;
 	ndata = (int) (totaltime / dt);
 
-	fprintf( stdout, "%s: nfiles=%d rank=%d total time = %lf sec / %lf hrs ndata=%d dt=%g\n",
-		progname, nfiles, rank, totaltime, totaltime/3600., ndata, dt );
+	if(verbose)
+        {
+          fprintf( stderr, "%s: %s: %s: nfiles=%d total time = %lf sec / %lf hrs ndata=%d dt=%g rank=%d(ptr to first file header)\n",
+                progname, __FILE__, __func__, nfiles, totaltime, totaltime/3600., ndata, dt, rank );
+        }
 
 	data = calloc( ndata, sizeof(float) );
 
@@ -103,17 +119,17 @@ int main(int ac, char **av)
 
 		if(verbose)
 		{
-		  fprintf(stderr, "%d %s mintime=%lf maxtime=%lf b=%g myepoch=%lf j=%d rank=%d\n",
+		  fprintf(stderr, "%d %s mintime=%lf maxtime=%lf b=%g myepoch=%lf j=%d\n",
                         i,
                         sf[i].filename,
                         mintime,
                         maxtime,
                         sf[i].s.b,
                         sf[i].beg.epoch,
-                        j,
-                        rank );
+                        j );
 		}
 
+		/*** for helicorder version, remove the mean ***/
 		/* remove_mean( &(sf[i].data[0]), sf[i].s.npts ); */
 
 		for( it=0; it<sf[i].s.npts; it++ )
@@ -128,25 +144,65 @@ int main(int ac, char **av)
 	sf[rank].s.b    = sf[rank].s.b;
 	sf[rank].s.e    = rint( ndata * dt );
 
+	/*** for helicorder version, don't remove the mean ***/
+	if(verbose)fprintf(stderr, "%s: %s: %s: removing mean\n", progname, __FILE__, __func__ );
 	remove_mean( &data[0], ndata );
 
+	if(verbose)fprintf(stderr, "%s: %s: %s: setting SAC minmax\n", progname, __FILE__, __func__ );
 	set_sac_minmax( &(sf[rank].s), &data[0] );
 
-	fprintf( stdout, "%s: writting out.sac nt=%d dt=%g b=%g e=%g dur=%g min=%g max=%g mean=%g\n",
-                                progname,
-                                sf[rank].s.npts,
-                                sf[rank].s.delta,
-                                sf[rank].s.b,
-                                sf[rank].s.e,
-                                (sf[rank].s.e - sf[i].s.b),
-				sf[rank].s.depmin,
-				sf[rank].s.depmax,
-				sf[rank].s.depmen );
+	if( strncmp( sf[rank].s.knetwk, "-12345", 6 ) == 0 || strcmp( sf[rank].s.knetwk, " " ) == 0 ) strcpy( sf[rank].s.knetwk, "NETWK" );
+        if( strncmp( sf[rank].s.kstnm,  "-12345", 6 ) == 0 || strcmp( sf[rank].s.kstnm,  " " ) == 0 ) strcpy( sf[rank].s.kstnm,  "NOSTA" );
+        if( strncmp( sf[rank].s.khole,  "-12345", 6 ) == 0 || strcmp( sf[rank].s.khole,  " " ) == 0 ) strcpy( sf[rank].s.khole,  "" );
+        if( strncmp( sf[rank].s.kcmpnm, "-12345", 6 ) == 0 || strcmp( sf[rank].s.kcmpnm, " " ) == 0 ) strcpy( sf[rank].s.kcmpnm, "CHAN" );
 
-	wrtoldsac( "out.sac", &(sf[rank].s), &data[0] );
+	if(verbose) fprintf( stderr, "%s: %s: %s: creating output filename\n", progname, __FILE__, __func__ );
 
-	free(data);
-}
+        sprintf( output_sac_filename, "%4d.%03d.%02d.%02d.%02d.%04d.%s.%s.%s.%s.D.SAC",
+                sf[rank].s.nzyear,
+                sf[rank].s.nzjday,
+                sf[rank].s.nzhour,
+                sf[rank].s.nzmin,
+                sf[rank].s.nzsec,
+                sf[rank].s.nzmsec,
+                sf[rank].s.knetwk,
+                sf[rank].s.kstnm,
+                sf[rank].s.khole,
+                sf[rank].s.kcmpnm );
+
+	if(verbose) fprintf( stderr, "%s: %s: %s: output filename %s\n", progname, __FILE__, __func__, output_sac_filename );
+
+/************************************/
+/*** check if file already exists ***/
+/************************************/
+
+        if( access( output_sac_filename, F_OK ) == 0 )
+        {
+                fprintf( stderr, "%s: %s: %s: %s already exists, writting output to out.sac instead\n",
+                        progname, __FILE__, __func__, output_sac_filename );
+                strcpy( output_sac_filename, "out.sac" );
+        }
+
+        fprintf( stderr, "%s: %s: %s: writting %s nt=%d dt=%g b=%g e=%g dur=%g min=%g max=%g mean=%g\n",
+                progname,
+                __FILE__,
+                __func__,
+                output_sac_filename,
+                sf[rank].s.npts,
+                sf[rank].s.delta,
+                sf[rank].s.b,
+                sf[rank].s.e,
+                (sf[rank].s.e - sf[i].s.b),
+                sf[rank].s.depmin,
+                sf[rank].s.depmax,
+                sf[rank].s.depmen );
+
+        wrtoldsac( output_sac_filename, &(sf[rank].s), &data[0] );
+
+        free(data);
+        exit(0);
+
+} /*** end of sacmerge.c: main() ***/
 
 int cvt2time( double minepoch, double maxepoch, double myepoch, float dt )
 {

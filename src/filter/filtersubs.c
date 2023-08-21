@@ -771,7 +771,8 @@ void lowpass_to_bandreject( Complex *p, Complex *z, Stype *stype,
         int n,i,iptr;
         float twopi,pi,a,b,scale,h;
         Complex cinv, ctemp, p1, p2, z1, z2, aarg, barg, carg;
-	Complex one, cone;
+	Complex one;
+	/* Complex cone; */
 
 	pi = M_PI;
 	twopi = 2*pi;
@@ -782,7 +783,7 @@ void lowpass_to_bandreject( Complex *p, Complex *z, Stype *stype,
 
         iptr = 1;
 	one.re = 1; one.im = 0;
-	cone.re = 0; cone.im = 1;
+	/* cone.re = 0; cone.im = 1; */
 
         for( i=1; i<=n; i++ )
         {

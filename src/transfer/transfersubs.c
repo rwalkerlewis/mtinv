@@ -7,7 +7,7 @@
 #include "../../include/sac.h"
 #include "../../include/complex.h"
 
-char progname[128];
+extern char progname[128];
 
 void transfer_response( float *data, int npts, float delta, char *sacpzfile, int verbose )
 {

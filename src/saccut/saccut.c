@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include "../../include/mt.h"
 
+char progname[256];
+
 int main( int ac, char **av )
 {
 	Sac_File sacfile;
@@ -15,6 +17,9 @@ int main( int ac, char **av )
 	void endpar();
 	float *cut_sac(Sac_File *, float, float, char *, int );
 	void set_sac_time_marker( int, Sac_File *, char *, MyTime *, char *, int );
+	void parsestring( MyTime *t, char *str );
+
+/*** begin main ***/
 
 	setpar(ac,av);
 	mstpar("f",  "s", &(sacfile.filename));

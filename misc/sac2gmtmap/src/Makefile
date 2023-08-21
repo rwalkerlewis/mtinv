@@ -1,6 +1,6 @@
-CC = gcc
+CC = gcc 
 INCLUDE = ../../../include
-CFLAGS = -Wall -I$(INCLUDE) 
+CFLAGS = -I$(INCLUDE) 
 LIBDIRS = -L../../../lib
 LIBS = -lm -lget
 # INSTALL = $(HOME)/bin

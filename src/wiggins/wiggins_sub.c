@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-char progname[128];
+extern char progname[128];
 
 void interpolate_wiggins2( float *data, int npts, float delta, float b, int new_nt, float new_dt, int verbose )
 {

@@ -4,7 +4,7 @@
 #include <math.h>
 #include "../include/mt.h"
 
-char progname[128];
+extern char progname[128];
 
 void clone_model( VelMod *vm0, VelMod *vm1 )
 {
@@ -219,7 +219,7 @@ void reinit_mod2( VelMod *vm, int fixbottom )
         }
 }
 
-void plot_gmt_mod( VelMod *vm, int ioutput )
+void plot_gmt_mod( VelMod *vm, int ioutput, int doP, int doS, char *pline, char *sline )
 {
         FILE *fp;
         float z[10000],x1[10000],x2[10000], qa[10000], qb[10000], rho[10000];
@@ -273,25 +273,32 @@ void plot_gmt_mod( VelMod *vm, int ioutput )
 	else if( ioutput == 1 )
 	{
 /*** changed to GMT v5.x Nov21,2017 ***/
-		fprintf( stdout, "> -W1.2p,red S-wave\n");
-		z[0] = 0;
-		for( i = 0; i < vm->nlay; i++ )
+		if( doS )
 		{
+		 fprintf( stdout, "> %s S-wave\n", sline );
+		 z[0] = 0;
+		 for( i = 0; i < vm->nlay; i++ )
+		 {
 			z[i+1] = z[i] + vm->thick[i];
 			fprintf( stdout, "%g %g %g %g\n",
 				vm->vs[i], -z[i], vm->qb[i], vm->rho[i] );
 			fprintf( stdout, "%g %g %g %g\n",
 				vm->vs[i], -z[i+1], vm->qb[i], vm->rho[i] );
+		 }
 		}
-		fprintf( stdout, "> -W1.2p,blue P-wave\n");
-		z[0] = 0;
-		for( i = 0; i < vm->nlay; i++ )
+
+		if( doP )
 		{
+		 fprintf( stdout, "> %s P-wave\n", pline );
+		 z[0] = 0;
+		 for( i = 0; i < vm->nlay; i++ )
+		 {
 			z[i+1] = z[i] + vm->thick[i];
 			fprintf( stdout, "%g %g %g %g\n",
 				vm->vp[i], -z[i], vm->qa[i], vm->rho[i] );
 			fprintf( stdout, "%g %g %g %g\n",
                                 vm->vp[i], -z[i+1], vm->qa[i], vm->rho[i] );
+		 }
 		}
 	}
 }

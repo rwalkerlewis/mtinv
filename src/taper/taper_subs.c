@@ -14,7 +14,7 @@
 void taper( float *data, int nt, char *taper_type, float taper_frac_width )
 {
 	float taper, x;
-	int i, j, itype, taper_length;
+	int j, itype, taper_length;
 
 	if( taper_frac_width < 0.0 || taper_frac_width > 1.0 )
 	{
@@ -35,8 +35,8 @@ void taper( float *data, int nt, char *taper_type, float taper_frac_width )
 			for(j=0; j<taper_length; j++)
 			{
 				taper = 1.0*(float)j/(float)(taper_length);
-				data[i] *= taper;
-				data[nt-1-j] *= taper;
+				data[j] *= taper;
+				data[(nt-1)-j] *= taper;
 			}
 			break;
 
@@ -49,7 +49,7 @@ void taper( float *data, int nt, char *taper_type, float taper_frac_width )
 				else
 					taper=1.0-2.0*pow((double)(1.0-x),(double)3.0);
 				data[j] *= taper;
-				data[nt-1-j] *= taper;
+				data[(nt-1)-j] *= taper;
 			}
 			break;
 	
@@ -58,7 +58,8 @@ void taper( float *data, int nt, char *taper_type, float taper_frac_width )
 			{
 				taper = 0.5-0.5*cos(M_PI*(float)(j)/(float)(taper_length+1));
 				data[j] *= taper;
-				/* data[nt-1-j] *= taper; */
+				/**** for MTINV do not taper the backend ***/
+				/* data[(nt-1)-j] *= taper; */
 			}
 			break;
 

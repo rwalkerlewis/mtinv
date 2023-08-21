@@ -28,7 +28,7 @@
 
 #include "sacfile.h"  /*** includes sac.h and mytime.h ***/
 
-char progname[128];
+extern char progname[128];
 
 #ifndef LITTLE_ENDIAN
 #define LITTLE_ENDIAN 0

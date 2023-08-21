@@ -9,7 +9,7 @@
 #include "../include/mt.h"         /** global datatype and structure declarations **/
 #include "../include/nrutil.h"     /** numerical recipes **/
 
-char progname[128];
+extern char progname[128];
 
 /********************************************************************/
 /*** loop over each station and load its SAC files for all 3 comp ***/
@@ -181,11 +181,12 @@ void sacdata2inv_serial(
 
 /******************************************/
 /*** convert from meters to centimeters ***/
+/*** don't do this for rotational data? ***/
 /******************************************/
 
 	if( verbose )
 	{
-	  fprintf( stdout, "%s: sacdata2inv_serial(): converting from meters to cm\n", progname );
+	   fprintf( stdout, "%s: sacdata2inv_serial(): converting from meters to cm\n", progname );
 	}
 
 	fmul( &(ev->ew.data[0]), ev->ew.s.npts, METERS2CM );
@@ -457,16 +458,28 @@ void sacdata2inv_serial(
         interpolate_wiggins2( ev[ista].ns.data, ev[ista].ns.s.npts, ev[ista].ns.s.delta, ev[ista].ns.s.b, ev[ista].nt, ev[ista].dt, verbose );
         interpolate_wiggins2( ev[ista].z.data,  ev[ista].z.s.npts,  ev[ista].z.s.delta,  ev[ista].z.s.b,  ev[ista].nt, ev[ista].dt, verbose );
 ***/
-	interpolate_fft( ev->ew.data, ev->ew.s.npts, ev->ew.s.delta, &old_nt, ev->dt );
-	interpolate_fft( ev->ns.data, ev->ns.s.npts, ev->ns.s.delta, &old_nt, ev->dt );
-	interpolate_fft( ev->z.data,  ev->z.s.npts,  ev->z.s.delta,  &old_nt, ev->dt );
+/*** ensure that ev->dt < ev->z.s.delta ***/
 
-	ev->ew.s.npts  = ev->nt;
-	ev->ew.s.delta = ev->dt;
-	ev->ns.s.npts  = ev->nt;
-	ev->ns.s.delta = ev->dt;
-	ev->z.s.npts   = ev->nt;
-	ev->z.s.delta  = ev->dt;
+	if( ev->dt >= ev->z.s.delta ) 
+	{
+		interpolate_fft( ev->ew.data, ev->ew.s.npts, ev->ew.s.delta, &old_nt, ev->dt );
+		interpolate_fft( ev->ns.data, ev->ns.s.npts, ev->ns.s.delta, &old_nt, ev->dt );
+		interpolate_fft( ev->z.data,  ev->z.s.npts,  ev->z.s.delta,  &old_nt, ev->dt );
+	
+		ev->ew.s.npts  = ev->nt;
+		ev->ew.s.delta = ev->dt;
+		ev->ns.s.npts  = ev->nt;
+		ev->ns.s.delta = ev->dt;
+		ev->z.s.npts   = ev->nt;
+		ev->z.s.delta  = ev->dt;
+	}
+	else
+	{
+	/*** never be here. should have check this in loadsacdata ***/
+		fprintf(stderr, "%s: %s: %s: Error reset dt\n", progname, __FILE__, __func__ );
+		fflush(stderr);
+		exit(-1);
+	}
 
 /****************************************************************************************/
 /*** taper the ends using Hanning taper width = 0.1 to 0.3 depending on sampling rate ***/
@@ -518,7 +531,7 @@ void sacdata2inv_serial(
 	ev->z.s.baz  = (float)dbaz;
 
  	fprintf(stdout,
-	  "%s: sacdata2inv_serial(): Resetting distaz values ista=%d sta.net=%s.%s dist=%.1f az=%.1f baz=%.1f\n",
+	    "%s: sacdata2inv_serial(): Resetting distaz values ista=%d sta.net=%s.%s dist=%.1f az=%.1f baz=%.1f\n",
 		progname,
 		ista,
 		ev->stnm,
@@ -532,12 +545,19 @@ void sacdata2inv_serial(
 	ev->baz     = ev->ns.s.baz;
 
 /****************************************************************************************/
+/*** do not rotate the rotational data                                                ***/
+/****************************************************************************************/
+
+	if( strcmp( ev->wavetype, "Surf/Pnl" ) == 0 )
+	{
+
+/****************************************************************************************/
 /*** before rotating the horizontals to the great circle path first rotate to pure NS ***/
 /***  EW coordinate system                                                            ***/
 /****************************************************************************************/
 
-	if( ev->ns.s.cmpaz != 0. && ev->ew.s.cmpaz != 90. )
-	{
+	  if( ev->ns.s.cmpaz != 0. && ev->ew.s.cmpaz != 90. )
+	  {
 		if(verbose)
 		{
 		  fprintf( stdout, "%s: sacdata2inv_serial() ista=%d horizontals az not 0 and 90. ", 
@@ -550,7 +570,7 @@ void sacdata2inv_serial(
 		rotate( ev->ns.data, ev->ns.s.npts, &(ev->ns.s.cmpaz), ev->ns.s.cmpinc,
                         ev->ew.data, ev->ew.s.npts, &(ev->ew.s.cmpaz), ev->ew.s.cmpinc,
                         angle, verbose );
-	}
+	  }
 
 /***********************************************************************/
 /*** rotate the horizontals to get radial and transverse             ***/
@@ -558,20 +578,22 @@ void sacdata2inv_serial(
 /*** transverse/tangential component is written over the ew          ***/
 /***********************************************************************/
 
-	/* angle = ev->ns.s.az; */
+	  /* angle = ev->ns.s.az; */
 
-	angle = ev->ns.s.baz + 180;
+	  angle = ev->ns.s.baz + 180;
 
-	rotate( ev->ns.data, ev->ns.s.npts, &(ev->ns.s.cmpaz), ev->ns.s.cmpinc,
+	  rotate( ev->ns.data, ev->ns.s.npts, &(ev->ns.s.cmpaz), ev->ns.s.cmpinc,
                 ev->ew.data, ev->ew.s.npts, &(ev->ew.s.cmpaz), ev->ew.s.cmpinc,
                 angle, verbose );
 
-	if(verbose)
-	{
+	  if(verbose)
+	  {
 		fprintf( stdout, 
 		  "%s: sacdata2inv_serial(): ista=%d horizontals rotated by angle=%g\n",
                      progname, ista, angle );
-	}
+	  }
+
+	} /*** rotate only if ev->wavetype == Surf/Pnl ... NOT Rotational! ***/
 
 /***********************************************************************/
 /*** compute peak to peak of signal and noise to measure SNR         ***/
@@ -591,10 +613,28 @@ void sacdata2inv_serial(
         	&(ev->ew.pha[NOISE].amp),  &(ev->ew.pha[NOISE].time),
         	&(ev->ew.pha[NOISE].duration), NOISE, verbose );
 
+	if(verbose)
+	fprintf( stderr, "%s: %s: %s: noise-EW-ista=%d per=%g gvlo=%g gvhi=%g amp=%g time=%g dur=%g\n",
+                progname, __FILE__, __func__, ista, (1/ev[ista].lf),
+                ev[ista].ew.pha[NOISE].gvlo,
+                ev[ista].ew.pha[NOISE].gvhi,
+                ev[ista].ew.pha[NOISE].amp,
+                ev[ista].ew.pha[NOISE].time,
+                ev[ista].ew.pha[NOISE].duration );
+
 	compute_Peak_to_Peak( &(ev->ew.s), ev->ew.data, 1/ev->lf,
         	ev->ew.pha[SIGNAL].gvlo, ev->ew.pha[SIGNAL].gvhi,
         	&(ev->ew.pha[SIGNAL].amp), &(ev->ew.pha[SIGNAL].time),
         	&(ev->ew.pha[SIGNAL].duration), SIGNAL, verbose );
+
+	if(verbose)
+	fprintf( stderr, "%s: %s: %s: signal-EW-ista=%d per=%g gvlo=%g gvhi=%g amp=%g time=%g dur=%g\n",
+                progname, __FILE__, __func__, ista, (1/ev[ista].lf),
+                ev[ista].ew.pha[SIGNAL].gvlo,
+                ev[ista].ew.pha[SIGNAL].gvhi,
+                ev[ista].ew.pha[SIGNAL].amp,
+                ev[ista].ew.pha[SIGNAL].time,
+                ev[ista].ew.pha[SIGNAL].duration );
 
 	ev->ew.pha[NOISE].period     = 2 * ev->ew.pha[NOISE].duration;
 	ev->ew.pha[NOISE].frequency  = 1 / ev->ew.pha[NOISE].period;
@@ -697,6 +737,7 @@ void sacdata2inv_serial(
 /****************************************************************************************/
 /*** clean up                                                                         ***/
 /****************************************************************************************/
+/*
 	if(verbose)
 	{
 		fprintf( stdout, "%s: sacdata2inv_serial(): done with station ista=%d \n", progname, ista );
@@ -705,7 +746,7 @@ void sacdata2inv_serial(
 	free(ev->ew.data);
 	free(ev->ns.data);
 	free(ev->z.data);
-
+*/
 	if(verbose)
 	{
 	  fprintf( stdout, "%s: STDOUT sacdata2inv_serial(): done with ista=%d\n\n\n", progname, ista );

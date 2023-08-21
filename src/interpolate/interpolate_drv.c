@@ -17,7 +17,10 @@ int main( int ac, char **av )
 	int i, j, nfiles=0, old_npts, new_npts;
 	float old_delta, new_delta;
 	void interpolate_fft( float *, int, float, int *, float );
+	int setpar(),mstpar();
+	void endpar();
 
+/*** begin main ***/
 	setpar(ac,av);
 	mstpar("dt", "f", &new_delta );
 	endpar();

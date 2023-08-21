@@ -12,7 +12,7 @@
 #include "../include/nrutil.h"     /** numerical recipes **/
 #include "../include/mt.h"         /** global datatype and structure declarations **/
 
-char progname[128];
+extern char progname[128];
 
 typedef struct {
         int ista;
@@ -31,7 +31,10 @@ void glib2inv_serial( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int
 /*** Greens stuff ***/
 /********************/
 
-	int ig, ng=10, MAX_ARRAY_SIZE=4096;
+	int ig;
+	int ng; /*** depends on wavetype ****/
+	int MAX_NUM_GRNS_FUNC = 23;
+	int MAX_ARRAY_SIZE = 4096;
 	float **garray;
 
 	FILE *fpout;
@@ -43,13 +46,13 @@ void glib2inv_serial( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int
 /*** function prototypes ***/
 /***************************/
 
-        /*** tdif/Differentiates.c ***/
+/*** tdif/Differentiates.c ***/
         void differentiate( float *x, int n, float dt, int op, int verbose );
                                                                                                                                                                
-        /*** source/source_subs.c ***/
+/*** source/source_subs.c ***/
         void source_time_function( float *data, int nt, float dt, float tr, float tt );
                                                                                                                                                                
-        /*** filter/filtersubs.c ***/
+/*** filter/filtersubs.c ***/
         void iir_filter( float *data,
                         int nsamps,
                         char *filter_type,
@@ -62,30 +65,32 @@ void glib2inv_serial( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int
                         float ts,
                         int passes );
 
-        /*** Ichinose Feb2010 ***/
-        /*** substitute interpolate_fft with interpolate_wiggins ***/
-        /*** interpolate/interpolate_subs.c ***/
+/*** Ichinose Feb2010 ***/
+/*** substitute interpolate_fft with interpolate_wiggins ***/
+/*** interpolate/interpolate_subs.c ***/
         void interpolate_fft(   float *data,
                                 int old_npts, float old_delta,
                                 int *new_npts, float new_delta );
                                                                                                                                                                
-        /*** wiggins/wiggins_sub.c ***/
+/*** wiggins/wiggins_sub.c ***/
         void interpolate_wiggins2( float *data, int npts, float delta,
                                 float b, int new_nt, float new_dt, int verbose );
                                                                                                                                                                
-        /*** wrtgrn2sac.c ***/
-        void wrtgrn2sac( Greens *g, int ista );
+/*** wrtgrn2sac.c ***/
+        void wrtgrn2sac( Greens *g, int ista, char *wavetype );
                                                                                                                                                                
-        /*** glib2inv_subs.c ***/
+/*** glib2inv_subs.c ***/
         void split2grn( Greens *g, float **garray );
-                                                                                                                                                               
-        /*** glib2inv_subs.c ***/
+	void split2grnRot( Greens *g, float **garray );
+
+/*** glib2inv_subs.c ***/
         void array2grn( float **garray, Greens *g );
-                                                                                                                                                               
-        /*** envelope/envelope_sub.c ***/
+ 	void array2grnRot( float **garray, Greens *g );
+
+/*** envelope/envelope_sub.c ***/
         void envelope( float *y, int npts, float dt );
  
-	/*** misc_tools/ampshift.c ***/
+/*** misc_tools/ampshift.c ***/
         void  ampshift( float *x, int n, int verbose );
 
 /***************************************************************************************************/
@@ -99,13 +104,10 @@ void glib2inv_serial( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int
 /*******************************************************/
 /*** allocate memory for greens function demultiplex ***/
 /*******************************************************/
-
-	garray = (float **)malloc( ng * sizeof(float *) );
-	for( ig=0; ig<ng; ig++ )
-	{
+	garray = (float **)malloc( MAX_NUM_GRNS_FUNC * sizeof(float *) );
+	for( ig=0; ig < MAX_NUM_GRNS_FUNC; ig++ )
 		garray[ig] = (float *)calloc( MAX_ARRAY_SIZE, sizeof(float) );
-	}
-
+	
 	for( ista = 0; ista < nsta; ista++ )
 	{
 		for( iz = 0; iz < z[ista].nz; iz++ )
@@ -115,9 +117,27 @@ void glib2inv_serial( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int
         /*** demultiplex from structure to array of 10 greens functions ***/
         /*** and loop over the 10 fundamental faulting orientations     ***/
         /******************************************************************/
-                                                                                                                                                               
-                        split2grn( &grn[ista][iz], garray );
-                                                                                                                                                               
+                         
+			if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+			{
+			  split2grnRot( &grn[ista][iz], garray );
+			  ng = 22;
+			}
+			else if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+			{
+                          split2grn( &grn[ista][iz], garray );
+			  ng = 10;
+                        }
+                        else
+			{
+			  split2grn( &grn[ista][iz], garray );
+			  ng = 10;
+			}
+     
+			if(verbose)
+			  fprintf( stdout, "%s: %s: %s: ng=%d ista=%d iz=%d\n", 
+				progname, __FILE__, __func__, ng, ista, iz );
+
                         for( ig = 0 ; ig < ng; ig++ )
                         {
 
@@ -223,9 +243,14 @@ void glib2inv_serial( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int
                 /********************************************/
                 /*** convert back from array to structure ***/
                 /********************************************/
-                                                                                                                                                               
-                        array2grn( garray, &grn[ista][iz] );
-                                                                                                                                                               
+
+			if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+                          array2grnRot( garray, &grn[ista][iz] );
+			else if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+			  array2grn( garray, &grn[ista][iz] );
+			else
+			  array2grn( garray, &grn[ista][iz] );
+
                 } /*** loop over depth - iz ***/
 
         } /*** loop over stations - ista  ***/
@@ -236,14 +261,17 @@ void glib2inv_serial( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int
 /*** write out greens functions as seperate sac ***/
 /***    files for inspection                    ***/
 /**************************************************/
-                                                                                                                                                                                 
+
         if( idumpgrn )
         {
                 for( ista = 0; ista < nsta; ista++ )
                 {
                         for( iz = 0; iz < z[ista].nz; iz++ )
                         {
-                                wrtgrn2sac( &grn[ista][iz], ista );
+				fprintf( stdout, "%s: %s: %s: calling wrtgrn2sac() ista=%d iz=%d wavetype=%s\n",
+					progname, __FILE__, __func__, ista, iz, ev[ista].wavetype );
+
+                                wrtgrn2sac( &grn[ista][iz], ista, ev[ista].wavetype );
                         }
                 }
         }
@@ -252,10 +280,9 @@ void glib2inv_serial( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int
 /*** if event tag present in input PAR file then  ***/
 /*** compute displacement synthetics              ***/
 /****************************************************/
-                                                                                                                                                                                 
+
         if( idumpsac )
         {
-                                                                                                                                                                                 
           for( ista = 0; ista < nsta; ista++ )
           {
             for( iz = 0; iz < z[ista].nz; iz++ )
@@ -297,10 +324,11 @@ void glib2inv_serial( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int
                 }
                                                                                                                                                                
                 fprintf( stderr,
-                  "%s: glib2inv.c: glib2inv(): STDERR: %s.%s nz=%d nt=%d dt=%g writing file %s\n",
-                        progname,
+                  "%s: %s: %s: STDERR: (%s.%s.%s) nz=%d nt=%d dt=%g writing file %s\n",
+                        progname, __FILE__, __func__, 
+			grn[ista][0].net,
                         grn[ista][0].stnm,
-                        grn[ista][0].net,
+			grn[ista][0].loc,
                         z[ista].nz,
                         grn[ista][0].nt,
                         grn[ista][0].dt,
@@ -381,7 +409,7 @@ void glib2inv_special( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, in
                                 float b, int new_nt, float new_dt, int verbose );
 
         /*** wrtgrn2sac.c ***/
-        void wrtgrn2sac( Greens *g, int ista );
+        void wrtgrn2sac( Greens *g, int ista, char *wavetype );
 
         /*** glib2inv_subs.c ***/
         void split2grn( Greens *g, float **garray );

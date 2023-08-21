@@ -567,7 +567,7 @@ void dbwrite( Histogram *h, SacFile *sf, int idiff, long evid, char *author )
 void create_db_table( void )
 {
 	FILE *fp;
-	fp = fopen( "create.sql", "w" );
+	fp = fopen( "create.sacqc.sql", "w" );
 
 	fprintf( fp, "DROP TABLE MT_DATA_QUALITY;\n" );
 	fprintf( fp, "DROP TABLE QCID_SEQ;\n" );
@@ -758,19 +758,19 @@ void create_GMT5x_script2( Histogram *h, SacFile *sf, int idiff, Statistics *st,
 
 	fprintf( fp, "set PS=${NET}.${STA}.${LOC}.${CHAN}.sacqc.ps\n" );
 
-        fprintf( fp, "psxy sacqc.out ${REG} ${PRJ} -W1p,red -L -P -V0 -K >! ${PS}\n" );
+        fprintf( fp, "gmt psxy sacqc.out ${REG} ${PRJ} -W1p,red -L -P -V0 -K >! ${PS}\n" );
 
-	fprintf( fp, "psxy ${REG} ${PRJ} -W1p,green,5_2:0p -O -V0 -K >> ${PS} << EOF\n" );
+	fprintf( fp, "gmt psxy ${REG} ${PRJ} -W1p,green,5_2:0p -O -V0 -K >> ${PS} << EOF\n" );
 	fprintf( fp, "> \n" );
 	fprintf( fp, "%g 0\n", h->mode );
 	fprintf( fp, "%g 10\n", h->mode ); 
 	fprintf( fp, "EOF\n" );
 
-	fprintf( fp, "psbasemap ${REG} ${PRJ} -U\" ${NET}.${STA}.${LOC}.${CHAN} \" " );
+	fprintf( fp, "gmt psbasemap ${REG} ${PRJ} -U\" ${NET}.${STA}.${LOC}.${CHAN} \" " );
         fprintf( fp, "  -Bxf0.1a1+l\"Log10 Raw Amplitude (counts)\" " );
         fprintf( fp, "  -Byf5a10+l\"Percent (counts)\" -BnSeW -O -V0 -K >> ${PS}\n" );
 
-	fprintf( fp, "pstext -R0/1/0/1 -JX5i/5i -F+jMR+f10p,Times-Bold,black -D0i/0i -O >> ${PS} << EOF\n" );
+	fprintf( fp, "gmt pstext -R0/1/0/1 -JX5i/5i -F+jMR+f10p,Times-Bold,black -D0i/0i -O >> ${PS} << EOF\n" );
 	fprintf( fp, "0.95 0.95 %s.%s.%s.%s\n", sf->s.knetwk, sf->s.kstnm, sf->s.khole, sf->s.kcmpnm );
 	fprintf( fp, "0.95 0.90 stats: min=%g max=%g mean=%g median=%g\n", 
 			st->min, st->max, st->ave, st->med );
@@ -783,7 +783,7 @@ void create_GMT5x_script2( Histogram *h, SacFile *sf, int idiff, Statistics *st,
                 h->xmax_percent );
 	fprintf( fp, "EOF\n" );
 
-	fprintf( fp, "psconvert -Tj -E300 -A ${PS}\n" );
+	fprintf( fp, "gmt psconvert -Tj -E300 -A ${PS}\n" );
 	fprintf( fp, "/bin/rm -f ${PS}\n" );
 	fclose(fp);
 
@@ -807,7 +807,7 @@ void create_GMT5x_script( )
 	fprintf( fp, "\n" );
 
 	fprintf( fp, "#cleanup\n" );
-	fprintf( fp, "#/bin/rm -f sacqc.out sacqc_insert.sql create.sql %{PS} %{JPG}\n" );
+	fprintf( fp, "# /bin/rm -f sacqc.out sacqc_insert.sql create.sacqc.sql %{PS} %{JPG}\n" );
 	fprintf( fp, "\n" );
 
 	fprintf( fp, "set SACFILES=(`/bin/ls -1 *.SAC`)\n" );
@@ -844,7 +844,7 @@ void create_GMT5x_script( )
 
 	fprintf( fp, "set PS=${SACFILE}.ps\n" );
 
-	fprintf( fp, "psbasemap ${REG} ${PRJ} -U\" ${SACFILE} \" " );
+	fprintf( fp, "gmt psbasemap ${REG} ${PRJ} -U\" ${SACFILE} \" " );
 	fprintf( fp, "  -Bxf0.1a1+l\"Log10 Raw Amplitude (counts)\" -Byf5a10+l\"Percent Counts\" -BnSeW -P -V0 -K >! ${PS}\n" );
 
 	fprintf( fp, "sacqc par=sacqc.par ${SACFILE}\n" );
@@ -857,19 +857,19 @@ void create_GMT5x_script( )
 
 	fprintf( fp, "set line_color=( `switch_color 3 ${i}` )\n" );
 	fprintf( fp, "if( ${i} < ${maxfiles} ) then\n" );
-	fprintf( fp, " psxy sacqc.out ${REG} ${PRJ} -W1p,${line_color} -L -O >> ${PS}\n" );
+	fprintf( fp, " gmt psxy sacqc.out ${REG} ${PRJ} -W1p,${line_color} -L -O >> ${PS}\n" );
 	fprintf( fp, "else\n" );
-	fprintf( fp, " psxy sacqc.out ${REG} ${PRJ} -W1p,${line_color} -L -O >> ${PS}\n" );
+	fprintf( fp, " gmt psxy sacqc.out ${REG} ${PRJ} -W1p,${line_color} -L -O >> ${PS}\n" );
 	fprintf( fp, "endif\n" );
 	fprintf( fp, "\n" );
 
-	fprintf( fp, "psconvert -Tj -E300 -A ${PS}\n" );
+	fprintf( fp, "gmt psconvert -Tj -E300 -A ${PS}\n" );
 
 	fprintf( fp, "@ i += 1\n" );
 	fprintf( fp, "end ### loop over SACFILE\n" );
 	fprintf( fp, "\n" );
 
-	fprintf( fp, "# psconvert -Tj -E300 -A ${PS}\n" );
+	fprintf( fp, "# gmt psconvert -Tj -E300 -A ${PS}\n" );
 	fprintf( fp, "\n" );
 
 	fprintf( fp, "# /bin/rm -f sacqc.par sacqc.out sacqc_insert.sql\n" );

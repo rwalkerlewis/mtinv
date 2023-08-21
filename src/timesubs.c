@@ -22,7 +22,7 @@ MyTime *mylocaltime( MyTime *t )
 	time_t local_time;
 	char now[128];
 	struct tm *localtime();
-	void complete( MyTime * );
+	void complete( MyTime *t );
 	extern char *tzname[2];
 	extern time_t timezone, altzone;
 
@@ -62,7 +62,7 @@ MyTime *myGMTtime( MyTime *t )
         time_t local_time;
         struct tm *gmtime();
 
-	void complete( MyTime * );
+	void complete( MyTime *t );
 
 /* get the local time */
         /* my_gmt_time = (struct tm *)calloc(1,sizeof(struct tm));  */
@@ -99,9 +99,9 @@ int setDST( MyTime *t )
 {
 	MyTime *start, *stop;
 	int sday, eday;
-	MyTime *setmytime( MyTime *, int, int, int, int, int, int, int, int );
+	MyTime *setmytime( MyTime *t, int, int, int, int, int, int, int, int );
 	int day_of_month( int, int, int, int, int );
-	void complete( MyTime * );
+	void complete( MyTime *t );
 	int after( MyTime *, MyTime * );
 	int before( MyTime *, MyTime * );
 
@@ -124,8 +124,10 @@ int setDST( MyTime *t )
 int day_of_month( int dayofweek, int weekoffset, int ref, int month, int year )
 {
 	int leap, DaysSinceYr0, day, weekofmonth=1;
-	int TotalNumDays, TotalNumWeeks;
-	int ThisDayOfMonth[32], ThisDayOfWeek[32], ThisWeekOfMonth[32];
+	int TotalNumDays;
+	int TotalNumWeeks;
+	int ThisDayOfMonth[32];
+	int ThisDayOfWeek[32], ThisWeekOfMonth[32];
 	int julday( int, int, int );
 
         leap=((year)<=1752?!((year)%4):(!((year)%4)&&((year)%100))||!((year)%400));
@@ -139,17 +141,26 @@ int day_of_month( int dayofweek, int weekoffset, int ref, int month, int year )
 		if( ThisDayOfWeek[day] == 0 ) weekofmonth++;
 		ThisWeekOfMonth[day] = weekofmonth;
 	}
+
 	TotalNumWeeks = ThisWeekOfMonth[TotalNumDays];
-	if( ref == END ) {
-	  for( day = TotalNumDays; day >= (TotalNumDays-weekoffset*7); day-- ) {
-		if ( dayofweek == ThisDayOfWeek[day] ) {
-				return ThisDayOfMonth[day];
+
+	if( ref == END )
+	{
+	  for( day = TotalNumDays; day >= (TotalNumDays-weekoffset*7); day-- )
+	  {
+		if ( dayofweek == ThisDayOfWeek[day] )
+		{
+			return ThisDayOfMonth[day];
 		}
 	  }
 	}
-	if( ref == BEGIN ) {
-		for( day = 1 ; day <= weekoffset*7; day++ ) {
-			if ( dayofweek == ThisDayOfWeek[day] ) {
+
+	if( ref == BEGIN )
+	{
+		for( day = 1 ; day <= weekoffset*7; day++ )
+		{
+			if ( dayofweek == ThisDayOfWeek[day] )
+			{
 				return ThisDayOfMonth[day];
 			}
 		}
@@ -174,8 +185,8 @@ int julday(int yr, int mo, int da)
 MyTime *setmytime2(MyTime *t, int year, int month, int day, 
 	int hour, int min, float sec)
 {
-        void complete( MyTime * );
-        void initialize_mytime( MyTime * );
+        void complete( MyTime *t );
+        void initialize_mytime( MyTime *t );
 
         initialize_mytime(t);
         t->year  = year;
@@ -195,10 +206,10 @@ MyTime *setmytime2(MyTime *t, int year, int month, int day,
 MyTime *setmytime(MyTime *t, int year, int month, int day, 
 	int hour, int min, int sec, int msec, int offset)
 {
-	void complete( MyTime * );
-	void fix_my_time( MyTime * );
-	int isMyTimeValid( MyTime * );
-	void initialize_mytime( MyTime * );
+	void complete( MyTime *t );
+	void fix_my_time( MyTime *t );
+	int isMyTimeValid( MyTime *t );
+	void initialize_mytime( MyTime *t );
 
 	initialize_mytime(t);
 	t->year  = year;
@@ -267,11 +278,11 @@ void initialize_mytime( MyTime *t )
  ****************************************************************/
 void complete( MyTime *t )
 {
-	void jday_to_month( MyTime * );
-	void month_to_jday( MyTime * );
-	double time2epoch( MyTime * );
-	void fix_my_time( MyTime * );
-	void setDayOfWeek( MyTime * );
+	void jday_to_month( MyTime *t );
+	void month_to_jday( MyTime *t );
+	double time2epoch( MyTime *t );
+	void fix_my_time( MyTime *t );
+	void setDayOfWeek( MyTime *t );
 
 /* fix Y2K problems */
 	if( t->year < 1900 ) t->year = t->year + 1900;
@@ -416,11 +427,13 @@ void jday_to_month( MyTime *t )
 	jday = t->jday;
         year = t->year;
         leap = (((year%4 == 0) && (year%100 != 0)) || (year%400 == 0) );
-        for(i=1; jday > day_tab[leap][i];i++) jday -= day_tab[leap][i];
+        for(i=1; jday > day_tab[leap][i];i++)
+	{
+		jday -= day_tab[leap][i];
+	}
         t->month = i;
+	strcpy( t->cmonth, mname[i] );
         t->mday = jday;
-        sprintf(t->cmonth, "%3s", mname[i]);
-        /* strncpy( t->cmonth, mname[i], 3); */
         return;
 }
 
@@ -432,7 +445,11 @@ void month_to_jday( MyTime *t )
 	int i, leap;
         t->jday = 0;
         leap=(((t->year%4 == 0)&&(t->year%100 != 0))||(t->year%400 == 0)) ;
-        for(i=1; i < t->month; i++) t->jday += day_tab[leap][i];
+
+        for(i=1; i < t->month; i++)
+	{
+		t->jday += day_tab[leap][i];
+	}
         t->jday += t->mday;
 	return;
 }
@@ -471,8 +488,8 @@ MyTime *epoch2time( MyTime *t, double epoch )
 {
 	int i=1970, leap = 0;
 	double seconds;
-	void complete( MyTime * );
-	void fix_my_time( MyTime * );
+	void complete( MyTime *t );
+	void fix_my_time( MyTime *t );
 
 	seconds = epoch;
 	t->year  = 1970;
@@ -482,7 +499,9 @@ MyTime *epoch2time( MyTime *t, double epoch )
 	t->hour  = 0;
 	t->min   = 0;
 	t->isec  = 0;
+	t->fsec  = 0;
 	t->msec  = 0;
+	t->offset = 0;
 
 	while( seconds > (366*24*60*60) ) {
                 leap = (((i%4 == 0) && (i%100 != 0)) || (i%400 == 0)) ;
@@ -658,43 +677,49 @@ void myaddtime( MyTime *t1, MyTime *t2, MyTime *t3 )
 
 void WriteMyTime2STDOUT( MyTime *t )
 {
-        fprintf(stdout, 
-	"%s %s %d, %d %4d:%03d:%02d:%02d:%02d.%03d %s %s [%15.3lf]\n",
-		t->cday,
-		FullMonthName[t->month],
-		t->mday,
-		t->year,
-		t->year,
-		t->jday,
-		t->hour,
-		t->min,
-		t->isec,
-		t->msec,
-		t->ampm,
-		t->tzone,
-		t->epoch
-        );
+        fprintf(stdout,
+	"%-9s %-9s %2d, %4d (%03d) %s %4d-%02d-%02dT%02d:%02d:%07.4f (%03d) %2s %s+%d [%16.3lf]\n",
+                t->cday,
+                FullMonthName[t->month],
+                t->mday,
+                t->year,
+                t->jday,
+                t->cmonth,
+                t->year,
+                t->month,
+                t->mday,
+                t->hour,
+                t->min,
+                t->fsec,
+                t->msec,
+                t->ampm,
+                t->tzone,
+                t->offset,
+                t->epoch );
         return;
 }
 
 void WriteMyTime2STDERR( MyTime *t )
 {
 	fprintf(stderr, 
-        "%s %s %d, %d %4d:%03d:%02d:%02d:%02d.%03d %s %s [ %15.3lf ] \n",
+	"%-9s %-9s %2d, %4d (%03d) %s %4d-%02d-%02dT%02d:%02d:%07.4f (%03d) %2s %s+%d [%16.3lf]\n",
                 t->cday,
                 FullMonthName[t->month],
                 t->mday,
                 t->year,
-                t->year,
                 t->jday,
+                t->cmonth,
+                t->year,
+                t->month,
+                t->mday,
                 t->hour,
                 t->min,
-                t->isec,
+                t->fsec,
                 t->msec,
                 t->ampm,
                 t->tzone,
-                t->epoch
-        );
+                t->offset,
+                t->epoch );
         return;
 }
 
@@ -747,7 +772,7 @@ void parsestring( MyTime *t, char *str )
 
 /*** assumes UTC ***/
 	t->offset = 0;
-	strcpy( t->tzone, "GMT" );
+	strcpy( t->tzone, "UTC" );
         complete( t );
         return;
 }
@@ -755,16 +780,18 @@ void parsestring( MyTime *t, char *str )
 MyTime *sac2mytime( MyTime *t, Sac_Header *sp )
 {
 	void complete( MyTime *t );
-	void initialize_mytime();
+	void initialize_mytime( MyTime *t );
 	
 	initialize_mytime(t);
 	t->year = sp->nzyear;
 	t->jday = sp->nzjday;
 	t->hour = sp->nzhour;
 	t->min  = sp->nzmin;
+	t->isec = sp->nzsec;
+	t->msec = sp->nzmsec;
 	t->fsec = (float)sp->nzsec + ((float)sp->nzmsec/1000);
 	t->offset = 0;
-	strcpy( t->tzone, "GMT" );
+	strcpy( t->tzone, "UTC" );
 	complete( t );
 	return t;
 }

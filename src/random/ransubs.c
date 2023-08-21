@@ -6,18 +6,29 @@ float gasdev(int *idum)
 {
 	static int iset=0;
 	static float gset;
-	float fac,r,v1,v2;
-	float ran1(int *);
+	float fac, rsq, v1, v2;
+	float ran1(int *idum);
 
-	if  (iset == 0) {
+	if( *idum < 0 ) iset = 0; /*** reinitialize ***/
+
+	if( iset == 0 )  /*** we dont have an extra deviate handy ***/
+	{
 		do {
+			/*** pick 2 uniform numbers in the sq extending from -1 to +1 in
+				each direction, see if they are in the unit circle ***/
 			v1=2.0*ran1(idum)-1.0;
 			v2=2.0*ran1(idum)-1.0;
-			r=v1*v1+v2*v2;
-		} while (r >= 1.0);
-		fac=sqrt(-2.0*log(r)/r);
+			rsq = v1*v1 + v2*v2;
+		}
+		while ( rsq >= 1.0  || rsq == 0.0 );
+				/*** try again if they are no in unit circle ***/
+
+		/*** now make the box-muller transform to get two normal deviates 
+			return one and save the other for next time ***/
+
+		fac=sqrt(-2.0*log(rsq)/rsq);
 		gset=v1*fac;
-		iset=1;
+		iset=1;        /*** set flag ***/
 		return v2*fac;
 	} else {
 		iset=0;
@@ -25,62 +36,69 @@ float gasdev(int *idum)
 	}
 }
 
-#define M1 259200
-#define IA1 7141
-#define IC1 54773
-#define RM1 (1.0/M1)
-#define M2 134456
-#define IA2 8121
-#define IC2 28411
-#define RM2 (1.0/M2)
-#define M3 243000
-#define IA3 4561
-#define IC3 51349
+#define IA 16807
+#define IM 2147483647
+#define AM (1.0/IM)
+#define IQ 127773
+#define IR 2836
+#define NTAB 32
+#define NDIV (1+(IM-1)/NTAB) 
+#define EPS 1.2e-7
+#define RNMX (1.0-EPS)
 
-float ran1(int *idum)
+/*** minimal random number generator of Park and Miller with Bays
+ Durham shuffle and added safe guards, returns a uniform random 
+    deviate between 0 and 1 ***/
+
+float ran1( int *idum )
 {
-	static long ix1,ix2,ix3;
-	static float r[98];
-	float temp;
-	static int iff=0;
 	int j;
+	long k;
+	static long iy = 0;
+	static long iv[NTAB];
+	float temp;
 
-	if (*idum < 0 || iff == 0) {
-		iff=1;
-		ix1=(IC1-(*idum)) % M1;
-		ix1=(IA1*ix1+IC1) % M1;
-		ix2=ix1 % M2;
-		ix1=(IA1*ix1+IC1) % M1;
-		ix3=ix1 % M3;
-		for (j=1;j<=97;j++) {
-			ix1=(IA1*ix1+IC1) % M1;
-			ix2=(IA2*ix2+IC2) % M2;
-			r[j]=(ix1+ix2*RM2)*RM1;
-		}
-		*idum=1;
-	}
-	ix1=(IA1*ix1+IC1) % M1;
-	ix2=(IA2*ix2+IC2) % M2;
-	ix3=(IA3*ix3+IC3) % M3;
-	j=1 + ((97*ix3)/M3);
-	if (j > 97 || j < 1) 
+	if ( *idum < 0 || !iy ) /*** initialize ***/
 	{
-		printf("RAN1: This cannot happen.");
-		exit(-1);
+	/*** Be sure to prevent idum = 0. ***/
+		if( -(*idum) < 1 )
+			*idum = 1;
+		else
+			*idum = -(*idum);
+
+	/*** Load the shuffle table (after 8 warm-ups). ***/
+		for( j = NTAB+7; j >= 0; j-- ) 
+		{
+			k = (*idum)/IQ;
+			*idum = IA*(*idum-k*IQ)-IR*k;
+			if( *idum < 0 ) *idum += IM;
+			if (j < NTAB) iv[j] = *idum;
+		}
+		iy=iv[0];
 	}
-	temp=r[j];
-	r[j]=(ix1+ix2*RM2)*RM1;
-	return temp;
+
+/*** Start here when not initializing. Compute idum=(IA*idum) % IM without over- ***/
+/*** flows by Schrage’s method. Will be in the range 0..NTAB-1. Output previously ***/
+/*** stored value and refill the  shuffle table. Because users don’t expect endpoint values. ***/
+	
+	k = (*idum)/IQ;
+	*idum = IA*(*idum-k*IQ)-IR*k;
+	if( *idum < 0 ) *idum += IM;
+	j     = iy / NDIV;
+	iy    = iv[j];
+	iv[j] = *idum;
+	if( ( temp = AM*iy ) > RNMX ) 
+		return RNMX; 
+	else
+		return temp;
 }
 
-#undef M1
-#undef IA1
-#undef IC1
-#undef RM1
-#undef M2
-#undef IA2
-#undef IC2
-#undef RM2
-#undef M3
-#undef IA3
-#undef IC3
+#undef IA
+#undef IM
+#undef AM
+#undef IQ
+#undef IR
+#undef NTAB
+#undef NDIV
+#undef EPS
+#undef RNMX

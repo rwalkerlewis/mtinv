@@ -64,7 +64,8 @@ int main( int ac, char **av )
 	void glib2inv_parallel( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int idumpsac, int idumpgrn, int verbose );
 
 	/*** wrtgrn2sac.c ***/
-	void wrtgrn2sac( Greens *g, int ista );
+	/* void wrtgrn2sac( Greens *g, int ista ); */
+	void wrtgrn2sac( Greens *g, int ista, char *wavetype );
 
 	/*** shorten_path.c ***/
 	char *shorten_path( char *pathname, char *filename );
@@ -131,13 +132,15 @@ int main( int ac, char **av )
 
 	if( verbose )
 	{
-		fprintf( stdout, "%s: glib2inv.c: glib2inv(): STDOUT: nsta=%d\n", progname, nsta );
+		fprintf( stdout, "%s: %s: %s: STDOUT: nsta=%d\n", 
+			progname, __FILE__, __func__, nsta );
 	
 		for( ista = 0; ista < nsta; ista++ )
 		{
-		  fprintf( stdout, "%s: ista=%03d data=%s glib=%s ginv=%s npole=%d npass=%d lf=%g ",
-			progname, ista, ev[ista].data_filename, ev[ista].glib_filename,
+		  fprintf( stdout, "%s: %s: %s: ista=%03d data=%s glib=%s ginv=%s npole=%d npass=%d lf=%g ",
+			progname, __FILE__, __func__, ista, ev[ista].data_filename, ev[ista].glib_filename,
 			ev[ista].ginv_filename, ev[ista].npole, ev[ista].npass, ev[ista].lf );
+
 		  fprintf( stdout, "hf=%g nt=%d dt=%g tr=%g tt=%g velordisp=%d mulfac=%g iused=%d\n",
 			ev[ista].hf, ev[ista].nt, ev[ista].dt, ev[ista].tr, ev[ista].tt,
 			ev[ista].grd_mo_type, ev[ista].mul_factor, ev[ista].iused );
@@ -198,8 +201,10 @@ int main( int ac, char **av )
 			exit(-1);
 		}
 
-		fprintf( stderr, "%s: glib2inv.c: glib2inv(): STDERR: reading file %s\n", 
-			progname, ev[ista].glib_filename );
+		fprintf( stderr, "%s: %s: %s: STDERR: reading file %s\n", 
+			progname, __FILE__, __func__, ev[ista].glib_filename );
+		fprintf( stdout, "%s: %s: %s: STDOUT: reading file %s\n",                
+                        progname, __FILE__, __func__, ev[ista].glib_filename );
 
 /******************************************************************************/
 /*** get the depth range info from glib file and write it into the ginv file ***/
@@ -265,8 +270,8 @@ int main( int ac, char **av )
 
 			if( verbose )
 			{
-			  fprintf( stdout, "%s: glib2inv.c: glib2inv(): STDOUT: iz=%d z=%g %-8.8s rdist=%g az=%g ",
-				progname, 
+			  fprintf( stdout, "%s: %s: %s: STDOUT: iz=%02d z=%3g %-8.8s rdist=%g az=%g ",
+				progname, __FILE__, __func__,
 				iz, 
 				z[ista].z[iz], 
 				grn[ista][iz].stnm, 
@@ -283,8 +288,8 @@ int main( int ac, char **av )
 
 			if( ev[ista].nt > grn[ista][iz].nt )
 			{
-			  fprintf( stderr, "%s: glib2inv.c: glib2inv(): STDERR: ERROR nt=%d of othe data greater than nt=%d ",
-				progname, ev[ista].nt, grn[ista][iz].nt );
+			  fprintf( stderr, "%s: %s: %s: STDERR: ERROR nt=%d of othe data greater than nt=%d ",
+				progname, __FILE__, __func__, ev[ista].nt, grn[ista][iz].nt );
 			  fprintf( stderr, "of the Green's functions for ista=%d sta=%s.%s\n",
 				ista, ev[ista].stnm, ev[ista].net );
 			  exit(-1);
@@ -292,10 +297,12 @@ int main( int ac, char **av )
 
 			if( ev[ista].dt < grn[ista][iz].dt )
 			{
-			  fprintf( stderr, "%s: glib2inv.c: glib2inv(): STDERR: ERROR dt=%g of the data is less than dt=%g ",
-				progname, ev[ista].dt, grn[ista][iz].dt );
+			  fprintf( stderr, "%s: %s: %s: STDERR: ERROR dt=%g of the data is less than dt=%g ",
+				progname, __FILE__, __func__, ev[ista].dt, grn[ista][iz].dt );
+
 			  fprintf( stderr, "of the Green's function for ista=%d sta=%s.%s\n",
 				ista, ev[ista].stnm, ev[ista].net );
+
 			  exit(-1);
 			}
 
@@ -318,7 +325,8 @@ int main( int ac, char **av )
 		glib2inv_serial( grn, ev, z, nsta, idumpsac, idumpgrn, verbose );
 	  }
 
-	  fprintf( stdout, "%s: freeing memory\n", progname );
+	  fprintf( stdout, "%s: %s: %s: STDOUT: freeing memory\n", progname, __FILE__, __func__ );
+	  fprintf( stderr, "%s: %s: %s: STDERR: freeing memory\n", progname, __FILE__, __func__ );
 
 	  free(z);
 
@@ -327,7 +335,8 @@ int main( int ac, char **av )
 	free(ev);
 	free(grn);
 
-	fprintf( stdout, "%s: Finished Program. Bye-Bye! \n\n\n", progname );
+	fprintf( stderr, "%s: %s: %s: STDERR: Finished Program. Bye-Bye! \n\n\n", progname, __FILE__, __func__ );
+	fprintf( stdout, "%s: %s: %s: STDOUT: Finished Program. Bye-Bye! \n\n\n", progname, __FILE__, __func__ );
 
 	exit(0);
 }
@@ -335,21 +344,25 @@ int main( int ac, char **av )
 void Usage_Print()
 {
         fprintf(stderr,
-          "\n USAGE: %s par= [no]verbose [no]dumpsac [no]dumpgrn [no]parallel [no]test_special\n",
+          "\n USAGE: %s par=mtinv.par [no]verbose [no]dumpsac [no]dumpgrn [no]parallel [no]test_special\n",
           progname );
 
         fprintf(stderr, "\n" );
         fprintf(stderr, "\t REQUIRED PARAMETERS: \n" );
-        fprintf(stderr, "\t par=glib2inv.par    station parameter file\n" );
+        fprintf(stderr, "\t par=mtinv.par    station parameter file\n" );
         fprintf(stderr, "\n" );
 
         fprintf(stderr, "\t OPTIONAL PARAMETERS: \n" );
-        fprintf(stderr, "\t [no]verbose         be verbosy DEFAULT is off\n" );
-        fprintf(stderr, "\t [no]dumpsac         compute 3-C synthetics from Green functions using str/dip/rak,Mo,depth from par file DEFAULT is off\n" );
-	fprintf(stderr, "\t [no]dumpgrn         write out the Green functions as SAC formatted files DEFAULT is off\n" );
-	fprintf(stderr, "\t [no]parallel        process Greens functions using pThreads/multithreading [default on] \n" );
-
-	fprintf(stderr, "\t [no]test_special    read in Greens functions from SAC files in Mij(r,t,z) format [boolean DEFAULT is off]\n" );
-	fprintf(stderr, "\t                      test_special option requires serial option (noparallel) automatically unset\n" );
+        fprintf(stderr, "\t [no]verbose           be verbosy [boolean DEFAULT off]\n" );
+        fprintf(stderr, "\t [no]dumpsac           compute 3-C synthetics from Green functions using str/dip/rak,Mo,depth \n" );
+        fprintf(stderr, "\t                       from par file [boolean DEFAULT off]\n" );
+        fprintf(stderr, "\t [no]dumpgrn           write out the Green functions as SAC formatted files [boolean DEFAULT off]\n" );
+        fprintf(stderr, "\t [no]parallel          process Greens functions using pThreads/multithreading [boolean DEFAULT on] \n" );
+        fprintf(stderr, "\t [no]test_special      read in Greens functions from SAC files in Mij(r,t,z) format [boolean DEFAULT off]\n" );
+        fprintf(stderr, "\t                       test_special option requires serial option (noparallel) automatically unset\n" );
         fprintf(stderr, "\n" );
+	fprintf(stderr, "\t DESCRIPTION:\n");
+	fprintf(stderr, "\t Reads station, filters, models, from PAR file mtinv.par and processes Green's function libraries.\n" );         
+	fprintf(stderr, "\t Outputs processed Green's function libraries for input into mtinv. For processing data see sacdata2inv.\n" );
+	fprintf(stderr, "\n" );
 }

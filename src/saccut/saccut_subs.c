@@ -31,7 +31,7 @@
 ***/
 /**************************************************************************/
 
-char progname[128];
+extern char progname[128];
 
 float *cut_sac( Sac_File *sacfile, float precut, float twincut, char *kmarker, int verbose )
 {

@@ -137,6 +137,8 @@ int main( int ac, char **av )
 	fclose(fp);
 	free(z);
 
+	exit(0);
+
 } /*** end of main.c ***/
 
 void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
@@ -155,7 +157,8 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 	float sixth = 0.166666666666666667;
 	float half  = 0.500000000000000000;
 	int nt;
-	float dt, t0, twin, fi, e;
+	float dt, t0, fi, e;
+	/* float twin = 0; */
 
 	int mkdirp2( const char *, mode_t mode );
 	char outDirectory[64];
@@ -176,7 +179,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 	nt = grn->nt;
 	dt = grn->dt;
 	t0 = grn->t0;
-	twin = (float)nt * dt;
+	/* twin = (float)nt * dt; */
 	e = t0 + (nt*dt);
 
 /**************************************************************************************************/
@@ -365,7 +368,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
         if( grn->redv > 0 )
         {
-         sprintf( sp.kt1, "%.1fkps", grn->redv );
+         sprintf( sp.kt1, "%.1fkms", grn->redv );
          sp.t1 = grn->rdist/grn->redv;  /*** Reduction Velocity km/km/sec ***/
         }
 
@@ -598,11 +601,29 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 void Usage(int ac)
 {
 	fprintf( stderr, "Usage: %s glib=%%s z=%%f mtdegfree=%%d [no]verbose [no]wrtdir \n", progname );
+	fprintf( stderr, "\n" );
+
+	fprintf( stderr, "REQUIRED: \n" );
 	fprintf( stderr, "\t glib=string       - Greens function library file ending in *.glib extension [required]\n" );
 	fprintf( stderr, "\t z=float           - The hypocenter depth [required]\n" );
+	fprintf( stderr, "\n" );
+
+	fprintf( stderr, "OPTIONAL: \n" );
 	fprintf( stderr, "\t mtdegfree=integer - 1=force isotropic, 5=deviatoric_moment_tensor, 6=full_moment_tensor [default 5]\n" );
 	fprintf( stderr, "\t [no]verbose       - verbosity boolean default off\n" );
 	fprintf( stderr, "\t [no]wrtdir        - write output to new directory by station name [boolean default on]\n" );
 	fprintf( stderr, "\n" );
+
+	fprintf( stderr, "DESCRIPTION: \n" );
+	fprintf( stderr, "\t Reads Green's function libraries from mkgrnlib using the 3 fundamental faulting orientations:\n" );
+	fprintf( stderr, "\t SS,DS,DD+Isotropic format of Helmberger and Langston (H&L 1975) and outputs Gfs in Mij format.\n" );
+	fprintf( stderr, "\t Writes output to new directories: (e.g.), \"INCN/IU.INCN.00.mdj2.glib.rxx.grn\" where \n" );
+	fprintf( stderr, "\t extensions *.{cmp}(i}{j}.grn are Mij i={x,y,z} j={x,y,z}, and component cmp={z,r,t} \n" );
+	fprintf( stderr, "\t Use glib2inv test_special and mtinv special argument options " );
+
+	fprintf( stderr, "\n" );
+
+	fprintf( stderr, "\n" );
+
 	exit(0);
 }

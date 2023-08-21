@@ -13,7 +13,7 @@
 #include "../include/nrutil.h"
 #include "../include/mt.h"
 
-char progname[128];
+extern char progname[128];
 
 void write_results2(
 	char *results_filename,
@@ -32,7 +32,8 @@ void write_results2(
 	int igmt5,
 	int sqlite3_db_write,
 	int mysql_db_write,
-	int oracle_db_write )
+	int oracle_db_write,
+	float FixMyZ )
 {
 	int ipage = 0, ista = 0, ichan = 0, nsta_used = 0;
 	char chan[8];
@@ -40,15 +41,26 @@ void write_results2(
         int mtdegfree = 0;
         char used;
 	char username[64];
+	char myloc[8];
+
         MyTime *now;	
 	char grd_mo_type[8];
 	FILE *fp;
 	float ot_tmp = 0;
 	
 	if( AutoAuth )
+	{
 		strcpy( username, "AutoAuth" );
+		/* fprintf( stderr, "%s: %s: %s: username=%s\n", progname, __FILE__, __func__, username ); */
+	}
         else
-		strcpy( username, getlogin() );
+	{
+		/*** getlogin() is a bad function/and does not work well with strcpy(), use getenv to stay consistent with rest of code ****/
+		/* strcpy( username, getlogin() ); */
+
+		strcpy( username, getenv( "USER" ) );
+		/* fprintf( stderr, "%s: %s: %s: username=%s\n", progname, __FILE__, __func__, username ); */
+	}
 
 	ot_tmp = ev[0].ts0 * -1;
 
@@ -90,7 +102,7 @@ void write_results2(
 			ipage+1, sol[iz].ot, grn[0][iz].evdp, ipage+1 );
 	}
 
-	fprintf( fp, "CMDLINE   %d %g %g %d %g %d %d %d %d\n",
+	fprintf( fp, "CMDLINE   %d %g %g %d %g %d %d %d %d %g\n",
 		ishift,
 		cortol,
 		maxtimeshift,
@@ -99,10 +111,11 @@ void write_results2(
 		igmt5,
 		sqlite3_db_write,
 		mysql_db_write,
-		oracle_db_write );
+		oracle_db_write,
+		FixMyZ ); 
 
-	fprintf( fp, "MO        %e\n", sol[iz].dmoment );
-	fprintf( fp, "MO_AB_EX  %g %d\n", sol[iz].abcassa, sol[iz].exponent );
+	fprintf( fp, "M0_DYNCM  %e\n", sol[iz].dmoment );
+	fprintf( fp, "M0_AB_EX  %g %d\n", sol[iz].abcassa, sol[iz].exponent );
 	fprintf( fp, "MW        %g\n", sol[iz].mw );
 	fprintf( fp, "PISO      %g\n", sol[iz].PISO );
 	fprintf( fp, "PCLVD     %g\n", sol[iz].PCLVD );
@@ -112,12 +125,14 @@ void write_results2(
 	fprintf( fp, "LUNELAT   %g\n", sol[iz].lune_lat );
 	fprintf( fp, "LUNELON   %g\n", sol[iz].lune_lon );
 	fprintf( fp, "FFAC      %g\n", sol[iz].f_factor );
-	fprintf( fp, "MXX       %e\n", sol[iz].mrr * pow( 10.0, sol[iz].exponent ) );
-	fprintf( fp, "MYY       %e\n", sol[iz].mtt * pow( 10.0, sol[iz].exponent ) );
-	fprintf( fp, "MZZ       %e\n", sol[iz].mff * pow( 10.0, sol[iz].exponent ) );
-	fprintf( fp, "MXY       %e\n", sol[iz].mrt * pow( 10.0, sol[iz].exponent ) );
-	fprintf( fp, "MXZ       %e\n", -sol[iz].mrf * pow( 10.0, sol[iz].exponent ) );
-	fprintf( fp, "MYZ       %e\n", -sol[iz].mtf * pow( 10.0, sol[iz].exponent ) );
+
+	fprintf( fp, "MXX       %e\n",  sol[iz].mtt * pow( 10.0, sol[iz].exponent ) );
+	fprintf( fp, "MYY       %e\n",  sol[iz].mff * pow( 10.0, sol[iz].exponent ) );
+	fprintf( fp, "MZZ       %e\n",  sol[iz].mrr * pow( 10.0, sol[iz].exponent ) );
+	fprintf( fp, "MXY       %e\n", -sol[iz].mtf * pow( 10.0, sol[iz].exponent ) );
+	fprintf( fp, "MXZ       %e\n",  sol[iz].mrt * pow( 10.0, sol[iz].exponent ) );
+	fprintf( fp, "MYZ       %e\n", -sol[iz].mrf * pow( 10.0, sol[iz].exponent ) );
+
 	fprintf( fp, "VRED      %g\n", sol[iz].var_red );
 	fprintf( fp, "TOTFIT    %g\n", sol[iz].total_fitness1 );
 	fprintf( fp, "ALGOR     %s%s\n", progname, Version_Label );
@@ -139,7 +154,7 @@ void write_results2(
 	fprintf( fp, "LON       %g\n", grn[0][iz].evlo );
 	fprintf( fp, "TIME      %lf\n", ev[0].ot.epoch );
 	fprintf( fp, "YR        %d\n", ev[0].ot.year );
-	fprintf( fp, "MO        %d\n", ev[0].ot.month );
+	fprintf( fp, "MONTH     %d\n", ev[0].ot.month );
 	fprintf( fp, "DAY       %d\n", ev[0].ot.mday );
 	fprintf( fp, "HR        %d\n", ev[0].ot.hour );
 	fprintf( fp, "MIN       %d\n", ev[0].ot.min );
@@ -163,8 +178,14 @@ void write_results2(
 		if( ev[ista].grd_mo_type == VELOCITY )     sprintf( grd_mo_type, "V" );
 		if( ev[ista].grd_mo_type == DISPLACEMENT ) sprintf( grd_mo_type, "D" );
 
-			/**         1  2  3  4  5 6  7  8  9  10 11 12 13 14 **/
-		fprintf( fp, "STA%03d %s %s %g %g %g %d %d %s %d %g %g %d %s\n",
+		if( strcmp( ev[ista].loc, "" ) == 0 || strcmp( ev[ista].loc, "--" ) == 0 )
+			strcpy( myloc, "\"\"");
+		else
+			strcpy( myloc, ev[ista].loc );
+
+
+			/**         1  2  3  4  5 6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 **/
+		fprintf( fp, "STA%03d %s %s %g %g %g %d %d %s %d %g %g %d %s %s %d %f %f %f %f %f %f %f %s\n",
 			ista,
 			grn[ista][iz].stnm,
 			grn[ista][iz].net,
@@ -178,7 +199,18 @@ void write_results2(
 			ev[ista].lf,
 			ev[ista].hf,
 			ev[ista].npass, 
-			grn[ista][iz].v.modfile ); /* 14 */
+			grn[ista][iz].v.modfile, /* 14 */
+			myloc,  /* 15 */   /** null="" else 00, 10, etc... **/
+			ev[ista].nt,  /* 16 */
+			ev[ista].dt, /* 17 */
+			ev[ista].tr, /* 18 */
+			ev[ista].tt, /* 19 */
+			ev[ista].mul_factor, /* 20 */
+			ev[ista].time_shift_all, /* 21 */
+			ev[ista].time_shift_user, /* 22 */
+			ev[ista].weight, /* 23 */
+			ev[ista].wavetype  /* 24 */
+		 );
 	
 		fprintf( fp, "NCHAN 3\n" );
 
@@ -188,17 +220,18 @@ void write_results2(
                 	if( ichan == 1 ) strcpy( chan, "BHR" );
                 	if( ichan == 2 ) strcpy( chan, "BHT" );
 
-			/*                  1        2 3   4   5  6  7  8   9 10 */
-			fprintf( fp, "STA%03d CHAN%02d %s %lf %lf %g %g %g %g %g ",
+			/*                  1        2 3   4   5  6  7  8   9 10 11 */
+			fprintf( fp, "STA%03d CHAN%02d %s %lf %lf %g %g %g %g %g %g ",
 				ista,
 				ichan,
 				chan,
                                 ev[ista].z.beg.epoch,
-                                ev[ista].z.end.epoch,
+                                ev[ista].z.end.epoch, /* 5 */
 	 			ev[ista].redv,
-                                ev[ista].time_shift_all,
+                                ev[ista].time_shift_all, /* 7 */
+				ev[ista].time_shift_user, /* 8 */
                                 ev[ista].weight,
-                                grn[ista][iz].Prayparameter,
+                                grn[ista][iz].Prayparameter, /* 10 */
                                 ev[ista].ew.s.delta );
 
 	 		if( ichan == 0 )

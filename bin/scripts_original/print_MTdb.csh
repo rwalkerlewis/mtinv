@@ -1,19 +1,27 @@
 #!/bin/csh
 
-#set DATABASE=/Users/ichinose1/Work/mtinv.v3.0.6/data/mt.db
-#setenv MT_DATABASE_FILE /Users/ichinose1/Work/mtinv.v3.0.6/data/mt.db
-set DATABASE=${MT_DATABASE_FILE}
-
 if( $#argv == 1 ) then
 	set MTID=$argv[1]
+	echo "User Environment:"
+	echo "MTINV_PATH          = ${MTINV_PATH}"
+	echo "MT_DATABASE_FILE    = ${MT_DATABASE_FILE}"
+
+	set DATABASE=${MT_DATABASE_FILE}
 	echo " Default database = ${DATABASE} "
 	set opt=1
+
 else if ( $#argv == 2 ) then
 	set MTID=$argv[1]
 	set DATABASE=$argv[2]
 	echo " Default database = ${DATABASE} "
 	set opt=1
+
 else if( $#argv == 0 ) then
+	echo "User Environment:"
+	echo "MTINV_PATH          = ${MTINV_PATH}"
+	echo "MT_DATABASE_FILE    = ${MT_DATABASE_FILE}"
+
+	set DATABASE=${MT_DATABASE_FILE} 
 	echo " Default Database = ${DATABASE} "
 	echo " Return most recent DB uploaded "
         set opt=2
@@ -39,7 +47,7 @@ endif
 
 sqlite3 ${DATABASE} << EOF
 .headers on
-.mode col
+.mode column
 .stats off
 .timer off
 
@@ -138,6 +146,23 @@ from
 
 
 .print "\n MT_WAVEFORM_SEGMENT_STAGE, MT_FILTER_STAGE, MT_EARTHMODEL_STAGE\n"
+
+select sta,
+        chan,
+	lcorner,
+        hcorner,
+        modelname,
+	used,
+        round(xcor,2) as xcor
+from
+        MT_WAVEFORM_SEGMENT_STAGE,
+        MT_FILTER_STAGE,
+        MT_EARTHMODEL_STAGE
+where
+        mtdataid in ( select mtdataid from MT_DATA_STAGE where mtid = ${QUERY2} ) and
+        MT_FILTER_STAGE.mtfilterid = MT_WAVEFORM_SEGMENT_STAGE.mtfilterid and
+        MT_EARTHMODEL_STAGE.mtvmodid = MT_WAVEFORM_SEGMENT_STAGE.mtvmodid;
+
 
 .width 6 4 20 8 7 7 9 6 6 14 4 -5 -7 -10
 select

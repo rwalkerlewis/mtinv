@@ -1,7 +1,7 @@
-CC = cc
+CC = gcc
 INCLUDE = -I.
-INSTALL = ../bin
-CFLAGS = -g -m32 $(INCLUDE)
+INSTALL = ../../bin
+CFLAGS =  $(INCLUDE)
 
 .c.o :
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -17,7 +17,6 @@ SUBS = envelope_driv.o envelope_sub.o fftsub.o sacio.o
 
 envelope_driv : $(SUBS)
 	$(CC) $(CFLAGS) -o $@ $(SUBS) -lm -L../../lib -lget
-
 
 clean : 
 	rm -f *.o envelope_driv

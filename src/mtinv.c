@@ -9,6 +9,21 @@ G. Ichinose Wed Jan 10 17:22:21 PST 2018
 
          data[it] is dynamically allocated and still used important for sacdata2inv.c
          data_safe[it] is statically allocated with predefined size of 8192
+
+Wed Aug  5 08:59:12 PDT 2020 g.ichinose
+	added option for largest %VR DEV-MT solution search
+
+Thu Aug  6 20:52:35 PDT 2020
+	mtinv_gmtsubs.c: wfplot2_gmt5() add option (sort_by_value=none,dis,azi,baz) to plot waveforms ordered by distance, azimuth or baz in gmtwf.csh
+
+Mon Aug 10 12:49:16 PDT 2020
+	pass fixz write_results2() realtime_subs.c to mtbestfit.c:make_run() to include in run2.csh  script
+	mtinv_gmtsubs.c: wfplot2_gmt5() added print_mt_info_text option of gmtwf.csh and gmtwf.*.jpg files
+
+Fri Aug 14 22:29:50 PDT 2020
+Todo list...
+	1. need to merge changes from  mtinv_gmtsubs.c._from_jorge_2020March_ 
+	2. mtinv_gmtsubs.c: wfplot2_gmt5() need add option to gmtwf.csh to go between plots grayscale or color
 ***/
 
 #include <stdio.h>
@@ -60,12 +75,14 @@ int main(int ac, char **av)
 	int igmtmap=0;
 	int mtdegfree=5;
 	int forward=0;
-	float ts0=0;
+	float ts0;  /***no default***/
 	int check_on_status_ok;
 	int FixMyiz;
 	float FixMyZ = -99;
 	int Distance_Normalize = 0;
 	float DistNormR0 = 1; /*** default is R0 = 1 km  in R/R0 ****/
+
+	int dev_mt_largest_vr = 0;  /*** best fit dev-mt uses only largest percent variance reduction no max dc ***/
 
 	int ishift = 0;
 	float cortol = 1.0;
@@ -140,7 +157,8 @@ int main(int ac, char **av)
 			int Distance_Normalize,
 			float DistNormR0,
 			FixISOZ myfixisoz,
-			int specialLoadGrnMxy );
+			int specialLoadGrnMxy,
+			int dev_mt_largest_vr );
 
 	/*** psplot.c ***/
 	int psplot(	int nsta,
@@ -166,6 +184,7 @@ int main(int ac, char **av)
 	void compute_synthetics_special( int ista, int iz, EventInfo *ev, Greens **grn, Solution *sol, int mtdegfree );
 
 	/*** mtinv_subs.c ***/
+	int write_emails = 0; /* default off, dont write emails */
 	void write_email_message( FILE *fp, int nsta, int iz, Solution *sol, EventInfo *ev, Greens **grn, int ifwd );
 
 	/*** realtime_subs.c ***/
@@ -186,7 +205,8 @@ int main(int ac, char **av)
 		int igmt5, 
 		int sqlite3_db_write,
 		int mysql_db_write,
-		int oracle_db_write );
+		int oracle_db_write,
+		float FixMyZ );
 
 	/*** mtinv_gmtsubs.c ***/
 	void plot_z_vs_fit_gmt5( int iz, float *z, Solution *sol, EventInfo *ev );
@@ -237,7 +257,9 @@ int main(int ac, char **av)
 	void dumpxy( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int verbose );
 
 	/*** mtinv_gmtsubs.c ***/
-	void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int verbose );
+	char sort_by_value[32];
+	int print_gmtwf_mt_info = 0;
+	void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int verbose, char *sort_by_value, int print_gmtwf_mt_info );
 
 	/*** dumpSAC.c ***/
 	void computeStationChannel_VarianceReduction_v2(
@@ -253,6 +275,8 @@ int main(int ac, char **av)
 	void  db_mysql_write( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int AutoAuth, int verbose );
 	void db_oracle_write( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int AutoAuth, int verbose ); 
 	int AutoAuth = 0;
+	/*** added 2/2022 by g.ichinose to work along side with sqlite3 output for llnl.GMPDB MTLoader ***/
+	void llnl_db_write(  EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int AutoAuth, int verbose );
 
 /*** ../misc/getpar/ - libget.a(getarg.o) ***/
 
@@ -308,38 +332,36 @@ int main(int ac, char **av)
 /*** get the input parameters foreach each station ***/
 /*****************************************************/
 	setpar(ac,av);
+	getpar( "largest_vr", "b", &dev_mt_largest_vr );
 	mstpar( "par", "s", &evinfo_filename );
 	mstpar( "mtdegfree", "d", &mtdegfree );
 	mstpar( "ts0", "f", &ts0 );
+
 	getpar( "fwd", "b", &forward );
 	getpar( "fixz", "f", &FixMyZ );
 	getpar( "verbose", "b", &verbose );
 	getpar( "dumpsac", "b", &idump );
 	getpar( "gmtmap", "b", &igmtmap );
-
+	getpar( "write_emails", "b", &write_emails );
 	getpar( "norm", "b", &Distance_Normalize );
 	if( Distance_Normalize )
 	{
 		mstpar( "R0", "f", &DistNormR0 );
 	}
-
 	getpar( "PltXcorLabel", "b", &PltXcorLabel );
 	myfixisoz.z = 0;
 	getpar( "FixISOZ", "f", &(myfixisoz.z) );
-
 	getpar( "shift", "b", &ishift );
 	if(ishift) 
 	{
 		mstpar( "ctol", "f", &cortol );
 		mstpar( "maxshift", "f", &maxtimeshift );
 	}
-
 	getpar( "use_snr", "b", &iuse_snr );
 	if( iuse_snr )
 	{
 		mstpar( "minsnr", "f", &MINSNR );
 	}
-
 	getpar( "dumpxy", "b", &idumpxy );
 	if( idumpxy ) 
 	{
@@ -372,11 +394,11 @@ int main(int ac, char **av)
 	evid = -1;
 	getpar( "evid", "s", &evidstr );
 	evid = strtol( evidstr, NULL, 10 );
-
 	getpar( "gmt5", "b", &igmt5 );
-
 	getpar( "special", "b", &specialLoadGrnMxy );
-
+	strcpy( sort_by_value, "dist" ); /***Default dist, options: none, dist, azi, baz ***/
+	getpar( "sort_by_value", "s", sort_by_value );
+	getpar( "print_gmtwf_mt_info", "b", &print_gmtwf_mt_info );
 	getpar( "compute_station_vred", "b", &compute_station_vred );
 	endpar();
 
@@ -737,7 +759,8 @@ int main(int ac, char **av)
 			Distance_Normalize, 
 			DistNormR0, 
 			myfixisoz,
-			specialLoadGrnMxy );
+			specialLoadGrnMxy,
+			dev_mt_largest_vr );
 		
 	/****************************/
 	/*** what is the best fit ***/
@@ -858,26 +881,30 @@ int main(int ac, char **av)
 /*** write out MT solution results to a text file format for email       ***/
 /***************************************************************************/
 
-	sprintf( asc_file_name, "email_T%05.1fsec_Z%05.1fkm_.txt", 
+	if( write_emails )
+	{
+		sprintf( asc_file_name, "email_T%05.1fsec_Z%05.1fkm_.txt", 
 			sol[iz_best].ot, grn[0][iz_best].evdp );
-	if(verbose)
-	{
-		fprintf(stdout, "%s: mtinv.c: Writing Email Messages to %s\n", 
+		if(verbose)
+		{
+		  fprintf(stdout, "%s: mtinv.c: Writing Email Messages to %s\n", 
 			progname, asc_file_name );
-	}
+		}
 	
-	if( (fpasc=fopen( asc_file_name, "w" ) ) == NULL )
-	{
-		fprintf(stdout, "cannot open file for writting\n");
-	}
+		if( (fpasc=fopen( asc_file_name, "w" ) ) == NULL )
+		{
+		  fprintf(stdout, "cannot open file for writting\n");
+		}
 
-	if(verbose)
-	{
-	  fprintf( stdout, "%s: %s: %s: calling write_email_message():\n",
-		progname, __FILE__, __func__ );
+		if(verbose)
+		{
+	  	  fprintf( stdout, "%s: %s: %s: calling write_email_message():\n",
+			progname, __FILE__, __func__ );
+		}
+
+		write_email_message( fpasc, nsta, iz_best, sol, ev, grn, forward );
+		fclose(fpasc);
 	}
-	write_email_message( fpasc, nsta, iz_best, sol, ev, grn, forward );
-	fclose(fpasc);
 
 /***************************************************************************/
 /*** write out an ascii text file of the MT results                      ***/
@@ -960,17 +987,17 @@ int main(int ac, char **av)
 			iz_best, ista, ev[ista].nt, ev[ista].dt );
 		  else
 		    fprintf( stdout,
-		      "%s: %s: %s: calling compute_synthetics()  iz_best=%d ista=%d nt=%d dt=%g\n",
+		      "%s: %s: %s: calling compute_synthetics()  iz_best=%d ista=%d nt=%d dt=%g mtdegfree=%d wavetype=%s\n",
 			progname,
                         __FILE__,
                         __func__,
-                        iz_best, ista, ev[ista].nt, ev[ista].dt );
+                        iz_best, ista, ev[ista].nt, ev[ista].dt, mtdegfree, ev[ista].wavetype );
 		}
 
 		if(specialLoadGrnMxy)
-		  compute_synthetics_special( ista, iz_best, ev, grn, sol, mtdegfree );
-		else
-		  compute_synthetics( ista, iz_best, ev, grn, sol, mtdegfree );
+		   compute_synthetics_special( ista, iz_best, ev, grn, sol, mtdegfree );
+		 else
+		   compute_synthetics( ista, iz_best, ev, grn, sol, mtdegfree );
 	}
 
 /***************************************************************************************/
@@ -1193,7 +1220,8 @@ int main(int ac, char **av)
 		igmt5,
 		sqlite3_db_write,
 		mysql_db_write,
-		oracle_db_write );	
+		oracle_db_write,
+		FixMyZ );	
 
 /**********************/
 /*** make a GMT map ***/
@@ -1269,12 +1297,15 @@ int main(int ac, char **av)
 		{
 		  if(verbose)
 		  {
-			fprintf(stdout, "%s: mtinv.c: mtinv(): calling gmt5wfplot()\n", progname );
+			fprintf(stdout, "%s: mtinv.c: mtinv(): calling wfplot2_gmt5()\n", progname );
 		  }
 
+		  /*** deprecated, why? ***/
 		  /* gmt5wfplot( ev, sol, grn, nsta, iz_best, iorientation, verbose ); */
 
-		  wfplot2_gmt5( ev, sol, grn, nsta, iz_best, verbose );
+		  wfplot2_gmt5( ev, sol, grn, nsta, iz_best, verbose, sort_by_value, print_gmtwf_mt_info );
+		/* void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int verbose, char *sort_by_value, int print_gmtwf_mt_info ) */
+
 		}
 		else
 		{
@@ -1289,14 +1320,18 @@ int main(int ac, char **av)
 	if( sqlite3_db_write )
 	{
 		if(verbose)
-		  fprintf(stdout, "%s: mtinv.c: mtinv(): calling db_sqlite3_create()\n", progname );
+		  fprintf(stdout, "%s: %s: %s: calling db_sqlite3_create()\n", progname, __FILE__, __func__ );
 
 		db_sqlite3_create();
 
 		if(verbose)
-		  fprintf(stdout, "%s: mtinv.c: mtinv(): calling db_sqlite3_write()\n", progname );
+		  fprintf(stdout, "%s: %s: %s: calling db_sqlite3_write()\n", progname, __FILE__, __func__ );
 
 		db_sqlite3_write(  ev, sol, grn, nsta, iz_best, AutoAuth, verbose );
+
+		if(verbose)
+		  fprintf( stdout, "%s: %s: %s: calling llnl_db_write\n", progname, __FILE__, __func__ );
+		llnl_db_write( ev, sol, grn, nsta, iz_best, AutoAuth, verbose );
 	}
 
 	if( mysql_db_write )
@@ -1823,7 +1858,8 @@ void invert(
 	int Distance_Normalize,
 	float DistNormR0, 
 	FixISOZ myfixisoz,
-	int specialLoadGrnMxy )
+	int specialLoadGrnMxy,
+	int dev_mt_largest_vr )
 {
 /* see include/mt.h Mo = math.pow( 10.0, 1.5*(Mw+10.73) ) = 1.2445146117713818e+16; Reference Mw = 0.0 */
 
@@ -1864,10 +1900,10 @@ void invert(
 
 	void mtinv_dumpSAC( EventInfo *ev, Greens **grn, int nsta, int iz, float *s_vector, int verbose );
 
+	/* void set_moment_tensor( MomentTensor *Ma, float *x_vector, int degfree, int verbose ); */
 	void set_moment_tensor( MomentTensor *Ma, float *x_vector, int degfree, int verbose );
-	void normalize_moment_tensor( MomentTensor *Ma, MomentTensor *Mn, float Mo, int );
 
-        void set_moment_tensor( MomentTensor *Ma, float *x_vector, int degfree, int verbose );
+	/* void normalize_moment_tensor( MomentTensor *Ma, MomentTensor *Mn, float Mo, int ); */
         void normalize_moment_tensor( MomentTensor *Ma, MomentTensor *Mn, float Mo, int );
 
         void mt2eig( MomentTensor Ma, Solution *sol, int iz, int verbose );
@@ -1926,6 +1962,10 @@ void invert(
 	void computeStationChannel_VarianceReduction(
 		EventInfo *ev, Greens **grn, int nsta, int iz, float *s_vector,
 		float var_red, int verbose );
+
+	 /* int write_matrix = 1; */
+	int write_matrix = 0;
+	 void writeMatrix( int rows, int cols, float **a_matrix, float *b_vector, float *s_vector, float *x_vector );
 
 /*************************************************/
 /*** get the total data length rows the matrix ***/
@@ -2123,11 +2163,16 @@ void invert(
 
 		matmul( 0, a_matrix, cols, x_vector, rows, s_vector );
 
+		if( write_matrix )
+			writeMatrix( rows, cols, a_matrix, b_vector, s_vector, x_vector );
+
 		if(debug_invert)
 		{
+		/*** solution vector, a-matrix * x-matrix ***/
 		  sprintf( sacfilename, "s_vector.%02d.sac", iz );
 		  wrtnewsac( sacfilename, 1.0, rows, s_vector, 0 );
 
+		/*** the data matrix, preshift? ***/
 		  sprintf( sacfilename, "b_vector.%02d.old.sac", iz );
 		  wrtnewsac( sacfilename, 1.0, rows, b_vector, 0 );
 		}
@@ -2197,8 +2242,16 @@ void invert(
         /*** col1-Mxx, col2-Myy, col3-Mxy, col4-Mxz, col5-Myz, col6-Mzz ***/
 	/*** store the original moment tensor to solution structure     ***/
         /******************************************************************/
-		for( i = 1; i <= 6; i++ ) x_vector[i] *= base_moment;
+		for( i = 1; i <= 6; i++ ) 
+		{
+			x_vector[i] *= base_moment;
 
+		/*
+		  fprintf( stderr, "%s: %s: %s: iz=%d i=%d x_vector[i]=%e Dyn*cm base_moment=%e x_vector[i]=%e N*m\n",
+		    progname, __FILE__, __func__, iz, i, x_vector[i], base_moment, x_vector[i]*1.0E-07 );
+		*/
+		}
+	
                 sol[iz].moment_tensor[1][1] = x_vector[1]; /* Mxx */
                 sol[iz].moment_tensor[2][2] = x_vector[2]; /* Myy */
                 sol[iz].moment_tensor[1][2] = x_vector[3]; /* Mxy */
@@ -2278,12 +2331,12 @@ void invert(
 		sol[iz].total_fitness1 = 0;
 		sol[iz].total_fitness2 = 0;
 
-		if( mtdegfree == 1 || mtdegfree == 6 )
+		if( mtdegfree == 1 || mtdegfree == 6 || dev_mt_largest_vr )
 		{
 			sol[iz].total_fitness1 = sol[iz].var_red;
 			sol[iz].total_fitness2 = sol[iz].var_red;
 		}
-		else if( mtdegfree == 5 )
+		else if( mtdegfree == 5 && !dev_mt_largest_vr )
 		{
 		   sol[iz].total_fitness1 = 
 			sol[iz].var_red / ( 101.0 - sol[iz].PDC );
@@ -2375,48 +2428,90 @@ void invert(
 
 void Usage_Print()
 {
-	fprintf( stderr, "\nUSAGE: %s par= mtdegfree=(1,5,6)\n", progname );
-	fprintf( stderr, "\t [no]verbose [no]dumpsac [no]fwd [no]gmtmap\n" );
-	fprintf( stderr, "\t ts0=[0] fixz=[-99] [no]norm [no]shift ctol=[1] FixISOZ=[-99]\n" );
+	fprintf( stderr, "\n" );
+	fprintf( stderr, "USAGE: (examples)\n" );
+	fprintf( stderr, "\tdeviatoric MT:\n");
+	fprintf( stderr, "\t\t %s par=mtinv.par mtdegfree=5 ts0=0 gmt5 use_snr minsnr=3 shift ctol=0.85 maxshift=10\n", progname );
+	fprintf( stderr, "\t      full MT:\n");
+	fprintf( stderr, "\t\t %s par=mtinv.par mtdegfree=6 ts0=0 gmt5 use_snr minsnr=3 shift ctol=0.85 maxshift=10\n", progname );
+	fprintf( stderr, "\n" );
 
-	fprintf( stderr, "\nREQUIRED PARAMETERS:\n" );
- 	fprintf( stderr, "\t par=(glib2inv.par) station parameter file\n" );
-	fprintf( stderr, "\t mtdegfree=(1,5,6) 1=Isotropic MT, 5=Deviatoric MT, 6=Full MT\n" );
+	fprintf( stderr, "USAGE: (all args)\n" );
+	fprintf( stderr, "\t %s par=(string) mtdegfree=(float) ts0=(float) [no]fwd [no]verbose [no]gmtmap [no]dumpsac [no]PltXcorLabel no]gmt5 \\ \n", progname );
+	fprintf( stderr, "\t          [no]compute_station_vred [no]AutoAuth evid=(long) fixz=(float) FixISOZ=(float) [no]norm R0=(float)\\ \n" );
+	fprintf( stderr, "\t          [no]shift ctol=(float) maxshift=(float) [no]use_snr minsnr=3 [no]dumpxy orientation=(string) sort_by_value=(string)\\ \n" );
+	fprintf( stderr, "\t          [no]print_gmtwf_mt_info [no]mysql [no]oracle [no]sqlite [no]sqlite3 [no]special\n" );
+	fprintf( stderr, "\n" );
 
-	fprintf( stderr, "\n OPTIONAL PARAMETERSL [DEFAULTS]\n" );
-	fprintf( stderr, "\t ts0=[0]       Origin Time Shift Default is [0]\n" );
-	fprintf( stderr, "\t fixz=[-99]    fix the depth Default is [-99] which turns off option\n" );
-	fprintf( stderr, "\t [no]verbose   give verbose print to stdout. Default is off.\n" );
-	fprintf( stderr, "\t [no]gmtmap    make a C-shell GMT script to plot a map of stations and solution, Default is off.\n" );
-	fprintf( stderr, "\t [no]dumpsac   write out data and synthetics as SAC files. default is off\n" );
-	fprintf( stderr, "\t [no]fwd       do forward calculation using input from glib2inv.par. default is off\n" );
+	fprintf( stderr, "REQUIRED PARAMETERS:\n" );
+ 	fprintf( stderr, "\t par=(mtinv.par)     mtinv station-filter-model parameter PAR file (string)\n" );
+	fprintf( stderr, "\t mtdegfree=(integer) 1=Isotropic MT, 5=Deviatoric MT, 6=Full MT (only 1, 5, or 6 allowed)\n" );
+	fprintf( stderr, "\t ts0=(float)         Origin Time Shift in seconds relative to absolute time in mtinv.par\n" );
+	fprintf( stderr, "\n" );
 
-	fprintf( stderr, "\t [no]norm     distance normalization default is off\n" );
-	fprintf( stderr, "\t R0=1.0       normalize Green functions to distance of R/R0 default is R=1 km required if norm is set\n" );
+	fprintf( stderr, "OPTIONAL PARAMETERS: [DEFAULTS]\n" );
+	fprintf( stderr, "\t [no]fwd      (boolean) Do forward calculation using Str/Dip/Rak Mw and depth input from mtinv.par. default is off\n" );
+	fprintf( stderr, "\t [no]verbose  (boolean) Give verbose print to stdout. Default is off.\n" );
+	fprintf( stderr, "\t [no]gmtmap   (boolean) Make a C-shell GMT script to plot a map of stations and solution, Default is off.\n" );
+	fprintf( stderr, "\t [no]dumpsac  (boolean) Write out data and synthetics as SAC files. default is off\n" );
+	fprintf( stderr, "\t [no]PltXcorLabel (boolean) label lag times and cross correlations in the PostScript plot for each chan [Default is on]\n" );
+	fprintf( stderr, "\t [no]gmt5      (boolean) C-shell scripts using GMT plotting output version 5+  else version 4 [default on]\n" );
+	fprintf( stderr, "\t [no]compute_station_vred (boolean)\n" );
+        fprintf( stderr, "\t              computes variance reductions for each station and channel.  Outputs file vred.out [default on] \n" );
+        fprintf( stderr, "\t [no]AutoAuth   (boolean) use AutoMT as Database output author else uses Operating System Enviroment username default off\n" );
+        fprintf( stderr, "\t evid           (long) EventID limited to 10 digit long int, default -1 none\n" );
+	fprintf( stderr, "\n" );
 
-	fprintf( stderr, "\t [no]shift    shift the data automatically by cross correlation peak. default is off\n" );
-	fprintf( stderr, "\t ctol=[0.6]  Correlation coefficient tolerance to shift the data when coef > ctol. defaut is off\n" );
-	fprintf( stderr, "\t maxshift=   Maximum time in seconds a shift is allowed. default off\n" );
+	fprintf( stderr, "\tOPTIONAL DEPTH PARAMETERS: \n" );
+	fprintf( stderr, "\t fixz         (float) Fix the depth in kilometers. [Default is [-99] free depth MT inversion)\n" );
+	fprintf( stderr, "\t FixISOZ      (float) Fix the depth kilometers of just the isotropic Green's function components (rex and zex). Default is off\n" );
+	fprintf( stderr, "\n" );
 
-	fprintf( stderr, "\t FixISOZ=     fix the depth of the rex and zex Green's function.  Default is off\n" );
-	fprintf( stderr, "\t [no]PltXcorLabel  Plot the time lag shift and cross correlation as a label in the PostScript plot [Default is on\n" );
+	fprintf( stderr, "\tOPTIONAL NORMALIZATION PARAMETERS: \n" );
+	fprintf( stderr, "\t [no]norm     (boolean) Distance normalization default is off\n" );
+	fprintf( stderr, "\t R0           (float) If norm true then normalize Green functions to distance in km of R/R0 required if norm is set\n" );
+	fprintf( stderr, "\n" );
 
-	fprintf( stderr, "\t [no]use_snr   use peak-to-peak amplitude based Signal-Noise Ratio to make stations non-defining in inversion [default off]\n" );
-	fprintf( stderr, "\t minsnr=3      minimum snr threshold.  all 3-components must be less than minsnr to set non-defining in inversion [default 3]\n" );
-	fprintf( stderr, "\t               use_snr and minsnr only applies to stations that are defining and does not override users settings \n" );
+	fprintf( stderr, "\tOPTIONAL SIGNAL QUALITY CONTROL PARAMETERS: (cross-correlation time shift, Signal-Noise-Ratio SNR)\n" );
+	fprintf( stderr, "\t [no]shift    (boolean) Shift the data automatically by cross correlation peak. default is off\n" );
+	fprintf( stderr, "\t                  if shift is on then only determines optimal lag times based on max cross-correlation\n" );
+	fprintf( stderr, "\t ctol=[0.6]   (float) Correlation coefficient tolerance to shift the data when coef > ctol. defaut is off\n" );
+	fprintf( stderr, "\t maxshift=    (float) Maximum time in seconds a shift is allowed. default off\n" );
+	fprintf( stderr, "\t                 user must manually transfer the time shifts into the run.csh file mtinv.par section to take effect\n" );  
+	fprintf( stderr, "\t [no]use_snr   (boolean) use peak-to-peak amplitude based Signal-Noise Ratio to make stations non-defining in inversion [default off]\n" );
+	fprintf( stderr, "\t                    see output file snr.out for values\n" );
+	fprintf( stderr, "\t minsnr=3      (float) minimum snr threshold.  all 3-components must be less than minsnr to set non-defining in inversion [default 3]\n" );
+	fprintf( stderr, "\t                  use_snr and minsnr only applies to stations that are defining and does not override users settings \n" );
+	fprintf( stderr, "\t                  there is basic logic to account for radiation pattern of love and rayleigh waves \n" );
+	fprintf( stderr, "\n" );
 
-	fprintf( stderr, "\t [no]dumpxy   write out (x,y) ascii text files for the data and synthetics for GMT plots [Default is off]\n" );
-	fprintf( stderr, "\t              includes GMT C-shell script (gmtwf.csh) which generates pages of postscripts plots\n" );
+	fprintf( stderr, "\tOPTIONAL HIGH QUALITY GMT WAVEFORM PLOT:\n" );
+	fprintf( stderr, "\t [no]dumpxy   (boolean) write out (x,y) ascii text files for the data and synthetics for GMT plots [Default is off]\n" );
+	fprintf( stderr, "\t                  includes GMT C-shell script (gmtwf.csh) which generates pages of postscripts plots - use mtbestfit pretty_plot\n" );
+	fprintf( stderr, "\t orientation   (string) if dumpxy on then plot orientation (\"portrait\" or \"landscape\") default landscape\n" );
+	fprintf( stderr, "\t sort_by_value (string) if dumpxy on then sorts plot order of waveforms in gmtwf.csh sort_by_value (dist, none, azi, baz) default dist\n" );
+	fprintf( stderr, "\t [no]print_gmtwf_mt_info (boolean) if dumpxy on then print_gmtwf_mt_info controls amount of information about mt solution in gmtwf.csh plot\n" );
+	fprintf( stderr, "\n" );
 
-	fprintf( stderr, "\t [no]mysql     write out mysql source scripts (create.sql,insert.sql) based on the NNSA custom schema [Default is off]\n" );
-	fprintf( stderr, "\t [no]oracle    write out oracle scripts (create.sql,insert.sql) based on the NNSA custom schema [Default is off]\n" );
+	fprintf( stderr, "\tOPTIONAL DATABASE OUTPUT PARAMETERS:\n");
+	fprintf( stderr, "\t [no]mysql     (boolean) write out mysql source scripts (create.sql,insert.sql) based on the NNSA custom schema [Default is off]\n" );
+	fprintf( stderr, "\t [no]oracle    (boolean) write out oracle scripts (create.sql,insert.sql) based on the NNSA custom schema [Default is off]\n" );
+	fprintf( stderr, "\t [no]sqlite or sqlite3 (boolean) write out sqlite scripts (create.sql,insert.sql) based on the NNSA custom schema [Default is off]\n" );
+	fprintf( stderr, "\n" );
 
-	fprintf( stderr, "\t [no]gmt5      C-shell scripts using GMT plotting output version 5.x.x else version 4.x.x [default on]\n" );
+	fprintf( stderr, "\tOPTIONAL NEW FEATURE:\n" );
+	fprintf( stderr, "\t [no]special   (boolean) reads Greens function from SAC files in Mij(Z,R,T) format (17 files) not \n" );
+	fprintf( stderr, "\t                 RSS,RDS,RDD,REP,ZSS,ZDS... format (10 fundamental faulting orientations) [default off] see grn2Mxy and glib2inv test_special\n" );
+	fprintf( stderr, "\n" );
 
-	fprintf( stderr, "\t [no]special   reads Greens function from SAC files in Mij(Z,R,T) format (17 files) not \n" );
-	fprintf( stderr, "\t                 RSS,RDS,RDD,REP,ZSS,ZDS... format (10 fundamental faulting orientations) [default off]\n" );
-	fprintf( stderr, "\t [no]compute_station_vred \n" );
-	fprintf( stderr, "\t              computes variance reductions for each station and channel. output in file vred.out [default on] \n" );
 
-	fprintf( stderr, "\n\n" );
+	fprintf( stderr, "\tDESCRIPTION: \n" );
+	fprintf( stderr, "\t mtinv performs a time-domain long-period regional moment tensor inversion \n" );
+	fprintf( stderr, "\t See mtinv man page or manual for mtinv.par PAR file formating details\n" );
+	fprintf( stderr, "\t mtinv returns best fit MT solution for all depths in the Green's function library\n" );
+	fprintf( stderr, "\t user shifts origin-time using the ts0 parameter. For example, here is a for loop over +/-8 sec around the absolute origin-time: \n" );
+	fprintf( stderr, "\t foreach ts0 ( -8 -7 -6 -5 -4 -3 -2 -1 0 1 2 3 4 5 6 7 8 )\n" );
+	fprintf( stderr, "\t   mtinv par=mtinv.par mtdegfree=5 ts0=${ts0}\n" );
+	fprintf( stderr, "\t end\n" );
+	fprintf( stderr, "\n" );
 }

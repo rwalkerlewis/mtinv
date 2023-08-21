@@ -1,26 +1,39 @@
-.TH GRNLIB2SAC 1 "20 Feb 2009" "MTINV Version 2.0" "MTINV Toolkit V2.0"
+.TH grnlib2sac 1 "27 April 2023" "MTINV Version 4.0.1" "MTINV Toolkit"
 
 .SH NAME 
-grnlib2sac
+grnlib2sac \- Generates synthetic seismograms from Green's funciton library 
 
 .SH SYNOPSIS
-grnlib2sac glib= z= [no]dumpgn [no]verbose tr= tt= [no]noise type=
+grnlib2sac
+glib=(string) 
+z=(float) 
+[no]dumpgn 
+[no]verbose 
+date=(string)
+[no]dounits_cm2m
+[no]dointerp
+[no]noise
+nMw=(float)
+tr=(float) 
+tt=(float) 
+type=(integer)
+az=(float)
+wave_type_fiber=(string)
+azi_fiber=(float)
 
 .TP
-.B if noise
-nMw= seed= 
-
-.TP 
-.B if type=0
-Mxx= Myy= Mzz= Mxy Mxz= Myz= Mo=
+.B type=0 Normalized Moment Tensor Elements and Total Seismic Moment in dyne*cm.
+TP
+Mxx={float} Myy={float} Mzz={float} Mxy={float} Mxz={float} Myz={float} Mo={float}
 
 .TP
-.B if type=1
-str= dip= rak= Mw=
+.B type=1 Double-couple Fault Strike, dip, and rake in degrees Aki's convention and Mw
+str={float} dip={float} rake={float} Mw={float}
 
-.TP 
-.B if type=2
-str= dip= rak= Mw= Piso=
+.TP
+.B type=2 Double-couple Fault Strike, dip, and rake in degrees Aki's convention and Mw, isotropic, clvd, dc percentages
+str={float} dip={float} rake={float} Mw={float} piso={float} pclvd={float} pdc={float}
+Piso+Pclvd+Pdc must add up to 1.0
 
 .SH DESCRIPTION
 Computes the ground displacements (z,r,t) given one type of source input, type=0
@@ -37,41 +50,53 @@ adds noise relative to a moment magnitude.
 
 .TP
 .B glib={string}
-The file name of the Green's function library ".glib" file. 
+The file name of the Green's function library ".glib" file.  (required)
 
 .TP
 .B z={float}
-The source depth.  Must be a depth computed in the Green's function library ".glib" file.  See par file from mkgrnlib
+The source depth in km. Must be a depth computed in the Green's function library ".glib" file.  See par file from mkgrnlib
 
 .SH OPTIONAL PARAMETERS
 
 .TP
 .B [no]dumpgrn
-write out only Green's functions for z= depth.
+write out only Green's functions for z= depth in km
 
 .TP
 .B [no]verbose
-verbosy output for diagnosis
+verbosy output for diagnosis (default off)
+
+.TP
+.B date=(string)
+origin-time format: YYYY/MM/DD,HH24:mm:ss.ss YYYY-MM-DDTHH24:mm:ss.ssss [default "2008-01-01T00:00:00.00"]
+
+.TP
+.B [no]dounits_cm2m
+convert output units of synthetic waveform amplitudes from centimeters to meters (default off) units originally cm displacement
+
+.TP
+.B [no]dointerp
+perform Wiggins interpolation to sampling rate of 0.02 sec/sample (default off)
 
 .TP
 .B tr={float}
-The ramp rise time in seconds.  If tr=0 and tt>0 then the source time function is a boxcar.
+The ramp rise time in seconds.  If tr=0 and tt>0 then the source time function is a boxcar. (default 0) no source-time func
 
 .TP
 .B tt={float}
-The boxcar rise time in seconds.  If tt=0 and tr>0 then the source time function is a triangle.
+The boxcar rise time in seconds.  If tt=0 and tr>0 then the source time function is a triangle. (default 0) no source-time func
 
 .TP
 .B [no]noise 
-add white Gaussian noise
+add white Gaussian noise (default off)
 
 .TP
 .B nMw={float}
-If noise then enter the level of the noise in units of Mw for freq band of interest
+If noise then enter the level of the noise in units of Mw for freq band of interest (required)
 
 .TP
 .B seed={integer}
-If noise then enter the random seed for noise
+If noise then enter the random seed for noise (default 1)
 
 .TP
 .B type={integer}

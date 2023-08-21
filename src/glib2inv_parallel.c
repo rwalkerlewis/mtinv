@@ -8,7 +8,8 @@
 #include "../include/nrutil.h"
 #include "../include/mt.h"
                                                                                                                                                                
-char progname[128];
+extern char progname[128];
+
 
 typedef struct {
         int ista;
@@ -26,6 +27,7 @@ typedef struct thread_data
 	int idumpsac;
 	int idumpgrn;
 	int verbose;
+	int wvtyp;   /* wvtyp == 0 : Surf/Pnl wvtyp == 1 Rotational */
 } ThreadData;
 
 void glib2inv_parallel( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int idumpsac, int idumpgrn, int verbose )
@@ -67,6 +69,12 @@ void glib2inv_parallel( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, i
 		td[ista].idumpsac     = idumpsac;
 		td[ista].idumpgrn     = idumpgrn;
 		td[ista].verbose      = verbose;
+
+		td[ista].wvtyp        = 0;
+		if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+			td[ista].wvtyp = 0;
+		else if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+			td[ista].wvtyp = 1;
 	}
 
 /***
@@ -142,7 +150,10 @@ void *glib2inv_staproc_pthread( void *ptr )
 /*** Greens stuff ***/
 /********************/
 
-	int ig, ng=10, MAX_ARRAY_SIZE=4096;
+	int ig;
+	int ng; /*** depends on wavetype ****/
+	int MAX_NUM_GRNS_FUNC = 23;
+	int MAX_ARRAY_SIZE = 4096;
 	float **garray;
 
 	FILE *fpout;
@@ -155,13 +166,13 @@ void *glib2inv_staproc_pthread( void *ptr )
 /*** function prototypes ***/
 /***************************/
 
-        /*** tdif/Differentiates.c ***/
+/*** tdif/Differentiates.c ***/
         void differentiate( float *x, int n, float dt, int op, int verbose );
                                                                                                                                                                
-        /*** source/source_subs.c ***/
+/*** source/source_subs.c ***/
         void source_time_function( float *data, int nt, float dt, float tr, float tt );
                                                                                                                                                                
-        /*** filter/filtersubs.c ***/
+/*** filter/filtersubs.c ***/
         void iir_filter( float *data,
                         int nsamps,
                         char *filter_type,
@@ -174,30 +185,32 @@ void *glib2inv_staproc_pthread( void *ptr )
                         float ts,
                         int passes );
 
-        /*** Ichinose Feb2010 ***/
-        /*** substitute interpolate_fft with interpolate_wiggins ***/
-        /*** interpolate/interpolate_subs.c ***/
+/*** Ichinose Feb2010 ***/
+/*** substitute interpolate_fft with interpolate_wiggins ***/
+/*** interpolate/interpolate_subs.c ***/
         void interpolate_fft(   float *data,
                                 int old_npts, float old_delta,
                                 int *new_npts, float new_delta );
                                                                                                                                                                
-        /*** wiggins/wiggins_sub.c ***/
+/*** wiggins/wiggins_sub.c ***/
         void interpolate_wiggins2( float *data, int npts, float delta,
                                 float b, int new_nt, float new_dt, int verbose );
                                                                                                                                                                
-        /*** wrtgrn2sac.c ***/
-        void wrtgrn2sac( Greens *g, int ista );
-                                                                                                                                                               
-        /*** glib2inv_subs.c ***/
+/*** wrtgrn2sac.c ***/
+	void wrtgrn2sac( Greens *g, int ista, char *wavetype );
+
+/*** glib2inv_subs.c ***/
         void split2grn( Greens *g, float **garray );
-                                                                                                                                                               
-        /*** glib2inv_subs.c ***/
+ 	void split2grnRot( Greens *g, float **garray );
+                                                                                                                                                              
+/*** glib2inv_subs.c ***/
         void array2grn( float **garray, Greens *g );
-                                                                                                                                                               
-        /*** envelope/envelope_sub.c ***/
+	void array2grnRot( float **garray, Greens *g );
+
+/*** envelope/envelope_sub.c ***/
         void envelope( float *y, int npts, float dt );
  
-	/*** misc_tools/ampshift.c ***/
+/*** misc_tools/ampshift.c ***/
         void  ampshift( float *x, int n, int verbose );
 
 /******************************/
@@ -216,6 +229,7 @@ void *glib2inv_staproc_pthread( void *ptr )
 	int ista;
 	int idumpsac;
 	int idumpgrn;
+	int wvtyp;
 
 /***************************************************************************************************/
 /**** begin program                                                                              ***/
@@ -228,12 +242,11 @@ void *glib2inv_staproc_pthread( void *ptr )
 	z     = (DepthVector *) td->z;
 	idumpsac = td->idumpsac;
 	idumpgrn = td->idumpgrn;
-	
-	garray = (float **)malloc( ng * sizeof(float *) );
-	for( ig=0; ig<ng; ig++ )
-	{
+	wvtyp = td->wvtyp;
+
+	garray = (float **)malloc( MAX_NUM_GRNS_FUNC * sizeof(float *) );
+	for( ig=0; ig < MAX_NUM_GRNS_FUNC; ig++ )
 		garray[ig] = (float *)calloc( MAX_ARRAY_SIZE, sizeof(float) );
-	}
 
 	for( iz = 0; iz < z->nz; iz++ )
 	{
@@ -242,9 +255,22 @@ void *glib2inv_staproc_pthread( void *ptr )
         /*** demultiplex from structure to array of 10 greens functions ***/
         /*** and loop over the 10 fundamental faulting orientations     ***/
         /******************************************************************/
-                                                                                                                                                               
-		split2grn( &grn[iz], garray );
-                                                                                                                                                               
+		if( wvtyp == 1 )
+		{
+			split2grnRot( &grn[iz], garray );
+			ng = 22;
+		}
+		else if( wvtyp == 0 )
+		{
+			split2grn( &grn[iz], garray );
+			ng = 10;
+		}
+                else
+		{
+			split2grn( &grn[iz], garray );
+			ng = 10;
+		}
+                                                                                                                                              
 		for( ig = 0 ; ig < ng; ig++ )
 		{
 
@@ -285,7 +311,19 @@ void *glib2inv_staproc_pthread( void *ptr )
 		/****************************************/
 		/*** bandpass filter greens functions ***/
 		/****************************************/
-                                                                                                                                                               
+
+                        iir_filter(  garray[ig],
+                                grn[iz].nt,
+                                "BU",
+                                ev[ista].trbndw,
+                                ev[ista].a,
+                                ev[ista].npole,
+                                "HP",
+                                0.008,
+                                -1,
+                                grn[iz].dt,
+                                2 );
+                                                                                                                                      
 			iir_filter(
 				garray[ig],
 				grn[iz].nt,
@@ -350,8 +388,12 @@ void *glib2inv_staproc_pthread( void *ptr )
 	/********************************************/
 	/*** convert back from array to structure ***/
 	/********************************************/
-                                                                                                                                                               
-		array2grn( garray, &grn[iz] );
+		if( wvtyp == 1 )
+			array2grnRot( garray, &grn[iz] );
+		else if( wvtyp == 0 )
+			array2grn( garray, &grn[iz] );
+		else
+			array2grn( garray, &grn[iz] );
                                                                                                                                                                
 	} /*** loop over depth - iz ***/
 
@@ -366,7 +408,12 @@ void *glib2inv_staproc_pthread( void *ptr )
 	{
 		for( iz = 0; iz < z->nz; iz++ )
 		{
-			wrtgrn2sac( &grn[iz], ista );
+			if( wvtyp == 1 )
+			  wrtgrn2sac( &grn[iz], ista, "Rotational" );
+			else if( wvtyp == 0 )
+			  wrtgrn2sac( &grn[iz], ista, "Surf/Pnl" );
+			else
+			  wrtgrn2sac( &grn[iz], ista, "Surf/Pnl" );
 		}
 	}
 

@@ -13,9 +13,7 @@ write sine.sac.env
 quit
 EOF
 
-sacsun2linux sine.sac
 envelope_driv sacf=sine.sac
-
 
 cat >! sac.mac << EOF
 window x 0.1 0.5 y 0.1 0.9
@@ -29,3 +27,5 @@ quit
 EOF
 
 sac sac.mac
+
+/bin/rm -f sine.sac sine.sac.env env.sac

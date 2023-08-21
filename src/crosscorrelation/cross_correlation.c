@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-char progname[128];
+extern char progname[128];
 
 void xcorr(	float *d,
 		float *s,
@@ -19,7 +19,6 @@ void xcorr(	float *d,
 	float *utmp;
 	float xcor, xlag;
 	int lag;
-	extern char progname[128];
 
 /*** shift/shift.c ***/
 

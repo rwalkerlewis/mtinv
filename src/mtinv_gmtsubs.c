@@ -1,3 +1,7 @@
+/*** updates ***/
+/** mtinv_gmtsubs.c._from_jorge_2020March_ ***/
+/** psmeca was fixed in version GMTv5 -Sz for devmt and -Sm for fullmt **/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +44,10 @@ void plot_z_vs_fit_gmt5( int iz, float *z, Solution *sol, EventInfo *ev )
         fprintf( fp, "############################################################################\n" );
         fprintf( fp, "\n" );
         fprintf( fp, "gmt set MAP_FRAME_TYPE plain\n" );
+	fprintf( fp, "gmt set PROJ_LENGTH_UNIT      inch\n");
+	fprintf( fp, "gmt set PS_MEDIA              Custom_612x792\n");
+	fprintf( fp, "gmt set PS_PAGE_ORIENTATION   portrait\n\n");
+
         fprintf( fp, "\n" );
         fprintf( fp, "###\n" );
         fprintf( fp, "### SET THE VARIABLE ts0 TO THE BEST ORIGIN TIME\n" );
@@ -53,23 +61,24 @@ void plot_z_vs_fit_gmt5( int iz, float *z, Solution *sol, EventInfo *ev )
         fprintf( fp, "###\n");
         fprintf( fp, "set extrema=`awk '{ if( ts0 == $16 ) print $15 }' ts0=${ts0} plotmech.txt | gmt info -C`\n" );
         fprintf( fp, "set Mmin=` echo $extrema[1] | awk '{ print $1-0.1 }' `\n" );
-        fprintf( fp, "set Mmax=` echo $extrema[2] | awk '{ print $1+0.1 }' `\n" );
+        fprintf( fp, "set Mmax=` echo $extrema[2] | awk '{ print $1+0.1 }' `\n\n" );
 
         fprintf( fp, "###\n");
         fprintf( fp, "### automatically set the variance reduction range to min max\n" );
         fprintf( fp, "###\n");
         fprintf( fp, "set extrema=`awk '{ if( ts0 == $16 ) print $13 }' ts0=${ts0} plotmech.txt | gmt info -C`\n" );
         fprintf( fp, "set VRmin=` echo $extrema[1] | awk '{ print $1-10 }' `\n" );
-        fprintf( fp, "set VRmax=` echo $extrema[2] | awk '{ print $1+10 }' `\n" );
+        fprintf( fp, "set VRmax=` echo $extrema[2] | awk '{ print $1+10 }' `\n\n" );
 
         fprintf( fp, "###\n");
         fprintf( fp, "### automatically set the depth range\n" );
         fprintf( fp, "###\n");
         fprintf( fp, "set extrema=`awk '{ if( ts0 == $16 ) print $1 }' ts0=${ts0} plotmech.txt | gmt info -C`\n" );
         fprintf( fp, "set Zmin=` echo $extrema[1] | awk '{ print $1-3 }' `\n" );
-        fprintf( fp, "set Zmax=` echo $extrema[2] | awk '{ print $1+3 }' `\n" );
+        fprintf( fp, "set Zmax=` echo $extrema[2] | awk '{ print $1+3 }' `\n\n" );
 
         fprintf( fp, "set PRJ=\" -JX6i/4i \" \n" );
+
         fprintf( fp, "############################################################################\n" );
         fprintf( fp, "### NOTHING BELOW NEEDS TO BE MODIFIED                                   ###\n" );
         fprintf( fp, "############################################################################\n" );
@@ -80,10 +89,9 @@ void plot_z_vs_fit_gmt5( int iz, float *z, Solution *sol, EventInfo *ev )
         fprintf( fp, "###\n" );
 
         fprintf( fp, "awk '{ if( ts0 == $16 ) print $3, $15 }' ts0=${ts0} plotmech.txt | \\\n" );
+        fprintf( fp, "  gmt psxy -R${Zmin}/${Zmax}/${Mmin}/${Mmax} ${PRJ} -W1p,red -K -Vq -P >! plotz.ps\n\n" );
 
-        fprintf( fp, "  gmt psxy -R${Zmin}/${Zmax}/${Mmin}/${Mmax} ${PRJ} -W1p,red -K -P >! plotz.ps\n" );
-
-        fprintf( fp, "gmt psbasemap -R ${PRJ} -Bxf1a10 -Byf0.1a0.1+l\"M@-w@-\" -BnE+t\"At T=${ts0} (sec)\" -O -K >> plotz.ps\n" );
+        fprintf( fp, "gmt psbasemap -R ${PRJ} -Bxf1a10 -Byf0.1a0.1+l\"M@-w@-\" -BnE+t\"At T=${ts0} (sec)\" -O -K -Vq >> plotz.ps\n\n" );
 
         fprintf( fp, "###\n" );
         fprintf( fp, "### plot the depth vs. variance reduction line\n" );
@@ -91,7 +99,7 @@ void plot_z_vs_fit_gmt5( int iz, float *z, Solution *sol, EventInfo *ev )
 
         fprintf( fp, "awk '{ if( ts0 == $16 ) print $3, $13  }' ts0=${ts0} plotmech.txt | " );
 
-        fprintf( fp, "  gmt psxy -R${Zmin}/${Zmax}/${VRmin}/${VRmax} ${PRJ} -W2p,green,5_5:0p -O -K >> plotz.ps\n" );
+        fprintf( fp, "  gmt psxy -R${Zmin}/${Zmax}/${VRmin}/${VRmax} ${PRJ} -W2p,green,5_5:0p -O -K -Vq >> plotz.ps\n" );
         fprintf( fp, "\n" );
 
         fprintf( fp, "###\n" );
@@ -108,7 +116,20 @@ void plot_z_vs_fit_gmt5( int iz, float *z, Solution *sol, EventInfo *ev )
         }
         fprintf( fp, " plotmech.txt | " );
 
-        fprintf( fp, " gmt psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K >> plotz.ps\n" );
+/** psmeca was fixed in version GMTv5 -Sz for devmt and -Sm for fullmt **/
+
+	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
+	{
+		fprintf( fp, " gmt psmeca -R ${PRJ} -Sm0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K -Vq >> plotz.ps\n\n" );
+	}
+	else if( sol[iz].mt_type == DEVIATORIC ) 
+	{
+        	fprintf( fp, " gmt psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K -Vq >> plotz.ps\n\n" );
+	}
+	else
+	{
+		fprintf( fp, " gmt psmeca -R ${PRJ} -Sm0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K -Vq >> plotz.ps\n" );
+	}
 
         fprintf( fp, "###\n" );
         fprintf( fp, "### plot the left and bottom axis for depth vs. reduction \n" );
@@ -116,7 +137,7 @@ void plot_z_vs_fit_gmt5( int iz, float *z, Solution *sol, EventInfo *ev )
 
         zinc = 10;
         vrinc = 5;
-        fprintf( fp, "gmt psbasemap -R ${PRJ} -Bxf1a%g+l\"Depth (km)\" -Byf1a%g+l\"Variance Reduction (%%)\" -BSW -O -K >> plotz.ps\n",
+        fprintf( fp, "gmt psbasemap -R ${PRJ} -Bxf1a%g+l\"Depth (km)\" -Byf1a%g+l\"Variance Reduction (%%)\" -BSW -O -K -Vq >> plotz.ps\n",
                 zinc, vrinc );
 
         fprintf( fp, "\n");
@@ -124,23 +145,21 @@ void plot_z_vs_fit_gmt5( int iz, float *z, Solution *sol, EventInfo *ev )
 	fprintf( fp, "###\n");
 	fprintf( fp, "### PLOT THE LABELS\n");
 	fprintf( fp, "###\n");
-	fprintf( fp, "gmt psxy -R0/1/0/1 ${PRJ} -W2p,red -O -K >> plotz.ps << EOF\n");
+	fprintf( fp, "gmt psxy -R0/1/0/1 ${PRJ} -W2p,red -O -K -Vq >> plotz.ps << EOF\n");
 	fprintf( fp, "> -W2p,red\n");
 	fprintf( fp, "0.42 0.04\n");
 	fprintf( fp, "0.54 0.04\n");
 	fprintf( fp, "> -W2p,green,5_5:0p\n");
 	fprintf( fp, "0.42 0.08\n");
 	fprintf( fp, "0.54 0.08\n");
-	fprintf( fp, "EOF\n");
-	
-	fprintf( fp, "gmt pstext -R ${PRJ} -F+f9p,Helvetica-Bold,black+jML -O >> plotz.ps << EOF\n");
+	fprintf( fp, "EOF\n\n");
+
+	fprintf( fp, "gmt pstext -R ${PRJ} -F+f9p,Helvetica-Bold,black+jML -O -Vq >> plotz.ps << EOF\n");
 	fprintf( fp, "0.55 0.08 <- %%Variance Reduction\n");
 	fprintf( fp, "0.55 0.04 Mw ->\n");
-	fprintf( fp, "EOF\n");
+	fprintf( fp, "EOF\n\n");
 	
-        fprintf( fp, "\n");
-
-	fprintf( fp, "psconvert -Tj -E300 -A -P -Z plotz.ps\n");
+	fprintf( fp, "gmt psconvert -Tj -E300 -A -P -Z -Vq plotz.ps\n\n");
 
         fclose(fp);
 
@@ -217,9 +236,9 @@ void plot_z_vs_fit_gmt4( int iz, float *z, Solution *sol, EventInfo *ev )
 
         fprintf( fp, "awk '{ if( ts0 == $16 ) print $3, $15 }' ts0=${ts0} plotmech.txt | \\\n" );
 
-        fprintf( fp, "  psxy -R${Zmin}/${Zmax}/${Mmin}/${Mmax} ${PRJ} -M -W1p/255/0/0 -K -P >! plotz.ps\n" );
+        fprintf( fp, "  psxy -R${Zmin}/${Zmax}/${Mmin}/${Mmax} ${PRJ} -M -W1p/255/0/0 -K -Vq -P >! plotz.ps\n" );
 
-        fprintf( fp, "psbasemap -R ${PRJ} -Bf1a10/f0.1a0.1:\"M@-w@-\":/:.\"At T=${ts0} (sec)\":nE -O -K >> plotz.ps\n" );
+        fprintf( fp, "psbasemap -R ${PRJ} -Bf1a10/f0.1a0.1:\"M@-w@-\":/:.\"At T=${ts0} (sec)\":nE -O -K -Vq >> plotz.ps\n" );
 
         fprintf( fp, "###\n" );
         fprintf( fp, "### plot the depth vs. variance reduction line\n" );
@@ -227,7 +246,7 @@ void plot_z_vs_fit_gmt4( int iz, float *z, Solution *sol, EventInfo *ev )
 
         fprintf( fp, "awk '{ if( ts0 == $16 ) print $3, $13  }' ts0=${ts0} plotmech.txt | " );
 
-        fprintf( fp, "  psxy -R${Zmin}/${Zmax}/${VRmin}/${VRmax} ${PRJ} -M -W2p/0/255/0ta -O -K >> plotz.ps\n" );
+        fprintf( fp, "  psxy -R${Zmin}/${Zmax}/${VRmin}/${VRmax} ${PRJ} -M -W2p/0/255/0ta -O -K -Vq >> plotz.ps\n" );
         fprintf( fp, "\n" );
 
         fprintf( fp, "###\n" );
@@ -244,7 +263,15 @@ void plot_z_vs_fit_gmt4( int iz, float *z, Solution *sol, EventInfo *ev )
         }
         fprintf( fp, " plotmech.txt | " );
 
-        fprintf( fp, " psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p/0 -G255/0/0 -N -O -K >> plotz.ps\n" );
+	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
+	{
+        	fprintf( fp, " psmeca -R ${PRJ} -Sm0.45i/10/0.1 -N -L -W1p/0 -G255/0/0 -N -O -K -Vq >> plotz.ps\n" );
+	}
+	else
+	{
+		fprintf( fp, " psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p/0 -G255/0/0 -N -O -K -Vq >> plotz.ps\n" );
+	}
+	
 
         fprintf( fp, "###\n" );
         fprintf( fp, "### plot the left and bottom axis for depth vs. reduction \n" );
@@ -252,7 +279,7 @@ void plot_z_vs_fit_gmt4( int iz, float *z, Solution *sol, EventInfo *ev )
 
         zinc = 10;
         vrinc = 5;
-        fprintf( fp, "psbasemap -R ${PRJ} -Bf1a%g:\"Depth (km)\":/f1a%g:\"Variance Reduction (%%)\":SW -O >> plotz.ps\n",
+        fprintf( fp, "psbasemap -R ${PRJ} -Bf1a%g:\"Depth (km)\":/f1a%g:\"Variance Reduction (%%)\":SW -O -Vq >> plotz.ps\n",
                 zinc, vrinc );
 
         fprintf( fp, "\n");
@@ -294,6 +321,10 @@ void plotmech_gmt5( int iz, Solution *sol, EventInfo *ev, float mechanism_size )
         fprintf( fp, "###################################################################################\n");
         fprintf( fp, "\n");
 
+	fprintf( fp, "gmt set MAP_FRAME_TYPE plain \n" );
+	fprintf( fp, "gmt set FONT_TITLE 14p,Helvetica-Bold,black \n" );
+        fprintf( fp, "\n" );
+
         fprintf( fp, "set extrema=`awk '{ print $1, $2 }' plotmech.txt | gmt info -C`\n");
         fprintf( fp, "set xmin=`echo $extrema[1] | awk '{ print $1-0.5 }' ` \n");
         fprintf( fp, "set xmax=`echo $extrema[2] | awk '{ print $1+0.5 }' ` \n");
@@ -311,7 +342,7 @@ void plotmech_gmt5( int iz, Solution *sol, EventInfo *ev, float mechanism_size )
         fprintf( fp, "\n\n");
 
         fprintf( fp, "gmt psbasemap -R${xmin}/${xmax}/${ymin}/${ymax} -JX9i/6i \\\n");
-        fprintf( fp, "\t -Bxf1a3+l\"${XLABEL}\" -Byf1a1+l\"${YLABEL}\" -BNSEW+t\"${TITLE}\" -K >! plotmech.ps\n" );
+        fprintf( fp, "\t -Bxf1a3+l\"${XLABEL}\" -Byf1a1+l\"${YLABEL}\" -BNSEW+t\"${TITLE}\" -K -Vq >! plotmech.ps\n" );
 
         if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
         {
@@ -321,12 +352,21 @@ void plotmech_gmt5( int iz, Solution *sol, EventInfo *ev, float mechanism_size )
         {
           fprintf( fp, "awk '{ print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, \"/\", $14 }' " );
         }
-        fprintf( fp, "plotmech.txt|\\\n");
-        fprintf( fp, "  gmt psmeca -R -JX -Sz%gi/8/0.1 -N -L -W1p,black -Gred -N -O >> plotmech.ps\n", mechanism_size );
+
+	fprintf( fp, "plotmech.txt|\\\n");
+
+	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
+	{
+          fprintf( fp, "    gmt psmeca -R -JX -Sm%gi/8/0.1 -N -L -W1p,black -Gred -N -O -Vq >> plotmech.ps\n", mechanism_size );
+	}
+	else
+	{
+	  fprintf( fp, "   gmt psmeca -R -JX -Sz%gi/8/0.1 -N -L -W1p,black -Gred -N -O -Vq >> plotmech.ps\n", mechanism_size );
+	}
 
         fprintf( fp, "\n");
 
-        fprintf( fp, "psconvert -Z -Tj -E300 -A plotmech.ps\n");
+        fprintf( fp, "gmt psconvert -Z -Tj -E300 -A -Vq plotmech.ps\n");
         fclose(fp);
 
 } /*** end of subroutine plotmech_gmt5() ***/
@@ -375,7 +415,7 @@ void plotmech_gmt4( int iz, Solution *sol, EventInfo *ev, float mechanism_size )
         fprintf( fp, "\n\n");
 
         fprintf( fp, "psbasemap -R${xmin}/${xmax}/${ymin}/${ymax} -JX9i/6i \\\n");
-        fprintf( fp, "\t -Bf1a3:\"${XLABEL}\":/f1a1:\"${YLABEL}\":/:.\"${TITLE}\":NSEW -K >! plotmech.ps\n" );
+        fprintf( fp, "\t -Bf1a3:\"${XLABEL}\":/f1a1:\"${YLABEL}\":/:.\"${TITLE}\":NSEW -K -Vq >! plotmech.ps\n" );
 
         if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
         {
@@ -387,7 +427,10 @@ void plotmech_gmt4( int iz, Solution *sol, EventInfo *ev, float mechanism_size )
         }
         fprintf( fp, "plotmech.txt|\\\n");
 
-        fprintf( fp, "    psmeca -R -JX -Sz%gi/8/0.1 -N -L -W1p/0 -G255/0/0 -N -O >> plotmech.ps\n", mechanism_size );
+	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
+       	  fprintf( fp, "    psmeca -R -JX -Sm%gi/8/0.1 -N -L -W1p/0 -G255/0/0 -N -O -Vq >> plotmech.ps\n", mechanism_size );
+	else
+	  fprintf( fp, "    psmeca -R -JX -Sz%gi/8/0.1 -N -L -W1p/0 -G255/0/0 -N -O -Vq >> plotmech.ps\n", mechanism_size );
 
         fprintf( fp, "\n");
 
@@ -430,7 +473,18 @@ void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
         {
                 gmt_int_filename = getenv( "MTINV_GMT_INT_FILE" );
                 gmt_cpt_filename = getenv( "MTINV_GMT_CPT_FILE" );
-                dogrd = 1;
+
+		if( (fp = fopen( gmt_grd_filename, "r")) != NULL )
+		{
+                	dogrd = 1;
+			
+		}
+		else
+		{
+			dogrd = 0;
+		}
+		fclose(fp);
+
                 if( verbose )
                 {
                         fprintf( stdout, "%s: including GMT grd file=%s\n", progname, gmt_grd_filename );
@@ -455,7 +509,26 @@ void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
         fprintf( fp, "## The script plots the mechanism at the event location and station locations    ##\n");
         fprintf( fp, "## on a map  - GMT Version 5.x.x - see mtinv usage to switch to GMT v4.x.x       ##\n");
         fprintf( fp, "###################################################################################\n");
-        fprintf( fp, "\n");
+        fprintf( fp, "\n" );
+
+	if( dogrd == 1 )
+	{
+		fprintf( fp, "# %s: from environmental variables:\n", progname );
+		fprintf( fp, "#\t GMT topography grid file MTINV_GMT_GRID_FILE=%s\n", gmt_grd_filename );
+		fprintf( fp, "#\t GMT color pallette  file MTINV_GMT_CPT_FILE=%s\n",  gmt_cpt_filename );
+		fprintf( fp, "#\t GMT topo shade grid file MTINV_GMT_INT_FILE=%s\n",  gmt_int_filename );
+		fprintf( fp, "\n" );
+	}
+	else
+	{
+		fprintf( fp, "# %s: set environmental variables in your .cshrc or .tcshrc ", progname );
+		fprintf( fp, " MTINV_GMT_GRID_FILE, MTINV_GMT_CPT_FILE, and MTINV_GMT_INT_FILE\n" );
+		fprintf( fp, "# to get GMT topography in the map plot (for example...)\n" );
+		fprintf( fp, "#\t setenv MTINV_GMT_GRID_FILE /Users/username/gmt_stuff/GMT_topo_grid_file.grd\n" ); 
+                fprintf( fp, "#\t setenv MTINV_GMT_CPT_FILE  /Users/username/gmt_stuff/GMT_topo_color_pallete.cpt\n" );
+                fprintf( fp, "#\t setenv MTINV_GMT_INT_FILE  /Users/username/gmt_stuff/GMT_topo_shade_grid.int\n" );  
+		fprintf( fp, "\n" );
+	}
 
         fprintf( fp, "gmt set MAP_FRAME_TYPE plain\n" );
         fprintf( fp, "gmt set FORMAT_GEO_OUT DG\n" );
@@ -503,19 +576,20 @@ void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
 
         if( dogrd == 0 )
         {
-    fprintf( fp, "gmt pscoast -R%g/%g/%g/%g -JM7i -Di -N1/2p,black,5_2:0p -N2/1p,black,5_2:0p -A1000 -W1p,black -Ggray -P -K >! gmtmap.ps\n",
+    fprintf( fp, "gmt pscoast -R%g/%g/%g/%g -JM7i -Di -N1/2p,black,5_2:0p -N2/1p,black,5_2:0p -A1000 -W1p,black -Ggray -P -K -Vq >! gmtmap.ps\n",
                 xmin, xmax, ymin, ymax );
           fprintf( fp, "\n" );
         }
 
         if( dogrd == 1 )
         {
-          fprintf( fp, "gmt grdimage -R%g/%g/%g/%g -JM6i -C%s -I%s %s -P -K >! gmtmap.ps\n",
-                xmin, xmax, ymin, ymax,
-                gmt_cpt_filename, gmt_int_filename, gmt_grd_filename );
+          fprintf( fp, "gmt grdimage -R%g/%g/%g/%g -JM6i -P -K -Vq \\\n", xmin, xmax, ymin, ymax );
+	  fprintf( fp, "    -C%s \\\n", gmt_cpt_filename );
+	  fprintf( fp, "    -I%s \\\n", gmt_int_filename );
+	  fprintf( fp, "     %s >! gmtmap.ps\n", gmt_grd_filename );
           fprintf( fp, "\n" );
 
-          fprintf( fp, "gmt pscoast -R -JM -Di -N1/2p,black,5_2:0p -N2/faint,black,5_2:0p -A1000 -W1p,black -Slightblue -O -K >> gmtmap.ps\n" );
+          fprintf( fp, "gmt pscoast -R -JM -Di -N1/2p,black,5_2:0p -N2/faint,black,5_2:0p -A1000 -W1p,black -Slightblue -O -K -Vq >> gmtmap.ps\n" );
           fprintf( fp, "\n" );
         }
 
@@ -527,7 +601,7 @@ void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
   /*** these stations are turned off ***/
   /*************************************/
 
-        fprintf( fp, "gmt psxy -R -JM -W1p,120/120/120 -Vq -O -K >> gmtmap.ps << EOF\n");
+        fprintf( fp, "gmt psxy -R -JM -W1p,120/120/120 -O -K -Vq >> gmtmap.ps << EOF\n");
 
         for(ista=0; ista<nsta; ista++ )
         {
@@ -548,7 +622,7 @@ void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
    /*** these stations are turned on ***/
    /*************************************/
 
-        fprintf( fp, "gmt psxy -R -JM -W1.25p,black -Vq -O -K >> gmtmap.ps << EOF\n");
+        fprintf( fp, "gmt psxy -R -JM -W1.25p,black -O -K -Vq >> gmtmap.ps << EOF\n");
 
         for(ista=0;ista<nsta;ista++ )
         {
@@ -569,7 +643,7 @@ void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
 /********************************************************/
 
         fprintf( fp, "echo %g %g | ", evlo, evla );
-        fprintf( fp, " gmt psxy -R -JM -Sa0.15i -W1p,black -Gred -Vq -O -K >> gmtmap.ps\n" );
+        fprintf( fp, " gmt psxy -R -JM -Sa0.15i -W1p,black -Gred -O -K -Vq >> gmtmap.ps\n" );
         fprintf( fp, "\n");
 
 /*****************************************************************/
@@ -580,7 +654,7 @@ void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
 /*****************************************************************/
 
 /*** QC problems not used ***/
-	fprintf( fp, "gmt psxy -R -JM -St0.15i -W1p,black -Gyellow -Vq -O -K >> gmtmap.ps << EOF\n");
+	fprintf( fp, "gmt psxy -R -JM -St0.15i -W1p,black -Gyellow -O -K -Vq >> gmtmap.ps << EOF\n");
 	for(ista=0;ista<nsta;ista++ )
         {
                 if( ev[ista].iused == -1 )
@@ -593,7 +667,7 @@ void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
         fprintf( fp, "\n");
 
 /*** not used, manual removed or SNR problem not used in inversion but predicted ***/
-        fprintf( fp, "gmt psxy -R -JM -St0.15i -W1p,black -Gblue -Vq -O -K >> gmtmap.ps << EOF\n");
+        fprintf( fp, "gmt psxy -R -JM -St0.15i -W1p,black -Gblue -O -K -Vq >> gmtmap.ps << EOF\n");
         for(ista=0;ista<nsta;ista++ )
         {
                 if( ev[ista].iused == 0 )
@@ -606,7 +680,7 @@ void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
         fprintf( fp, "\n");
 
 /*** used in inversion ***/
-        fprintf( fp, "gmt psxy -R -JM -St0.15i -W1p,black -Gred -Vq -O -K >> gmtmap.ps << EOF\n");
+        fprintf( fp, "gmt psxy -R -JM -St0.15i -W1p,black -Gred -O -K -Vq >> gmtmap.ps << EOF\n");
 
         for(ista=0;ista<nsta;ista++ )
         {
@@ -623,7 +697,7 @@ void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
 /*** plot the station label names    ver GMT 5.x.x             ***/
 /*****************************************************************/
 
-        fprintf( fp, "gmt pstext -R -JM -D0.2i/0.2i -Vq -N -O -K >> gmtmap.ps << EOF\n");
+        fprintf( fp, "gmt pstext -R -JM -D0.2i/0.2i -N -O -K -Vq >> gmtmap.ps << EOF\n");
         for(ista=0;ista<nsta;ista++ )
         {
                 fprintf( fp, "%g %g %s.%s\n",
@@ -637,7 +711,10 @@ void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
 /*** plot the moment tensor                                    ***/
 /*****************************************************************/
 
-        fprintf( fp, "gmt psmeca -Vq -R -JM -Sz1.0i/0/0.1 -T0/1p,black -W1p,black -Ewhite -Gred -N -O -K >> gmtmap.ps << EOF\n");
+	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
+          fprintf( fp, "gmt psmeca -R -JM -Sm1.0i/0/0.1 -T0/1p,black -W1p,black -Ewhite -Gred -N -O -K -Vq >> gmtmap.ps << EOF\n");
+	else
+	  fprintf( fp, "gmt psmeca -R -JM -Sz1.0i/0/0.1 -T0/1p,black -W1p,black -Ewhite -Gred -N -O -K -Vq >> gmtmap.ps << EOF\n");
 
         fprintf( fp, "%g %g 0 %g %g %g %g %g %g %d title\n",
                 evlo,
@@ -658,10 +735,10 @@ void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
 /*** pspolar gmt 5.x.x version ***/
 /*****************************************************************/
 
-        fprintf( fp, "gmt pspolar -Vq -R -JM -D%g/%g -M%g -C%g/%g -Sc0.05i -Egreen -Gblue ",
+        fprintf( fp, "gmt pspolar -R -JM -D%g/%g -M%g -C%g/%g -Sc0.05i -Egreen -Gblue ",
 		evlo, evla, 0.9, evlo, evla );
 
-        fprintf( fp, " -T0.0/0/5/8 -O -K >> gmtmap.ps << EOF\n" );
+        fprintf( fp, " -T0.0/0/5/8 -O -K -Vq >> gmtmap.ps << EOF\n" );
 
         for( ista = 0; ista<nsta; ista++ )
         {
@@ -688,11 +765,11 @@ void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
         if( fabs( xmin-xmax ) > 16 ) xy_axis_frame_interval =  1;
         if( fabs( ymin-ymax ) > 16 ) y_axis_anot_interval = 5;
 
-        fprintf( fp, "gmt psbasemap -Vq -R -JM -Bxf0.5a%g -Byf0.5a%g -BNSEW -Lx1/1/%g/100 -O >> gmtmap.ps\n",
+        fprintf( fp, "gmt psbasemap -R -JM -Bxf0.5a%g -Byf0.5a%g -BNSEW -Lx1/1/%g/100 -O -Vq >> gmtmap.ps\n",
                 x_axis_anot_interval, y_axis_anot_interval, evla );
 
         fprintf( fp, "\n");
-        fprintf( fp, "psconvert -Z -Tj -E600 -P -A gmtmap.ps\n");
+        fprintf( fp, "gmt psconvert -Z -Tj -E600 -P -A -Vq gmtmap.ps\n");
         fclose(fp);
 
 }  /*** END OF SUBROUTINE     make_map_gmt5()   ****/
@@ -809,20 +886,20 @@ void make_map_gmt4( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
 /********************************************************/
         if( dogrd == 0 )
         {
-          fprintf( fp, "pscoast -R%g/%g/%g/%g -JM7i -Di -Na1p/0t5_2:0p -A1000 -W1p/0 -G220 -P -K >! gmtmap.ps\n",
+          fprintf( fp, "pscoast -R%g/%g/%g/%g -JM7i -Di -Na1p/0t5_2:0p -A1000 -W1p/0 -G220 -P -K -Vq >! gmtmap.ps\n",
                 xmin, xmax, ymin, ymax );
           fprintf( fp, "\n" );
         }
 
         if( dogrd == 1 )
         {
-          fprintf( fp, "grdimage -R%g/%g/%g/%g -JM6i -C%s -I%s %s -P -K >! gmtmap.ps\n",
+          fprintf( fp, "grdimage -R%g/%g/%g/%g -JM6i -C%s -I%s %s -P -K -Vq >! gmtmap.ps\n",
                 xmin, xmax, ymin, ymax,
                 gmt_cpt_filename, gmt_int_filename, gmt_grd_filename );
 
           fprintf( fp, "\n" );
 
-          fprintf( fp, "pscoast -R -JM -Di -Na1p/0t5_2:0p -A1000 -W1p/0 -S200/200/255 -O -K >> gmtmap.ps\n" );
+          fprintf( fp, "pscoast -R -JM -Di -Na1p/0t5_2:0p -A1000 -W1p/0 -S200/200/255 -O -K -Vq >> gmtmap.ps\n" );
           fprintf( fp, "\n" );
         }
 
@@ -832,7 +909,7 @@ void make_map_gmt4( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
 /********************************************************/
 
     /*** these stations are turned off ***/
-        fprintf( fp, "psxy -R -JM -M -O -K >> gmtmap.ps << EOF\n");
+        fprintf( fp, "psxy -R -JM -M -O -K -Vq >> gmtmap.ps << EOF\n");
         for(ista=0;ista<nsta;ista++ )
         {
                 if( ev[ista].iused < 1 )
@@ -848,7 +925,7 @@ void make_map_gmt4( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
         fprintf( fp, "\n");
 
     /*** these stations are turned on ***/
-        fprintf( fp, "psxy -R -JM -M -O -K >> gmtmap.ps << EOF\n");
+        fprintf( fp, "psxy -R -JM -M -O -K -Vq >> gmtmap.ps << EOF\n");
         for(ista=0;ista<nsta;ista++ )
         {
                 if( ev[ista].iused == 1 )
@@ -868,7 +945,7 @@ void make_map_gmt4( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
 /********************************************************/
 
         fprintf( fp, "echo %g %g | ", evlo, evla );
-        fprintf( fp, " psxy -R -JM -Sa0.15i -W1p/0 -G255/0/0 -O -K >> gmtmap.ps\n" );
+        fprintf( fp, " psxy -R -JM -Sa0.15i -W1p/0 -G255/0/0 -O -K -Vq >> gmtmap.ps\n" );
         fprintf( fp, "\n");
 
 /*****************************************************************/
@@ -878,7 +955,7 @@ void make_map_gmt4( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
 /*****************************************************************/
 
 /*** yellow QC problems not used ***/
-	fprintf( fp, "psxy -R -JM -St0.15i -W1p/0 -G0/255/255 -O -K >> gmtmap.ps << EOF\n");
+	fprintf( fp, "psxy -R -JM -St0.15i -W1p/0 -G0/255/255 -O -K -Vq >> gmtmap.ps << EOF\n");
 	for(ista=0;ista<nsta;ista++ )
         {
                 if( ev[ista].iused == -1 )
@@ -889,7 +966,7 @@ void make_map_gmt4( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
         fprintf( fp, "\n");
 
 /*** manual remove or low SNR , not used but predicted shown ***/
-        fprintf( fp, "psxy -R -JM -St0.15i -W1p/0 -G0/0/255 -O -K >> gmtmap.ps << EOF\n");
+        fprintf( fp, "psxy -R -JM -St0.15i -W1p/0 -G0/0/255 -O -K -Vq >> gmtmap.ps << EOF\n");
         for(ista=0;ista<nsta;ista++ )
         {
                 if( ev[ista].iused == 0 )
@@ -900,7 +977,7 @@ void make_map_gmt4( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
         fprintf( fp, "\n");
 
 /*** used ***/
-        fprintf( fp, "psxy -R -JM -St0.15i -W1p/0 -G255/0/0 -O -K >> gmtmap.ps << EOF\n");
+        fprintf( fp, "psxy -R -JM -St0.15i -W1p/0 -G255/0/0 -O -K -Vq >> gmtmap.ps << EOF\n");
         for(ista=0;ista<nsta;ista++ )
         {
                 if( ev[ista].iused == 1 )
@@ -914,7 +991,7 @@ void make_map_gmt4( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
 /*** plot the station label names                              ***/
 /*****************************************************************/
 
-        fprintf( fp, "pstext -R -JM -N -O -K >> gmtmap.ps << EOF\n");
+        fprintf( fp, "pstext -R -JM -N -O -K -Vq >> gmtmap.ps << EOF\n");
         for(ista=0;ista<nsta;ista++ )
         {
                 fprintf( fp, "%g %g 12 0 1 0 %s.%s\n",
@@ -928,7 +1005,11 @@ void make_map_gmt4( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
 /*** plot the moment tensor                                    ***/
 /*****************************************************************/
 
-        fprintf( fp, "psmeca -R -JM -Sz1.0i/0/0.1 -L -W1p/0 -G255/0/0 -N -O -K >> gmtmap.ps << EOF\n");
+	if( sol[iz].mt_type == EXPLOSION || sol[iz].mt_type == FULL_MT  )
+          fprintf( fp, "psmeca -R -JM -Sm1.0i/0/0.1 -L -W1p/0 -G255/0/0 -N -O -K -Vq >> gmtmap.ps << EOF\n");
+	else
+	  fprintf( fp, "psmeca -R -JM -Sz1.0i/0/0.1 -L -W1p/0 -G255/0/0 -N -O -K -Vq >> gmtmap.ps << EOF\n");
+
         fprintf( fp, "%g %g 0 %g %g %g %g %g %g %d x y \n",
                 evlo, evla,
                 sol[iz].mrr, sol[iz].mtt, sol[iz].mff, sol[iz].mrt, sol[iz].mrf, sol[iz].mtf,
@@ -941,7 +1022,7 @@ void make_map_gmt4( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
 /**** GMT 4.5.x old version ***/
 /*****************************************************************/
         fprintf( fp,
-          "pspolar -R -JM -D%g/%g -M%g -N -Sc0.1i -E0/255/0 -e1p/0 -G0/0/255 -g1p/0 -T0.0/0/5/8 -W1p/0 -O -K >> gmtmap.ps << EOF\n",
+          "pspolar -R -JM -D%g/%g -M%g -N -Sc0.1i -E0/255/0 -e1p/0 -G0/0/255 -g1p/0 -T0.0/0/5/8 -W1p/0 -O -K -Vq >> gmtmap.ps << EOF\n",
                 evlo, evla, 0.9 );
         for(ista=0;ista<nsta;ista++ )
         {
@@ -966,7 +1047,7 @@ void make_map_gmt4( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
         if( fabs( xmin-xmax ) > 16 ) xy_axis_frame_interval =  1;
         if( fabs( ymin-ymax ) > 16 ) y_axis_anot_interval = 5;
 
-        fprintf( fp, "psbasemap -R -JM -Bf0.5a%g/f0.5a%gNSEW -Lx1/1/%g/100 -O >> gmtmap.ps\n",
+        fprintf( fp, "psbasemap -R -JM -Bf0.5a%g/f0.5a%gNSEW -Lx1/1/%g/100 -O -Vq >> gmtmap.ps\n",
                 x_axis_anot_interval, y_axis_anot_interval, evla );
 
         fprintf( fp, "\n");
@@ -1021,7 +1102,8 @@ void plot_results_gmt5( int iz, Solution *sol, EventInfo *ev )
 
         fprintf( fp, "\n" );
 
-        fprintf( fp, "gmt set MAP_FRAME_TYPE plain\n" );
+        fprintf( fp, "gmt set MAP_FRAME_TYPE plain \n" );
+        fprintf( fp, "gmt set FONT_TITLE 14p,Helvetica-Bold,black \n" );
         fprintf( fp, "\n" );
 
         fprintf( fp, "### automatically set the variance reduction range to min max\n" );
@@ -1068,12 +1150,12 @@ void plot_results_gmt5( int iz, Solution *sol, EventInfo *ev )
         fprintf( fp, "###\n" );
 
         fprintf( fp, "awk '{ print $4, $13 }' %s | ", outfile );
-        fprintf( fp, "gmt psxy -R${OTmin}/${OTmax}/${VRmin}/${VRmax} ${PRJ} -W2p,red -K -P >! ${OUTPUT_PS}\n" );
-        fprintf( fp, "gmt psbasemap -R ${PRJ} -Bxg1a1+l\"${XLABEL}\" -Byg5a5+l\"%%Variance Reduction\" -BnSeW -K -O >> ${OUTPUT_PS}\n" );
+        fprintf( fp, "gmt psxy -R${OTmin}/${OTmax}/${VRmin}/${VRmax} ${PRJ} -W2p,red -K -Vq -P >! ${OUTPUT_PS}\n" );
+        fprintf( fp, "gmt psbasemap -R ${PRJ} -Bxg1a1+l\"${XLABEL}\" -Byg5a5+l\"%%Variance Reduction\" -BnSeW -K -O -Vq >> ${OUTPUT_PS}\n" );
         fprintf( fp, "\n" );
 
 /*** take care of differences in scaling MT size is psmeca due to the use of %VR in FULL_MT ***/
-/*** or %VR normalized by %DC used in DEV_MT ***/
+/*** or %VR normalized by %DC used in DEVIATORIC ***/
 
 /*******************************************************************************************************************************/
 /***            1   2     3   4     5           6                  7      8     9   10    11    12   13    14    15    16    ***/
@@ -1099,7 +1181,12 @@ void plot_results_gmt5( int iz, Solution *sol, EventInfo *ev )
           fprintf( fp, "awk '{ print $4, $13, $3, $17, $18, $19, $20, $21, $22, $15, $4, $13, \"Mw\", $7 }' %s | ",
                 outfile );
         }
-	fprintf( fp, "gmt psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K >> ${OUTPUT_PS} \n" );
+
+	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
+	  fprintf( fp, "gmt psmeca -R ${PRJ} -Sm0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K -Vq >> ${OUTPUT_PS} \n" );
+	else
+	  fprintf( fp, "gmt psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K -Vq >> ${OUTPUT_PS} \n" );
+
         fprintf( fp, "\n" );
 
 	
@@ -1112,8 +1199,8 @@ void plot_results_gmt5( int iz, Solution *sol, EventInfo *ev )
         fprintf( fp, "###\n" );
 
         fprintf( fp, "awk '{ print $4, $9 }' %s | ", outfile );
-        fprintf( fp, "gmt psxy -R${OTmin}/${OTmax}/${DCmin}/${DCmax} ${PRJ} -W2p,red -K -O -Y3i >> ${OUTPUT_PS}\n" );
-        fprintf( fp, "gmt psbasemap -R ${PRJ} -Bxg1a1+l\"${XLABEL}\" -Byg5a5+l\"%%Double Couple\" -BnseW -K -O >> ${OUTPUT_PS}\n" );
+        fprintf( fp, "gmt psxy -R${OTmin}/${OTmax}/${DCmin}/${DCmax} ${PRJ} -W2p,red -K -O -Vq -Y3i >> ${OUTPUT_PS}\n" );
+        fprintf( fp, "gmt psbasemap -R ${PRJ} -Bxg1a1+l\"${XLABEL}\" -Byg5a5+l\"%%Double Couple\" -BnseW -K -O -Vq >> ${OUTPUT_PS}\n" );
         fprintf( fp, "\n" );
 
         fprintf( fp, "###\n" );
@@ -1133,7 +1220,11 @@ void plot_results_gmt5( int iz, Solution *sol, EventInfo *ev )
                 outfile );
         }
 
-        fprintf( fp, "gmt psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K >> ${OUTPUT_PS}\n" );
+	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
+          fprintf( fp, "gmt psmeca -R ${PRJ} -Sm0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K -Vq >> ${OUTPUT_PS}\n" );
+	else
+	  fprintf( fp, "gmt psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K -Vq >> ${OUTPUT_PS}\n" );
+
         fprintf( fp, "\n" );
 
 /*****************************************************/
@@ -1145,9 +1236,9 @@ void plot_results_gmt5( int iz, Solution *sol, EventInfo *ev )
 
 	
         fprintf( fp, "awk '{ print $4, $3 }' %s | ", outfile );
-        fprintf( fp, "gmt psxy -R${OTmin}/${OTmax}/${Zmin}/${Zmax} ${PRJ} -W2p,red -K -O -Y3i >> ${OUTPUT_PS}\n" );
+        fprintf( fp, "gmt psxy -R${OTmin}/${OTmax}/${Zmin}/${Zmax} ${PRJ} -W2p,red -K -O -Vq -Y3i >> ${OUTPUT_PS}\n" );
         fprintf( fp, "gmt psbasemap -R ${PRJ} -Bxg1a1+l\"${XLABEL}\" -Byf${Zdiv}a${Zdiv}+l\"Depth (km)\" -BnseW+t\"${TITLE}\" " );
-        fprintf( fp, " -K -O >> ${OUTPUT_PS}\n" );
+        fprintf( fp, " -K -O -Vq >> ${OUTPUT_PS}\n" );
         fprintf( fp, "\n" );
 
         fprintf( fp, "###\n" );
@@ -1166,11 +1257,15 @@ void plot_results_gmt5( int iz, Solution *sol, EventInfo *ev )
             "awk '{ print $4, $3, $3, $17, $18, $19, $20, $21, $22, $15, $4, $3, \"Z=\", $3\"(km)\" }' %s | ",
                 outfile );
         }
-        fprintf( fp, "gmt psmeca -R ${PRJ} -Sz0.45i/10/0 -N -L -W1p,black -Gred -N -O >> ${OUTPUT_PS} \n" );
+
+	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
+          fprintf( fp, "gmt psmeca -R ${PRJ} -Sm0.45i/10/0 -N -L -W1p,black -Gred -N -O -Vq >> ${OUTPUT_PS} \n" );
+	else
+	  fprintf( fp, "gmt psmeca -R ${PRJ} -Sz0.45i/10/0 -N -L -W1p,black -Gred -N -O -Vq >> ${OUTPUT_PS} \n" );
 
         fprintf( fp, "\n" );
 
-        fprintf( fp, "psconvert -Tj -E300 -Z -A -P ${OUTPUT_PS}\n" );
+        fprintf( fp, "gmt psconvert -Tj -E300 -Z -A -P -Vq ${OUTPUT_PS}\n" );
 
         fclose(fp);
 
@@ -1262,13 +1357,13 @@ void plot_results_gmt4( int iz, Solution *sol, EventInfo *ev )
         fprintf( fp, "###\n" );
 
         fprintf( fp, "awk '{ print $4, $13 }' %s | ", outfile );
-        fprintf( fp, "psxy -R${OTmin}/${OTmax}/${VRmin}/${VRmax} ${PRJ} -M -W2p/255/0/0 -K -P >! ${OUTPUT_PS}\n" );
-        fprintf( fp, "psbasemap -R ${PRJ} -Bf1g1a1:\"${XLABEL}\":/f1g5a5:\"%%Variance Reduction\":nSeW -K -O >> ${OUTPUT_PS}\n" );
+        fprintf( fp, "psxy -R${OTmin}/${OTmax}/${VRmin}/${VRmax} ${PRJ} -M -W2p/255/0/0 -K -Vq -P >! ${OUTPUT_PS}\n" );
+        fprintf( fp, "psbasemap -R ${PRJ} -Bf1g1a1:\"${XLABEL}\":/f1g5a5:\"%%Variance Reduction\":nSeW -K -O -Vq >> ${OUTPUT_PS}\n" );
         fprintf( fp, "\n" );
 
 
 /*** take care of differences in scaling MT size is psmeca due to the use of %VR in FULL_MT ***/
-/*** or %VR normalized by %DC used in DEV_MT ***/
+/*** or %VR normalized by %DC used in DEVIATORIC ***/
 
 /*******************************************************************************************************************************/
 /***            1   2     3   4     5           6                  7      8     9   10    11    12   13    14    15    16    ***/
@@ -1294,7 +1389,12 @@ void plot_results_gmt4( int iz, Solution *sol, EventInfo *ev )
           fprintf( fp, "awk '{ print $4, $13, $3, $17, $18, $19, $20, $21, $22, $15, $4, $13, \"Mw\", $7 }' %s | ",
                 outfile );
         }
-        fprintf( fp, "psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p/0 -G255/0/0 -N -O -K >> ${OUTPUT_PS} \n" );
+
+	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
+          fprintf( fp, "psmeca -R ${PRJ} -Sm0.45i/10/0.1 -N -L -W1p/0 -G255/0/0 -N -O -K -Vq >> ${OUTPUT_PS} \n" );
+	else
+	  fprintf( fp, "psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p/0 -G255/0/0 -N -O -K -Vq >> ${OUTPUT_PS} \n" );
+
         fprintf( fp, "\n" );
 
 /******************************************/
@@ -1304,8 +1404,8 @@ void plot_results_gmt4( int iz, Solution *sol, EventInfo *ev )
         fprintf( fp, "###\n" );
 
         fprintf( fp, "awk '{ print $4, $9 }' %s | ", outfile );
-        fprintf( fp, "psxy -R${OTmin}/${OTmax}/${DCmin}/${DCmax} ${PRJ} -M -W2p/255/0/0 -K -O -Y3i >> ${OUTPUT_PS}\n" );
-        fprintf( fp, "psbasemap -R ${PRJ} -Bf1g1a1:\"${XLABEL}\":/f1g5a5:\"%%Double Couple\":nseW -K -O >> ${OUTPUT_PS}\n" );
+        fprintf( fp, "psxy -R${OTmin}/${OTmax}/${DCmin}/${DCmax} ${PRJ} -M -W2p/255/0/0 -K -O -Vq -Y3i >> ${OUTPUT_PS}\n" );
+        fprintf( fp, "psbasemap -R ${PRJ} -Bf1g1a1:\"${XLABEL}\":/f1g5a5:\"%%Double Couple\":nseW -K -O -Vq >> ${OUTPUT_PS}\n" );
         fprintf( fp, "\n" );
 
         fprintf( fp, "###\n" );
@@ -1325,7 +1425,11 @@ void plot_results_gmt4( int iz, Solution *sol, EventInfo *ev )
                 outfile );
         }
 
-        fprintf( fp, "psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p/0 -G255/0/0 -N -O -K >> ${OUTPUT_PS}\n" );
+	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
+          fprintf( fp, "psmeca -R ${PRJ} -Sm0.45i/10/0.1 -N -L -W1p/0 -G255/0/0 -N -O -K -Vq >> ${OUTPUT_PS}\n" );
+	else
+	  fprintf( fp, "psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p/0 -G255/0/0 -N -O -K -Vq >> ${OUTPUT_PS}\n" );
+
         fprintf( fp, "\n" );
 
 /******************************************/
@@ -1335,9 +1439,9 @@ void plot_results_gmt4( int iz, Solution *sol, EventInfo *ev )
         fprintf( fp, "###\n" );
 
         fprintf( fp, "awk '{ print $4, $3 }' %s | ", outfile );
-        fprintf( fp, "psxy -R${OTmin}/${OTmax}/${Zmin}/${Zmax} ${PRJ} -M -W2p/255/0/0 -K -O -Y3i >> ${OUTPUT_PS}\n" );
+        fprintf( fp, "psxy -R${OTmin}/${OTmax}/${Zmin}/${Zmax} ${PRJ} -M -W2p/255/0/0 -K -O -Vq -Y3i >> ${OUTPUT_PS}\n" );
         fprintf( fp, "psbasemap -R ${PRJ} -Bf1g1a1:\"${XLABEL}\":/f1g5a5:\"Depth (km)\":/:.\"${TITLE}\":nseW " );
-        fprintf( fp, "  -K -O >> ${OUTPUT_PS}\n" );
+        fprintf( fp, "  -K -O -Vq >> ${OUTPUT_PS}\n" );
         fprintf( fp, "\n" );
 
         fprintf( fp, "###\n" );
@@ -1356,7 +1460,11 @@ void plot_results_gmt4( int iz, Solution *sol, EventInfo *ev )
             "awk '{ print $4, $3, $3, $17, $18, $19, $20, $21, $22, $15, $4, $3, \"Z=\", $3\"(km)\" }' %s | ",
                 outfile );
         }
-        fprintf( fp, "psmeca -R ${PRJ} -Sz0.45i/10/0 -N -L -W1p/0 -G255/0/0 -N -O >> ${OUTPUT_PS} \n" );
+
+	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
+	  fprintf( fp, "psmeca -R ${PRJ} -Sm0.45i/10/0 -N -L -W1p/0 -G255/0/0 -N -O -Vq >> ${OUTPUT_PS} \n" );
+	else
+	  fprintf( fp, "psmeca -R ${PRJ} -Sz0.45i/10/0 -N -L -W1p/0 -G255/0/0 -N -O -Vq >> ${OUTPUT_PS} \n" );
 
         fprintf( fp, "\n" );
 
@@ -1375,7 +1483,7 @@ void plot_results_gmt4( int iz, Solution *sol, EventInfo *ev )
 /*** this version does each station as rows of 3-component rather than cols ***/
 /*****************************************************************************/
 
-void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int verbose )
+void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int verbose, char *sort_by_value, int print_gmtwf_mt_info )
 {
 	FILE *fp;
 	char grd_mo_type[6];
@@ -1384,9 +1492,14 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
 	float cm2microns = 10000.;
 	float cm2nanometers = 10000000.;
 	float scale;
+	float peak_amplitude = 0;
+
+	float Mo_newton_meters_abcassa;
+	int Mo_newton_meters_exponent;
+
 /* see include/mt.h Mo = math.pow( 10.0, 1.5*(Mw+10.73) ) = 1.2445146117713818e+16; Reference Mw = 0.0 */
 
-	int first = 1, ista, it, npts, ipage = 0;
+	int first = 1, ista, ii, it, npts, ipage = 0;
 	float dt, beg;
 	float *x, *syn_z, *syn_r, *syn_t, *dat_z, *dat_r, *dat_t;
 	float new_page;
@@ -1395,6 +1508,7 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
 	char syn_linecolor[24], dat_linecolor[24];
 	char limits[128];
 	char project[64];
+	char myloc[8];
 
 	char    axes_top[128];
 	char axes_middle[128];
@@ -1406,11 +1520,19 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
 	char JPG_outputfilename[256];
 	char yunits[24];
 
+	int panel_count  = 0;
 	int total_sta_per_page = 8;
 	float xinc = +1.5, yinc = +1.25;
 	float xsize = +1.5, ysize = +0.75;
 
 	void sac_minmax( float *x, int nt, float *min, float *max, float *mean );
+
+	int *indx;
+	void station_sorter( int *indx, EventInfo *ev, int nsta, char *sort_type, int verbose ); 
+		/* sort_type == "none" or "dist" or "azi" or "baz" */
+
+/*** add pass option to plot grayscale or color waveforms ***/
+/*** add option to plot waveforms ordered by azimuth instead of distance ***/
 
 	fp = fopen( "gmtwf.csh", "w" );
 	fprintf( fp, "#!/bin/csh\n" );
@@ -1431,8 +1553,16 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
 
 	scale = cm2nanometers;
 
-	for( ista=0; ista<nsta; ista++ )
+/*** sort by distance or azimuth ***/
+
+	indx = (int *) calloc( nsta+1, sizeof(int) );
+	station_sorter( indx, ev, nsta, sort_by_value,  verbose );
+
+	panel_count = 0;
+
+	for( ii=0; ii<nsta; ii++ )
 	{
+		ista=indx[ii+1]-1;
 
 	/*** set variables and allocate mem ***/
 
@@ -1488,6 +1618,10 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
                 if( ev[ista].syn_r.s.depmax > ymax ) ymax = ev[ista].syn_r.s.depmax;
                 if( ev[ista].syn_z.s.depmax > ymax ) ymax = ev[ista].syn_z.s.depmax;
 
+		peak_amplitude = fabs(ymin) + fabs(ymax);
+
+	/*** pad the y-axes by 5% additional scale ***/
+
 		ytmp = ymin - ( fabs(ymin) * 0.05 );
 		ymin = roundf( ytmp );
 		ytmp = ymax + ( fabs(ymax) * 0.05 );
@@ -1506,34 +1640,53 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
 
 	/*** orientation == PORTRAIT 24 rows per page  ***/
 
-		new_page = ista % total_sta_per_page;
+		new_page = panel_count % total_sta_per_page;
 
 		sprintf( limits, "-R%g/%g/%g/%g", xmin, xmax, ymin, ymax );
 
 		sprintf( project, "-JX%gi/%gi", xsize, ysize );
 
-
-		if( ev[ista].grd_mo_type == VELOCITY )
+		if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
 		{
+		 if( ev[ista].grd_mo_type == VELOCITY )
+		 {
                         sprintf( grd_mo_type, "V" );
 			sprintf( yunits, "nm/sec" );
-		}
-                else
-		{
+		 }
+                 else
+		 {
                         sprintf( grd_mo_type, "D" );
 			sprintf( yunits, "nm" );
+		 }
+		}
+		else if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		{
+		  if( ev[ista].grd_mo_type == VELOCITY )
+		  {
+		  	sprintf( grd_mo_type, "V" );
+			sprintf( yunits, "nrad/sec" );
+		  }
+		  else
+		  {
+			sprintf( grd_mo_type, "D" );
+			sprintf( yunits, "nrad" );
+		  }
 		}
 
-		sprintf( axes_top, "-Bxf%ga%g+l\"sec\" -Byf%ga%g+l\"%s\" -BsW",
+			/*** changed so no y-axes, moved peak amplitude to under station text ***/
+							/*** changed -BsW to -Bs ***/
+		sprintf( axes_top, "-Bxf%ga%g+l\"sec\" -Byf%ga%g+l\"%s\" -Bs",
                         roundf(xmax/4.0), roundf(xmax),
                         roundf(ymax/4.0), roundf(ymax),
 			yunits );
 
-		sprintf( axes_middle, "-Bxf%ga%g -Byf%ga%g+l\"%s\" -BSW",
+							/*** changed -BSW to -BS ***/
+		sprintf( axes_middle, "-Bxf%ga%g -Byf%ga%g+l\"%s\" -BS",
                         roundf(xmax/4.0), roundf(xmax),
                         roundf(ymax/4.0), roundf(ymax), yunits );
 
-		sprintf( axes_bottom, "-Bxf%ga%g+l\"sec\" -Byf%ga%g+l\"%s\" -BSW",
+							/**** changed -BSW to -BS ***/
+		sprintf( axes_bottom, "-Bxf%ga%g+l\"sec\" -Byf%ga%g+l\"%s\" -BS",
                         roundf(xmax/4.0), roundf(xmax), 
                         roundf(ymax/4.0), roundf(ymax),
 			yunits );
@@ -1548,10 +1701,10 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
 			if ( new_page == 0 && !first )
 			{
 				fprintf( fp, "### close the previous plot\n" );
-				fprintf( fp, "echo 0 0 . | gmt pstext -R -JX -O >> %s\n", PS_outputfilename );
+				fprintf( fp, "echo 0 0 . | gmt pstext -R -JX -O -Vq >> %s\n", PS_outputfilename );
 				fprintf( fp, "# gs %s\n", PS_outputfilename );
 				fprintf( fp, "ps2pdf %s\n", PS_outputfilename );
-				fprintf( fp, "psconvert -Tj -E600 -A %s\n", PS_outputfilename );
+				fprintf( fp, "gmt psconvert -Tj -E600 -A -Vq %s\n", PS_outputfilename );
 				fprintf( fp, "open %s\n", JPG_outputfilename );
 			}
 		
@@ -1570,7 +1723,7 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
 			fprintf( fp, "################## %s ista = %d ########################\n", grn[ista][iz].stnm, ista+1 );
 			fprintf( fp, "###\n" );
 
-			fprintf( fp, "gmt psbasemap %s %s %s -P -K >! %s\n", 
+			fprintf( fp, "gmt psbasemap %s %s %s -P -K -Vq >! %s\n", 
 				limits, project, axes_bottom, PS_outputfilename );
 			first = 0;
 			ipage++;
@@ -1582,11 +1735,13 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
 			fprintf( fp, "################## %s ista = %d ########################\n", grn[ista][iz].stnm, ista+1 );
 			fprintf( fp, "###\n" );
 
-                        fprintf( fp, "gmt psbasemap %s %s %s -Y%gi -X-%gi -O -K >> %s\n", 
+                        fprintf( fp, "gmt psbasemap %s %s %s -Y%gi -X-%gi -O -K -Vq >> %s\n", 
 				limits, project, axes_middle, yinc, (2.0*xinc), PS_outputfilename );
 		}
 
 		sprintf( dat_linecolor, "-W1p,black" );
+
+/*** color only ***/
 
                 if( ev[ista].iused == 1 )
                   sprintf( syn_linecolor, "-W1p,red,10_2:0p" );
@@ -1595,16 +1750,35 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
 		else 
 		  sprintf( syn_linecolor, "-W1p,yellow,10_2:0p" );
 
+/*** gray scale ***/
+/*
+		if( ev[ista].iused == 1 )
+                  sprintf( syn_linecolor, "-W1p,darkgray,10_2:0p" );
+                else if( ev[ista].iused == 0 )
+                  sprintf( syn_linecolor, "-W1p,darkgray,10_2:0p" );
+                else
+                  sprintf( syn_linecolor, "-W1p,yellow,10_2:0p" );
+*/
+
 	/*** vertical ***/
 
                 sprintf( data_filename, "%s.%s.%s.%03d.z.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
                 sprintf( synt_filename, "%s.%s.%s.%03d.z.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
 
 		fprintf( fp, "\n### vertical data and synthetics\n" );
-                fprintf( fp, "gmt psxy -R -JX %s -O -K        %s >> %s\n", dat_linecolor, data_filename, PS_outputfilename );
-                fprintf( fp, "gmt psxy -R -JX %s -O -K        %s >> %s\n", syn_linecolor, synt_filename, PS_outputfilename );
+                fprintf( fp, "gmt psxy -R -JX %s -O -K -Vq        %s >> %s\n", dat_linecolor, data_filename, PS_outputfilename );
+                fprintf( fp, "gmt psxy -R -JX %s -O -K -Vq        %s >> %s\n", syn_linecolor, synt_filename, PS_outputfilename );
 
-		fprintf( fp, "echo \"0 0 Z\" | gmt pstext -R -JX -D0.1i/0.1i -F+jBL+f10p,Times-Bold,black -N -O -K >> %s\n", PS_outputfilename );
+		if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		{
+			fprintf( fp, "echo \"0 %g @~w@~@-x@-\" | gmt pstext -R -JX -D0.1i/0.1i -F+jBL+f14p,Times-BoldItalic,black -N -O -K -Vq >> %s\n",
+                        	ymax, PS_outputfilename );
+		}
+		else if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+		{
+			fprintf( fp, "echo \"0 %g Z\" | gmt pstext -R -JX -D0.1i/0.0i -F+jBL+f14p,Times-Bold,black -N -O -K -Vq >> %s\n", 
+				ymax, PS_outputfilename );
+		}
 
 	/*** radial ***/
 
@@ -1612,10 +1786,19 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
                 sprintf( synt_filename, "%s.%s.%s.%03d.r.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
 
 		fprintf( fp, "\n### radial data and synthetics\n" );
-                fprintf( fp, "gmt psxy -R -JX %s -O -K -X%gi   %s >> %s\n", dat_linecolor, xinc, data_filename, PS_outputfilename );
-                fprintf( fp, "gmt psxy -R -JX %s -O -K         %s >> %s\n", syn_linecolor, synt_filename, PS_outputfilename );
+                fprintf( fp, "gmt psxy -R -JX %s -O -K -Vq -X%gi   %s >> %s\n", dat_linecolor, xinc, data_filename, PS_outputfilename );
+                fprintf( fp, "gmt psxy -R -JX %s -O -K -Vq         %s >> %s\n", syn_linecolor, synt_filename, PS_outputfilename );
 
-		fprintf( fp, "echo \"0 0 R\" | gmt pstext -R -JX -D0.1i/0.1i -F+jBL+f10p,Times-Bold,black -N -O -K >> %s\n", PS_outputfilename );
+		if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		{
+		 fprintf( fp, "echo \"0 %g @~w@~@-y@-\" | gmt pstext -R -JX -D0.1i/0.1i -F+jBL+f14p,Times-BoldItalic,black -N -O -K -Vq >> %s\n", 
+			ymax, PS_outputfilename );
+		}
+		else if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+		{
+		 fprintf( fp, "echo \"0 %g R\" | gmt pstext -R -JX -D0.1i/0.0i -F+jBL+f14p,Times-Bold,black -N -O -K -Vq >> %s\n", 
+			ymax, PS_outputfilename );
+		}
 
 	/*** transverse ***/
 
@@ -1623,18 +1806,55 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
 		sprintf( synt_filename, "%s.%s.%s.%03d.t.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
 
 		fprintf( fp, "\n### transverse data and synthetics\n" );
-		fprintf( fp, "gmt psxy -R -JX %s -O -K -X%gi   %s >> %s\n", dat_linecolor, xinc, data_filename, PS_outputfilename );
-                fprintf( fp, "gmt psxy -R -JX %s -O -K         %s >> %s\n", syn_linecolor, synt_filename, PS_outputfilename );
+		fprintf( fp, "gmt psxy -R -JX %s -O -K -Vq -X%gi   %s >> %s\n", dat_linecolor, xinc, data_filename, PS_outputfilename );
+                fprintf( fp, "gmt psxy -R -JX %s -O -K -Vq         %s >> %s\n", syn_linecolor, synt_filename, PS_outputfilename );
 
-		fprintf( fp, "echo \"0 0 T\" | gmt pstext -R -JX -D0.1i/0.1i -F+jBL+f10p,Times-Bold,black -N -O -K >> %s\n", PS_outputfilename );
+		if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		{
+		 fprintf( fp, "echo \"0 %g @~w@~@-z@-\" | gmt pstext -R -JX -D0.1i/0.1i -F+jBL+f14p,Times-BoldItalic,black -N -O -K -Vq >> %s\n", 
+			ymax, PS_outputfilename );
+		}
+		else if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+		{
+		 fprintf( fp, "echo \"0 %g T\" | gmt pstext -R -JX -D0.1i/0.0i -F+jBL+f14p,Times-Bold,black -N -O -K -Vq >> %s\n", 
+			ymax, PS_outputfilename );
+		}
+
+		if(  strcmp( grn[ista][iz].loc, "" ) == 0 )
+			strcpy( myloc, "--" );
+		else
+			strcpy( myloc, grn[ista][iz].loc );
 
 		fprintf( fp, "\n### net.sta label tag\n" );
-		fprintf( fp, "gmt pstext -R0/1/0/1 -JX1i/1i -D0i/0i -N -F+jML+f11p,Times-Bold,black -O -K >> %s << EOF\n", PS_outputfilename );
-		fprintf( fp, "1.5 0.6 %s.%s\n",           grn[ista][iz].net, grn[ista][iz].stnm );
-		fprintf( fp, "1.5 0.4 @~D@~=%.0f km\n",   grn[ista][iz].rdist );
-		fprintf( fp, "1.5 0.2 @~f@~=%.0f@+o@+\n", grn[ista][iz].az );
+
+		fprintf( fp, "gmt pstext -R0/1/0/1 -JX1i/1i -D0i/0i -N -F+jML+f11p,Times-Bold,black -O -K -Vq >> %s << EOF\n", PS_outputfilename );
+		fprintf( fp, "1.5 0.8 %s.%s.%s\n",       grn[ista][iz].net, grn[ista][iz].stnm,  myloc );
+		fprintf( fp, "1.5 0.6 @~D@~=%.0f @%%7%% km @%%%%\n",   grn[ista][iz].rdist );
+		fprintf( fp, "1.5 0.4 @~f@~=%.0f@+o@+\n", grn[ista][iz].az );
 		fprintf( fp, "EOF\n" );
-		fprintf( fp, "\n" );
+
+		/*** peak-to-peak ***/
+		if( print_gmtwf_mt_info )
+		{
+		 fprintf( fp, "gmt pstext -R0/1/0/1 -JX1i/1i -D0i/0i -N -F+jML+f9p,Times-Bold,black -O -K -Vq >> %s << EOF\n", PS_outputfilename );
+		 fprintf( fp, "1.5 0.2 %5.2e @%%7%%%s@%%%%\n", peak_amplitude, yunits );
+		 fprintf( fp, "EOF\n" );
+		 fprintf( fp, "\n" );
+		}
+
+	/*** invert / prediction / freq band ***/
+		if( print_gmtwf_mt_info )
+		{
+		 fprintf( fp, "gmt pstext -R0/1/0/1 -JX1i/1i -D0i/0i -N -F+jML+f8p,Times-Bold,black -O -K -Vq >> %s << EOF\n", PS_outputfilename );
+
+		 if( ev[ista].iused == 1 )
+		  fprintf( fp, "1.5 0.05 Invert %4.2f_%04.2fHz\n", ev[ista].lf, ev[ista].hf );
+		 else if( ev[ista].iused == 0 )
+		  fprintf( fp, "1.5 0.05 Predict %4.2f_%04.2fHz\n", ev[ista].lf, ev[ista].hf );
+
+		 fprintf( fp, "EOF\n" );
+		 fprintf( fp, "\n" );
+		}
 
 		free(x);
 		free(syn_z);
@@ -1643,6 +1863,8 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
                 free(dat_z);
                 free(dat_r);
                 free(dat_t);
+
+		panel_count++;
 
 	} /*** loop over ista - stations ***/
 
@@ -1654,12 +1876,19 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
 	fprintf( fp, "################## mechanism ########################\n" );
 	fprintf( fp, "####\n" );
 
-	if( sol[iz].PISO > 40 )
-	  fprintf( fp, "gmt psmeca -R0/10/0/10 -JX1.5i/1.5i -Sz1i/0 -T0/1p,black -W1p,black -Gred -Ered -N -X+2i -O -K >> %s << EOF\n",
+				/*** x-offset change from 2.0 inches to 2.25inches -X+2i -> -X+2.25i ***/
+				/*** change red to gray ***/
+
+	if( sol[iz].mt_type == EXPLOSION || sol[iz].mt_type == FULL_MT )
+	{
+	  fprintf( fp, "gmt psmeca -R0/10/0/10 -JX1.5i/1.5i -Sm1i/0 -T0/1p,black -W1p,black -Ggray -N -X+2.15i -O -K -Vq >> %s << EOF\n",
                 PS_outputfilename );
+	}
 	else
-	  fprintf( fp, "gmt psmeca -R0/10/0/10 -JX1.5i/1.5i -Sz1i/0 -T0/1p,black -W1p,black -Gred -Ewhite -N -X+2i -O -K >> %s << EOF\n",
+	{
+	  fprintf( fp, "gmt psmeca -R0/10/0/10 -JX1.5i/1.5i -Sz1i/0 -T0/1p,black -W1p,black -Ggray -N -X+2.15i -O -K -Vq >> %s << EOF\n",
                 PS_outputfilename );
+	}
 
         fprintf( fp, "5 5 %g %g %g %g %g %g %g %d x y %4d/%02d/%02dT%02d:%02d:%05.2f %s\n",
                 grn[0][iz].evdp,
@@ -1677,12 +1906,15 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
 /**************************************************************************************************************************/
 /*** plot the information block, close the plot ***/
 /**************************************************************************************************************************/
+	fprintf( stderr, "%s: %s: %s: print_gmtwf_mt_info = %d \n", progname, __FILE__, __func__, print_gmtwf_mt_info );
+        fflush( stderr );
 
 	fprintf( fp, "###\n" );
         fprintf( fp, "### MOMENT TENSOR/FOCAL MECHANISM INFORMATION LABEL \n" );
         fprintf( fp, "###\n" );
+	/* fprintf( fp, "gmtset PS_CHAR_ENCODING Standard+\n" ); */
 
-        fprintf( fp, "gmt pstext -R0/10/0/10 -JX1.5i/1.8i -D0i/0i -F+jML+f10p,Palatino-Bold,black -N -O -X-1i -Y-1.5i >> %s << EOF\n",
+        fprintf( fp, "gmt pstext -R0/10/0/10 -JX1.5i/1.8i -D0i/0i -F+jML+f10p,Palatino-Bold,black -N -O -Vq -X-1i -Y-1.5i >> %s << EOF\n",
                 PS_outputfilename );
 
         fprintf( fp, "9 9 %s\n", ev[0].comment );
@@ -1690,37 +1922,79 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
         fprintf( fp, "9 8 %4d/%02d/%02dT%02d:%02d:%05.2f\n",
                 ev[0].ot.year, ev[0].ot.month, ev[0].ot.mday, ev[0].ot.hour, ev[0].ot.min, sol[iz].ot );
 
-        fprintf( fp, "9 7 Depth = %5.1f (km)\n", grn[0][iz].evdp );
-        fprintf( fp, "9 6 Mw = %5.2f\n",     sol[iz].mw );
-        fprintf( fp, "9 5 Mo = %5.2fx10@+%2d@+ (dynexcm)\n", sol[iz].abcassa, sol[iz].exponent );
+	if( print_gmtwf_mt_info )
+	{
+        fprintf( fp, "9 7 Depth = %5.1f @%%7%%km@%%%%\n", grn[0][iz].evdp );
+        fprintf( fp, "9 6 M@-w@- = %5.2f\n", sol[iz].mw );
 
-        if( sol[iz].mt_type == EXPLOSION  ) fprintf( fp, "9 4 ISO=%.0f%%\n", sol[iz].PISO );
-        if( sol[iz].mt_type == DEVIATORIC ) fprintf( fp, "9 4 DC=%.0f%% CLVD=%.0f%%\n", sol[iz].PDC, sol[iz].PCLVD );
-        if( sol[iz].mt_type == FULL_MT    ) fprintf( fp, "9 4 DC=%.0f%% CLVD=%.0f%% ISO=%.0f%%\n",
+	if( sol[iz].abcassa < 1 ) { sol[iz].abcassa *= 10; sol[iz].exponent -= 1; }
+	/*** use Newton meters (N m) instead of dyne cm (dyne x cm) ***/
+	Mo_newton_meters_abcassa = sol[iz].abcassa;
+	Mo_newton_meters_exponent = sol[iz].exponent - 7;
+
+	/***
+        fprintf( fp, "9 5 Mo = %5.2f@%%12%%\\264@%%%%10@+%2d@+ dyne@%%12%%\\264@%%%%cm\n", sol[iz].abcassa, sol[iz].exponent );
+	**/
+
+	fprintf( fp, "9 5 M@-0@- = %5.2f@%%12%%\\264@%%%%10@+%2d@+ N@%%12%%\\264@%%%%m\n",
+		Mo_newton_meters_abcassa, Mo_newton_meters_exponent );
+	}
+
+
+	if( print_gmtwf_mt_info )
+	{
+        	if( sol[iz].mt_type == EXPLOSION  ) fprintf( fp, "9 4 ISO=%.0f%%\n", sol[iz].PISO );
+
+        	if( sol[iz].mt_type == DEVIATORIC ) fprintf( fp, "9 4 DC=%.0f%% CLVD=%.0f%%\n", sol[iz].PDC, sol[iz].PCLVD );
+
+        	if( sol[iz].mt_type == FULL_MT    ) fprintf( fp, "9 4 DC=%.0f%% CLVD=%.0f%% ISO=%.0f%%\n",
                                                 sol[iz].PDC, sol[iz].PCLVD, sol[iz].PISO );
 
-        fprintf( fp, "9 3 VR = %5.1f%%\n", sol[iz].var_red );
+        	fprintf( fp, "9 3 VR= %5.1f%%\n", sol[iz].var_red );
 
-        fprintf( fp, "9 2 P1(S/D/R): %g/%g/%g\n", roundf(sol[iz].Maj.P1.s), roundf(sol[iz].Maj.P1.d), roundf(sol[iz].Maj.P1.r) );
-        fprintf( fp, "9 1 P2(S/D/R): %g/%g/%g\n", roundf(sol[iz].Maj.P2.s), roundf(sol[iz].Maj.P2.d), roundf(sol[iz].Maj.P2.r) );
+		fprintf( fp, "9  2 M@-xx@-=%+.2f M@-xy@-=%+.2f\n",
+                        sol[iz].moment_tensor[1][1]/pow(10,sol[iz].exponent),
+                        sol[iz].moment_tensor[1][2]/pow(10,sol[iz].exponent) );
 
-/**********
-	if( sol[iz].mt_type == FULL_MT    ) 
-	{
-	  fprintf( fp, "9 0 Lune lat=%.2f lon=%.2f Epsilon=%0.2f k=%0.2f F-factor=%0.2f\n", 
-		sol[iz].lune_lat, sol[iz].lune_lon, sol[iz].epsilon, sol[iz].k, sol[iz].f_factor ); 
+                fprintf( fp, "9  1 M@-xz@-=%+.2f M@-yy@-=%+.2f\n",
+                        sol[iz].moment_tensor[1][3]/pow(10,sol[iz].exponent),
+                        sol[iz].moment_tensor[2][2]/pow(10,sol[iz].exponent) );
+
+                fprintf( fp, "9  0 M@-yz@-=%+.2f M@-zz@-=%+.2f\n",
+                        sol[iz].moment_tensor[2][3]/pow(10,sol[iz].exponent),
+                        sol[iz].moment_tensor[3][3]/pow(10,sol[iz].exponent) );
+
+		if( sol[iz].mt_type == FULL_MT    )
+		{
+			fprintf( fp, "9 -1 Lune @%%12%%d@%%%%=%.2f @%%12%%g@%%%%=%.2f\n", sol[iz].lune_lat, sol[iz].lune_lon );
+		}
+
+		if( sol[iz].mt_type == DEVIATORIC ) 
+		{
+			fprintf( fp, "9 -1 P1(S/D/R): %g/%g/%g\n", roundf(sol[iz].Maj.P1.s), roundf(sol[iz].Maj.P1.d), roundf(sol[iz].Maj.P1.r) );
+			fprintf( fp, "9 -2 P2(S/D/R): %g/%g/%g\n", roundf(sol[iz].Maj.P2.s), roundf(sol[iz].Maj.P2.d), roundf(sol[iz].Maj.P2.r) );
+		}
 	}
-*******/
+	else
+	{
+/*** reduce clutter, dont print strike-dip-rake  ***/
+/*** reduce clutter, dont print moment tensor elements ***/
 
-	fprintf( fp, "9  0 xx=%.2f xy=%.2f xz=%.2f\n", 
-		sol[iz].moment_tensor[1][1]/pow(10,sol[iz].exponent),
-		sol[iz].moment_tensor[1][2]/pow(10,sol[iz].exponent),
-		sol[iz].moment_tensor[1][3]/pow(10,sol[iz].exponent) );
+	/*
+		fprintf( fp, "9  4 M@-xx@-=%+.2f M@-xy@-=%+.2f\n",
+			sol[iz].moment_tensor[1][1]/pow(10,sol[iz].exponent),
+                	sol[iz].moment_tensor[1][2]/pow(10,sol[iz].exponent) );
 
-	fprintf( fp, "9 -1 yy=%.2f yz=%.2f zz=%.2f\n", 
-                sol[iz].moment_tensor[2][2]/pow(10,sol[iz].exponent),
-                sol[iz].moment_tensor[2][3]/pow(10,sol[iz].exponent),
-                sol[iz].moment_tensor[3][3]/pow(10,sol[iz].exponent) );
+		fprintf( fp, "9  3 M@-xz@-=%+.2f M@-yy@-=%+.2f\n",
+			sol[iz].moment_tensor[1][3]/pow(10,sol[iz].exponent),
+			sol[iz].moment_tensor[2][2]/pow(10,sol[iz].exponent) );
+
+		fprintf( fp, "9  2 M@-yz@-=%+.2f M@-zz@-=%+.2f\n",
+			sol[iz].moment_tensor[2][3]/pow(10,sol[iz].exponent),
+                	sol[iz].moment_tensor[3][3]/pow(10,sol[iz].exponent) );
+	*/
+
+	} /*** if print_gmtwf_mt_info true ***/
 
         fprintf( fp, "EOF\n" );
 
@@ -1730,7 +2004,7 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
 
 	fprintf( fp, "# gs %s\n", PS_outputfilename );
         fprintf( fp, "ps2pdf %s\n", PS_outputfilename );
-        fprintf( fp, "psconvert -Tj -E600 -A %s\n", PS_outputfilename );
+        fprintf( fp, "gmt psconvert -Tj -E600 -A -Vq %s\n", PS_outputfilename );
         fprintf( fp, "open %s\n", JPG_outputfilename );
         fclose(fp);
 
@@ -1871,6 +2145,7 @@ void gmt5wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                   sprintf( limits, "-R%g/%g/%g/%g", xmin, xmax, ymin, ymax );
 
                 sprintf( project, "-JX1.75i/2i" );
+
                 sprintf( axes, "-Bxf%ga%g+l\"sec\" -Byf%ga%g+l\"microns\" -BSW",
                         roundf(xmax/4.0), roundf(xmax),
                         roundf(ymax/4.0), roundf(ymax) );
@@ -1881,7 +2156,7 @@ void gmt5wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                        /*** close the previous plot ****/
                         if ( new_page == 0 && !first )
                         {
-                                fprintf( fp, "echo 0 0 .  | gmt pstext -R -JX -O >> %s\n", outputfilename );
+                                fprintf( fp, "echo 0 0 .  | gmt pstext -R -JX -O -Vq >> %s\n", outputfilename );
                                 fprintf( fp, "\n" );
                                 fprintf( fp, "gs %s\n", outputfilename );
                                 fprintf( fp, "\n" );
@@ -1896,12 +2171,12 @@ void gmt5wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                         sprintf( outputfilename, "gmtwf.%03d.ps", ipage );
 
                         fprintf( fp, "################## ista = %d ########################\n", ista+1 );
-                        if( iorientation == PORTRAIT ) fprintf( fp, "gmt psbasemap %s %s %s -P -K >! %s\n",
+                        if( iorientation == PORTRAIT ) fprintf( fp, "gmt psbasemap %s %s %s -P -K -Vq >! %s\n",
                                 limits, project, axes, outputfilename );
-                        else if( iorientation == LANDSCAPE ) fprintf( fp, "gmt psbasemap %s %s %s -K >! %s\n",
+                        else if( iorientation == LANDSCAPE ) fprintf( fp, "gmt psbasemap %s %s %s -K -Vq >! %s\n",
                                 limits, project, axes, outputfilename );
                         else
-                                fprintf( fp, "gmt psbasemap %s %s %s -P -K >! %s\n",
+                                fprintf( fp, "gmt psbasemap %s %s %s -P -K -Vq >! %s\n",
                                 limits, project, axes, outputfilename );
 
                         first = 0;
@@ -1915,24 +2190,24 @@ void gmt5wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                         fprintf( fp, "################## ista = %d ########################\n", ista+1 );
                         if( iorientation == PORTRAIT )
                         {
-                          fprintf( fp, "gmt psbasemap %s %s %s -Y-8.5i -X2.5i -O -K >> %s\n",
+                          fprintf( fp, "gmt psbasemap %s %s %s -Y-8.5i -X2.5i -O -K -Vq >> %s\n",
                                 limits, project, axes, outputfilename );
                         }
                         else if( iorientation == LANDSCAPE )
                         {
-                          fprintf( fp, "gmt psbasemap %s %s %s -Y-6i -X2.5i -O -K >> %s\n",
+                          fprintf( fp, "gmt psbasemap %s %s %s -Y-6i -X2.5i -O -K -Vq >> %s\n",
                                 limits, project, axes, outputfilename );
                         }
                         else
                         {
-			  fprintf( fp, "gmt psbasemap %s %s %s -Y-3.5 -X2.5i -O -K >> %s\n",
+			  fprintf( fp, "gmt psbasemap %s %s %s -Y-3.5 -X2.5i -O -K -Vq >> %s\n",
                                 limits, project, axes, outputfilename );
                         }
                   }
                   else
                   {
                         fprintf( fp, "################## ista = %d ########################\n", ista+1 );
-                    fprintf( fp, "gmt psbasemap %s %s %s -Y1.5i -O -K >> %s\n",
+                    fprintf( fp, "gmt psbasemap %s %s %s -Y1.5i -O -K -Vq >> %s\n",
                         limits, project, axes, outputfilename );
                   }
                 }
@@ -1941,7 +2216,7 @@ void gmt5wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                         grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type,
                         grn[ista][iz].rdist, grn[ista][iz].az );
 
-                fprintf( fp, "gmt pstext -R -JX -D+1.1i/-0.05i -N -O -K >> %s << EOF\n", outputfilename );
+                fprintf( fp, "gmt pstext -R -JX -D+1.1i/-0.05i -N -O -K -Vq >> %s << EOF\n", outputfilename );
                 fprintf( fp, "0 %g %s\n", roundf(ymax), label );
                 fprintf( fp, "EOF\n" );
 
@@ -1956,25 +2231,25 @@ void gmt5wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                 sprintf( data_filename, "%s.%s.%s.%03d.t.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
                 sprintf( synt_filename, "%s.%s.%s.%03d.t.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
 
-                fprintf( fp, "gmt psxy -R -JX -W2p,gray        -O -K %s >> %s\n", data_filename, outputfilename );
-                fprintf( fp, "gmt psxy -R -JX -W1.2p,%s,10_1:0p -O -K %s >> %s\n", linecolor, synt_filename, outputfilename );
-                fprintf( fp, "echo \"%g %g T\" | gmt pstext -R -JX -D0.2i/0i -N  -O -K >> %s\n", x[npts-1], dat_t[npts-1], outputfilename );
+                fprintf( fp, "gmt psxy -R -JX -W2p,gray        -O -K -Vq %s >> %s\n", data_filename, outputfilename );
+                fprintf( fp, "gmt psxy -R -JX -W1.2p,%s,10_1:0p -O -K -Vq %s >> %s\n", linecolor, synt_filename, outputfilename );
+                fprintf( fp, "echo \"%g %g T\" | gmt pstext -R -JX -D0.2i/0i -N  -O -K -Vq >> %s\n", x[npts-1], dat_t[npts-1], outputfilename );
 
 /*** radial ***/
                 sprintf( data_filename, "%s.%s.%s.%03d.r.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
                 sprintf( synt_filename, "%s.%s.%s.%03d.r.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
 
-                fprintf( fp, "gmt psxy -R -JX -W2p,gray        -O -K -Y0.5i %s >> %s\n", data_filename, outputfilename );
-                fprintf( fp, "gmt psxy -R -JX -W1.2p,%s,10_1:0p -O -K        %s >> %s\n", linecolor, synt_filename, outputfilename );
-                fprintf( fp, "echo \"%g %g R\" | gmt pstext -R -JX -D0.2i/0i -N  -O -K >> %s\n", x[npts-1], dat_r[npts-1], outputfilename );
+                fprintf( fp, "gmt psxy -R -JX -W2p,gray        -O -K -Vq -Y0.5i %s >> %s\n", data_filename, outputfilename );
+                fprintf( fp, "gmt psxy -R -JX -W1.2p,%s,10_1:0p -O -K -Vq        %s >> %s\n", linecolor, synt_filename, outputfilename );
+                fprintf( fp, "echo \"%g %g R\" | gmt pstext -R -JX -D0.2i/0i -N  -O -K -Vq >> %s\n", x[npts-1], dat_r[npts-1], outputfilename );
 
 /*** vertical ***/
                 sprintf( data_filename, "%s.%s.%s.%03d.z.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
                 sprintf( synt_filename, "%s.%s.%s.%03d.z.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
 
-                fprintf( fp, "gmt psxy -R -JX -W2p,gray        -O -K -Y0.5i %s >> %s\n", data_filename, outputfilename );
-                fprintf( fp, "gmt psxy -R -JX -W1.2p,%s,10_1:0p -O -K        %s >> %s\n", linecolor, synt_filename, outputfilename );
-                fprintf( fp, "echo \"%g %g Z\" | gmt pstext -R -JX -D0.2i/0i -N  -O -K >> %s\n", x[npts-1], dat_z[npts-1], outputfilename );
+                fprintf( fp, "gmt psxy -R -JX -W2p,gray        -O -K -Vq -Y0.5i %s >> %s\n", data_filename, outputfilename );
+                fprintf( fp, "gmt psxy -R -JX -W1.2p,%s,10_1:0p -O -K -Vq        %s >> %s\n", linecolor, synt_filename, outputfilename );
+                fprintf( fp, "echo \"%g %g Z\" | gmt pstext -R -JX -D0.2i/0i -N  -O -K -Vq >> %s\n", x[npts-1], dat_z[npts-1], outputfilename );
 
                 free(x);
                 free(syn_z);
@@ -2009,7 +2284,7 @@ void gmt5wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                /*** close the previous plot ****/
                 if ( new_page == 0 && !first )
                 {
-                        fprintf( fp, "echo 0 0 8 0 0 0 .  | gmt pstext -R -JX -O >> %s\n", outputfilename );
+                        fprintf( fp, "echo 0 0 8 0 0 0 .  | gmt pstext -R -JX -O -Vq >> %s\n", outputfilename );
                         fprintf( fp, "\n" );
                         fprintf( fp, "gs %s\n", outputfilename );
                         fprintf( fp, "\n" );
@@ -2029,11 +2304,11 @@ void gmt5wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                 fprintf( fp, "################## mechanism ########################\n" );
 
                 if( iorientation == PORTRAIT )
-                        sprintf( page_xy_offset, " -P -K >! " );
+                        sprintf( page_xy_offset, " -P -K -Vq >! " );
                 else if( iorientation == LANDSCAPE )
-                        sprintf( page_xy_offset, "    -K >! " );
+                        sprintf( page_xy_offset, "    -K -Vq >! " );
                 else
-                        sprintf( page_xy_offset, " -P -K >! " );
+                        sprintf( page_xy_offset, " -P -K -Vq >! " );
                 ipage++;
         }
         else
@@ -2044,16 +2319,16 @@ void gmt5wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                 fprintf( fp, "################## mechanism ########################\n" );
 
                 if( iorientation == PORTRAIT )
-                        sprintf( page_xy_offset, " -Y+8.5i -X+2.5i -O -K >> " );
+                        sprintf( page_xy_offset, " -Y+8.5i -X+2.5i -O -Vq -K -Vq >> " );
                 else if( iorientation == LANDSCAPE )
-                        sprintf( page_xy_offset, " -Y-6.0i -X+2.5i -O -K >> " );
+                        sprintf( page_xy_offset, " -Y-6.0i -X+2.5i -O -Vq -K -Vq >> " );
                 else
-                        sprintf( page_xy_offset, " -Y-3.5i -X+2.5i -O -K >> " );
+                        sprintf( page_xy_offset, " -Y-3.5i -X+2.5i -O -Vq -K -Vq >> " );
           }
           else
           {
             fprintf( fp, "################## mechanism ########################\n" );
-            sprintf( page_xy_offset, " -Y+1.5i -O -K >> " );
+            sprintf( page_xy_offset, " -Y+1.5i -O -Vq -K -Vq >> " );
           }
 
         } /*** end if new page ***/
@@ -2062,10 +2337,20 @@ void gmt5wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
         fprintf( fp, "### GMT PSMECA  -S<format><scale>[/<fontsize>[/<justify>/<offset>/<angle>/<form>]]  \n");
         fprintf( fp, "###\n" );
 
-        fprintf( fp, "gmt psmeca -R0/10/0/10 %s -Sz1i/0 -T0/1p,black -W1p,black -Gred -Ewhite -N %s %s << EOF\n",
+	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
+	{
+          fprintf( fp, "gmt psmeca -R0/10/0/10 %s -Sm1i/0 -T0/1p,black -W1p,black -Gred -Ewhite -N %s %s << EOF\n",
                 project,
                 page_xy_offset,
                 outputfilename );
+	}
+	else
+	{
+	  fprintf( fp, "gmt psmeca -R0/10/0/10 %s -Sz1i/0 -T0/1p,black -W1p,black -Gred -Ewhite -N %s %s << EOF\n",
+                project,
+                page_xy_offset,
+                outputfilename );
+	}
 
         fprintf( fp, "5 5 %g %g %g %g %g %g %g %d x y %4d/%02d/%02dT%02d:%02d:%05.2f %s\n",
                 grn[0][iz].evdp,
@@ -2083,7 +2368,7 @@ void gmt5wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
         fprintf( fp, "###\n" );
         fprintf( fp, "### MOMENT TENSOR/FOCAL MECHANISM INFORMATION LABEL \n" );
         fprintf( fp, "###\n" );
-        fprintf( fp, "gmt pstext -R0/10/0/10 %s -D0i/0i -F+jBL+f12p,Palatino-Roman,black -N -O >> %s << EOF\n",
+        fprintf( fp, "gmt pstext -R0/10/0/10 %s -D0i/0i -F+jBL+f12p,Palatino-Roman,black -N -O -Vq >> %s << EOF\n",
                 project, outputfilename );
 
         fprintf( fp, "9 9 %s\n", ev[0].comment );
@@ -2111,7 +2396,7 @@ void gmt5wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
 
         fprintf( fp, "# gs %s\n", outputfilename );
         fprintf( fp, "ps2pdf %s\n", outputfilename );
-        fprintf( fp, "psconvert -Tj -E300 -A %s\n", outputfilename );
+        fprintf( fp, "gmt psconvert -Tj -E300 -A -Vq %s\n", outputfilename );
         fprintf( fp, "open %s\n", outputfilename );
         fclose(fp);
 
@@ -2257,7 +2542,7 @@ void gmt4wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                        /*** close the previous plot ****/
                         if ( new_page == 0 && !first )
                         {
-                                fprintf( fp, "echo 0 0 8 0 0 0 .  | gmt pstext -R -JX -O >> %s\n", outputfilename );
+                                fprintf( fp, "echo 0 0 8 0 0 0 .  | pstext -R -JX -O -Vq >> %s\n", outputfilename );
                                 fprintf( fp, "\n" );
                                 fprintf( fp, "gs %s\n", outputfilename );
                                 fprintf( fp, "\n" );
@@ -2272,12 +2557,12 @@ void gmt4wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                         sprintf( outputfilename, "gmtwf.%03d.ps", ipage );
 
                         fprintf( fp, "################## ista = %d ########################\n", ista+1 );
-                        if( iorientation == PORTRAIT ) fprintf( fp, "gmt psbasemap %s %s %s -P -K >! %s\n",
+                        if( iorientation == PORTRAIT ) fprintf( fp, "psbasemap %s %s %s -P -K -Vq >! %s\n",
                                 limits, project, axes, outputfilename );
-                        else if( iorientation == LANDSCAPE ) fprintf( fp, "gmt psbasemap %s %s %s -K >! %s\n",
+                        else if( iorientation == LANDSCAPE ) fprintf( fp, "psbasemap %s %s %s -K -Vq >! %s\n",
                                 limits, project, axes, outputfilename );
                         else
-                                fprintf( fp, "gmt psbasemap %s %s %s -P -K >! %s\n",
+                                fprintf( fp, "psbasemap %s %s %s -P -K -Vq >! %s\n",
                                 limits, project, axes, outputfilename );
 
                         first = 0;
@@ -2291,24 +2576,24 @@ void gmt4wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                         fprintf( fp, "################## ista = %d ########################\n", ista+1 );
                         if( iorientation == PORTRAIT )
                         {
-                          fprintf( fp, "gmt psbasemap %s %s %s -Y-8.5i -X2.5i -O -K >> %s\n",
+                          fprintf( fp, "psbasemap %s %s %s -Y-8.5i -X2.5i -O -Vq -K -Vq >> %s\n",
                                 limits, project, axes, outputfilename );
                         }
                         else if( iorientation == LANDSCAPE )
                         {
-                          fprintf( fp, "gmt psbasemap %s %s %s -Y-6i -X2.5i -O -K >> %s\n",
+                          fprintf( fp, "psbasemap %s %s %s -Y-6i -X2.5i -O -Vq -K -Vq >> %s\n",
                                 limits, project, axes, outputfilename );
                         }
                         else
                         {
-                          fprintf( fp, "gmt psbasemap %s %s %s -Y-3.5 -X2.5i -O -K >> %s\n",
+                          fprintf( fp, "psbasemap %s %s %s -Y-3.5 -X2.5i -O -Vq -K -Vq >> %s\n",
                                 limits, project, axes, outputfilename );
                         }
                   }
                   else
                   {
                         fprintf( fp, "################## ista = %d ########################\n", ista+1 );
-                    fprintf( fp, "gmt psbasemap %s %s %s -Y1.5i -O -K >> %s\n",
+                    fprintf( fp, "psbasemap %s %s %s -Y1.5i -O -Vq -K -Vq >> %s\n",
                         limits, project, axes, outputfilename );
                   }
                 }
@@ -2317,7 +2602,7 @@ void gmt4wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                         grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type,
                         grn[ista][iz].rdist, grn[ista][iz].az );
 
-                fprintf( fp, "gmt pstext -R -JX -D0.05i/-0.1i -N -O -K >> %s << EOF\n", outputfilename );
+                fprintf( fp, "pstext -R -JX -D0.05i/-0.1i -N -O -Vq -K -Vq >> %s << EOF\n", outputfilename );
                 fprintf( fp, "0 %g 10 0 1 0 %s\n", roundf(ymax), label );
                 fprintf( fp, "EOF\n" );
 
@@ -2330,24 +2615,24 @@ void gmt4wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
 
                 sprintf( data_filename, "%s.%s.%s.%03d.t.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
                 sprintf( synt_filename, "%s.%s.%s.%03d.t.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
-                /* fprintf( fp, "gmt psxy -R -JX -M -W2p/black/t10_5:0p -O -K     %s >> %s\n", data_filename, outputfilename ); */
-                fprintf( fp, "gmt psxy -R -JX -M -W2p/120 -O -K     %s >> %s\n", data_filename, outputfilename );
-                fprintf( fp, "gmt psxy -R -JX -M -W1.2p/%st10_1:0p       -O -K     %s >> %s\n", linecolor, synt_filename, outputfilename );
-                fprintf( fp, "echo \"%g %g 10 0 1 0 T\" | gmt pstext -R -JX  -N  -O -K >> %s\n", x[npts-1], dat_t[npts-1], outputfilename );
+                /* fprintf( fp, "psxy -R -JX -M -W2p/black/t10_5:0p -O -Vq -K -Vq     %s >> %s\n", data_filename, outputfilename ); */
+                fprintf( fp, "psxy -R -JX -M -W2p/120 -O -Vq -K -Vq     %s >> %s\n", data_filename, outputfilename );
+                fprintf( fp, "psxy -R -JX -M -W1.2p/%st10_1:0p       -O -Vq -K -Vq     %s >> %s\n", linecolor, synt_filename, outputfilename );
+                fprintf( fp, "echo \"%g %g 10 0 1 0 T\" | pstext -R -JX  -N  -O -Vq -K -Vq >> %s\n", x[npts-1], dat_t[npts-1], outputfilename );
 
                 sprintf( data_filename, "%s.%s.%s.%03d.r.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
                 sprintf( synt_filename, "%s.%s.%s.%03d.r.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
-                /* fprintf( fp, "gmt psxy -R -JX -M -W2p/black/t10_5:0p -O -K -Y0.5i %s >> %s\n", data_filename, outputfilename ); */
-                fprintf( fp, "gmt psxy -R -JX -M -W2p/120  -O -K -Y0.5i %s >> %s\n", data_filename, outputfilename );
-                fprintf( fp, "gmt psxy -R -JX -M -W1.2p/%st10_1:0p      -O -K        %s >> %s\n", linecolor, synt_filename, outputfilename );
-                fprintf( fp, "echo \"%g %g 10 0 1 0 R\" | gmt pstext -R -JX  -N  -O -K >> %s\n", x[npts-1], dat_r[npts-1], outputfilename );
+                /* fprintf( fp, "psxy -R -JX -M -W2p/black/t10_5:0p -O -Vq -K -Vq -Y0.5i %s >> %s\n", data_filename, outputfilename ); */
+                fprintf( fp, "psxy -R -JX -M -W2p/120  -O -Vq -K -Vq -Y0.5i %s >> %s\n", data_filename, outputfilename );
+                fprintf( fp, "psxy -R -JX -M -W1.2p/%st10_1:0p      -O -Vq -K -Vq        %s >> %s\n", linecolor, synt_filename, outputfilename );
+                fprintf( fp, "echo \"%g %g 10 0 1 0 R\" | pstext -R -JX  -N  -O -Vq -K -Vq >> %s\n", x[npts-1], dat_r[npts-1], outputfilename );
 
                 sprintf( data_filename, "%s.%s.%s.%03d.z.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
                 sprintf( synt_filename, "%s.%s.%s.%03d.z.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
-                /* fprintf( fp, "gmt psxy -R -JX -M -W2p/black/t10_5:0p -O -K -Y0.5i %s >> %s\n", data_filename, outputfilename ); */
-                fprintf( fp, "gmt psxy -R -JX -M -W2p/120 -O -K -Y0.5i %s >> %s\n", data_filename, outputfilename );
-                fprintf( fp, "gmt psxy -R -JX -M -W1.2p/%st10_1:0p    -O -K        %s >> %s\n", linecolor, synt_filename, outputfilename );
-                fprintf( fp, "echo \"%g %g 10 0 1 0 Z\" | gmt pstext -R -JX  -N  -O -K >> %s\n", x[npts-1], dat_z[npts-1], outputfilename );
+                /* fprintf( fp, "psxy -R -JX -M -W2p/black/t10_5:0p -O -Vq -K -Vq -Y0.5i %s >> %s\n", data_filename, outputfilename ); */
+                fprintf( fp, "psxy -R -JX -M -W2p/120 -O -Vq -K -Vq -Y0.5i %s >> %s\n", data_filename, outputfilename );
+                fprintf( fp, "psxy -R -JX -M -W1.2p/%st10_1:0p    -O -Vq -K -Vq        %s >> %s\n", linecolor, synt_filename, outputfilename );
+                fprintf( fp, "echo \"%g %g 10 0 1 0 Z\" | pstext -R -JX  -N  -O -Vq -K -Vq >> %s\n", x[npts-1], dat_z[npts-1], outputfilename );
 
                 free(x);
                 free(syn_z);
@@ -2383,7 +2668,7 @@ void gmt4wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                /*** close the previous plot ****/
                 if ( new_page == 0 && !first )
                 {
-                        fprintf( fp, "echo 0 0 8 0 0 0 .  | gmt pstext -R -JX -O >> %s\n", outputfilename );
+                        fprintf( fp, "echo 0 0 8 0 0 0 .  | pstext -R -JX -O -Vq >> %s\n", outputfilename );
                         fprintf( fp, "\n" );
                         fprintf( fp, "gs %s\n", outputfilename );
                         fprintf( fp, "\n" );
@@ -2400,11 +2685,11 @@ void gmt4wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                 fprintf( fp, "################## mechanism ########################\n" );
 
                 if( iorientation == PORTRAIT )
-                        fprintf( fp, "gmt psbasemap -R0/10/0/10 %s -Bf20a20s -P -K >! %s\n", project, outputfilename );
+                        fprintf( fp, "psbasemap -R0/10/0/10 %s -Bf20a20s -P -K -Vq >! %s\n", project, outputfilename );
                 else if( iorientation == LANDSCAPE )
-                        fprintf( fp, "gmt psbasemap -R0/10/0/10 %s -Bf20a20s -K >! %s\n", project, outputfilename );
+                        fprintf( fp, "psbasemap -R0/10/0/10 %s -Bf20a20s -K -Vq >! %s\n", project, outputfilename );
                 else
-                        fprintf( fp, "gmt psbasemap -R0/10/0/10 %s -Bf20a20s -P -K >! %s\n", project, outputfilename );
+                        fprintf( fp, "psbasemap -R0/10/0/10 %s -Bf20a20s -P -K -Vq >! %s\n", project, outputfilename );
 
                 ipage++;
         }
@@ -2416,22 +2701,26 @@ void gmt4wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
                 fprintf( fp, "################## mechanism ########################\n" );
 
                 if( iorientation == PORTRAIT )
-                  fprintf( fp, "gmt psbasemap -R0/10/0/10 %s -Bf20a20s -Y-8.5i -X2.5i -O -K >> %s\n", project, outputfilename );
+                  fprintf( fp, "psbasemap -R0/10/0/10 %s -Bf20a20s -Y-8.5i -X2.5i -O -Vq -K -Vq >> %s\n", project, outputfilename );
                 else if( iorientation == LANDSCAPE )
-                  fprintf( fp, "gmt psbasemap -R0/10/0/10 %s -Bf20a20s -Y-6i -X2.5i -O -K >> %s\n", project, outputfilename );
+                  fprintf( fp, "psbasemap -R0/10/0/10 %s -Bf20a20s -Y-6i -X2.5i -O -Vq -K -Vq >> %s\n", project, outputfilename );
                 else
-                  fprintf( fp, "gmt psbasemap -R0/10/0/10 %s -Bf20a20s -Y-3.5 -X2.5i -O -K >> %s\n", project, outputfilename );
+                  fprintf( fp, "psbasemap -R0/10/0/10 %s -Bf20a20s -Y-3.5 -X2.5i -O -Vq -K -Vq >> %s\n", project, outputfilename );
           }
           else
           {
             fprintf( fp, "################## mechanism ########################\n" );
-            fprintf( fp, "gmt psbasemap -R0/10/0/10 %s -Bf20a20s -Y1.5i -O -K >> %s\n", project, outputfilename );
+            fprintf( fp, "psbasemap -R0/10/0/10 %s -Bf20a20s -Y1.5i -O -Vq -K -Vq >> %s\n", project, outputfilename );
           }
 
         } /*** end if new page ***/
 
         fprintf( fp, "\n");
-        fprintf( fp, "gmt psmeca -R -JX -Sz1i/12/0.2i -T0 -L -W1p/0 -G255/0/0 -N -O -K >> %s << EOF\n", outputfilename );
+
+	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
+          fprintf( fp, "psmeca -R -JX -Sm1i/12/0.2i -T0 -L -W1p/0 -G255/0/0 -N -O -Vq -K -Vq >> %s << EOF\n", outputfilename );
+	else
+	  fprintf( fp, "psmeca -R -JX -Sz1i/12/0.2i -T0 -L -W1p/0 -G255/0/0 -N -O -Vq -K -Vq >> %s << EOF\n", outputfilename );
 
         fprintf( fp, "5 5 %g %g %g %g %g %g %g %d x y %4d/%02d/%02d %02d:%02d:%05.2f %s\n",
                 grn[0][iz].evdp,
@@ -2445,7 +2734,7 @@ void gmt4wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
         fprintf( fp, "EOF\n");
         fprintf( fp, "\n");
 
-        fprintf(fp, "gmt pstext -R -JX -N -O >> %s << EOF\n", outputfilename );
+        fprintf(fp, "pstext -R -JX -N -O -Vq >> %s << EOF\n", outputfilename );
 
         fprintf( fp, "9 7 12 0 0 0 Depth = %5.1f(km)\n", grn[0][iz].evdp );
         fprintf( fp, "9 6 12 0 0 0 Mw    = %5.2f\n",     sol[iz].mw );
@@ -2466,3 +2755,49 @@ void gmt4wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, i
 
 }  /*** end SUB : gmt4wfplot() ***/
 
+
+/* sort_type == "dist" or "azi" or "baz" */
+
+void station_sorter( int *indx, EventInfo *ev, int nsta, char *sort_type, int verbose )
+{
+	int ista;
+	float *val;
+	void indexx( int n, float *arrin, int *indx );
+
+	fprintf( stderr, "%s: %s: %s: nsta=%d sort_type=%s\n", progname, __FILE__, __func__, nsta, sort_type );
+
+
+	val = (float *) calloc( nsta+1, sizeof(float) );
+
+	for( ista = 0; ista < nsta; ista++ )
+	{
+		if( strcmp( sort_type, "azi" ) == 0 ) 
+			val[ista+1] = ev[ista].az; /**** azimuth in degrees ***/
+		else if( strcmp( sort_type, "dist" ) == 0 )
+			val[ista+1] = ev[ista].rdist; /**** distance km ****/
+		else if( strcmp( sort_type, "baz" ) == 0 )
+			val[ista+1] = ev[ista].baz; /**** back-azimuth degrees ****/
+		else if( strcmp( sort_type, "none" ) == 0 )
+			val[ista+1] = (float)ista+1; /*** none - no sorting plot by order ***/
+		else
+			val[ista+1] = ev[ista].rdist; /* if error plot by distance km */
+
+		indx[ista+1] = ista+1;
+	}
+
+	indexx( nsta, val, indx );
+
+	if(verbose)
+	{
+		for( ista = 0; ista <nsta; ista++ )
+		{
+			fprintf( stderr, "%s: %s: %s: ista=%d indx[ista]=%d %s val=%g\n",
+				progname,	
+				__FILE__, __func__,
+				ista, indx[ista+1]-1, 
+				sort_type,
+				val[ indx[ista+1]-1 ] );
+		}
+	}
+	free(val);
+}

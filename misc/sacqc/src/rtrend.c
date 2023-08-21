@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-char progname[128];
+extern char progname[128];
 
 /* Now Local Variables ( float *a, float *b, float *sigmaa, float *sigmab, float *sigma, float *corcoef ) */
 

@@ -10,33 +10,60 @@ char progname[128];
 int main( int ac, char **av )
 {
 	VelMod vm;
-	int init=0;
-	int gmt=0;
+	int init = 0, gmt = 0;
+	int doP=1, doS=1;
+	char pline[64], sline[64];
 
-	void create_mod( VelMod * );
-	void reinit_mod( VelMod * );
-	void print_mod1( FILE *, VelMod * );
-	void plot_gmt_mod( VelMod *, int );
-	void print_mod0( VelMod * );
+	void create_mod( VelMod *vm );
+	void reinit_mod( VelMod *vm );
+	void print_mod1( FILE *fp, VelMod *vm );
+	void plot_gmt_mod( VelMod *vm, int ioutput, int doP, int doS, char *pline, char *sline );
+	void print_mod0( VelMod *vm );
+
 	int setpar(),mstpar(),getpar();
 	void endpar();
+
+/*** start main ***/
 
 	strcpy( progname, av[0] );
 
 	if( ac == 1 )
 	{
-		fprintf( stderr, "\t Usage: %s modeldb= velmod= [no]init [no]gmt\n",
-			progname );
-		fprintf( stderr, "\t\t or \n" );
-		fprintf( stderr, "\t\t %s par=mkgrnlib.par [no]init [no]gmt\n", progname );
-		exit(-1);
+	  fprintf( stderr, "USAGE:\n" );
+	  fprintf( stderr, "\t %s modeldb=(string) velmod=(string) [no]init [no]gmt \n", progname );
+	  fprintf( stderr, "\t          pline=\"-W1.2p,blue,5_2:0p\" sline=\"-W1.2p,red,5_2:0p\" \n" );
+	  fprintf( stderr, "\n" );
+	  fprintf( stderr, "REQUIRED PARAMETERS:\n" );
+	  fprintf( stderr, "\t modeldb=(string) path directory to *.mod files\n" );
+          fprintf( stderr, "\t velmod=(string) basename of *.mod file\n" );
+	  fprintf( stderr, "\n" );
+	  fprintf( stderr, "OPTIONAL PARAMETERS: \n" ); 
+          fprintf( stderr, "\t [no]init reinitialize the S-vel & Den to a Poissonian Solid based on P-vel (default off)\n" );
+	  fprintf( stderr, "\t [no]gmt sends output as GMT psxy output (default off, screen output)\n" );
+	  fprintf( stderr, "\t pline=(string) P-wave GMT psxy -W specs \n" );
+	  fprintf( stderr, "\t sline=(string) S-wave GMT psxy -W specs \n" );
+	  fprintf( stderr, "\n" );
+	  fprintf( stderr, "DESCRIPTION:\n" );
+	  fprintf( stderr, "\t reads mod file and creates input for Generic Mapping Tools psxy\n" );
+	  fprintf( stderr, "\n" );
+	  exit(-1);
 	}
 
 	setpar(ac,av);
 	mstpar( "modeldb", "s", &(vm.modpath) );
 	mstpar( "velmod", "s", &(vm.modfile) );
 	getpar( "init", "b", &init );
+
 	getpar( "gmt", "b", &gmt );
+	if( gmt )
+	{
+		strcpy( pline, "-W1.2p,blue,5_2:0p" );
+		strcpy( sline, "-W1.2p,red,5_2:0p" );
+		getpar( "pline", "s", pline );
+		getpar( "sline", "s", sline );
+		getpar( "doP", "b", &doP );
+		getpar( "doS", "b", &doS );
+	}
 	endpar();
 
 	create_mod( &vm );
@@ -53,7 +80,7 @@ int main( int ac, char **av )
 
 	if( gmt )
 	{
-		plot_gmt_mod( &vm, 1 );
+		plot_gmt_mod( &vm, 1, doP, doS, pline, sline );
 	}
 
 	if( init == 0 && gmt == 0 ) print_mod0( &vm );

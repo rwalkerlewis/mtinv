@@ -5,9 +5,7 @@
 #include "complex.h"
 #include "sac.h"
 
-main(ac,av)
-int ac;
-char **av;
+int main(int ac, char **av)
 {
 	int i,j,k, npts, padfac=1;
 	float scale, df, nyquist;
@@ -110,5 +108,5 @@ char **av;
 	fwrite(&am[0], npts*sizeof(float), 1, fp);
 	fclose(fp);
 
-	return;
+	return 0;
 }

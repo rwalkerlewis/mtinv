@@ -3,6 +3,8 @@
 #include <math.h>
 #include "../../include/sac.h"
 
+char progname[256];
+
 int main( int ac, char **av )
 {
 	float *data;
@@ -12,20 +14,34 @@ int main( int ac, char **av )
 	float new_dt;
 	int new_nt;
 	float *z;
+	int verbose = 0;
 
-	void wrtoldsac( char *, Sac_Header *, float * );
-	float *readsac( Sac_Header *, char * );
-	void interpolate_wiggins( float *, int, float, float, float *, int, float );
-	void set_sac_minmax( Sac_Header *, float * );
+/*** fuction prototypes ***/
+
+	void wrtoldsac( char *FO, Sac_Header *s, float *data );
+
+	float *readsac( Sac_Header *s, char *filename, int verbose );
+
+	void interpolate_wiggins( float *y, int npts, float delta, float b, float *z, int new_nt, float new_dt );
+
+	void set_sac_minmax( Sac_Header *s, float *data );
+
+	int setpar(int ac, char **av), mstpar(),getpar();
+	void endpar();
+
+/*** begin main ***/
 
 	setpar(ac,av);
 	mstpar("f",  "s", FileName);
 	mstpar("nt", "d", &new_nt);
 	mstpar("dt", "f", &new_dt);
+	getpar("verbose", "b", &verbose);
 	endpar();
 
-	data = (float *)readsac( &s, FileName );
-	fprintf( stdout, "%s: nt=%d dt=%g\n", FileName, s.npts, s.delta );
+	data = readsac( &s, FileName, verbose );
+
+	if(verbose) fprintf( stdout, "%s: %s: %s nt=%d dt=%g\n", 
+		__FILE__, __func__, FileName, s.npts, s.delta );
 
 	z = (float *)calloc( new_nt, sizeof(float) );
 

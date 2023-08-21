@@ -7,7 +7,7 @@
 #include "../include/mt.h"         /** global datatype and structure declarations **/
 #include "../include/nrutil.h"     /** numerical recipes **/
 
-char progname[128];
+extern char progname[128];
 
 #define MAXDATAPTS 1000000
 
@@ -32,6 +32,7 @@ void sacdata2inv_loaddata(
 	void getsacfiles(
                 char *stnm,
                 char *net,
+		char *loc, 
                 char *pathname,
                 char sacfiles[256][2048],
                 int *nfiles,
@@ -52,13 +53,11 @@ void sacdata2inv_loaddata(
                 char *pathname,
                 char *sta,
                 char *net,
+		char *loc,
                 char *cmp,
                 char *khole,
                 int verbose,
                 char respfile[256] );
-
-        /*** sacdata2inv_subs.c ***/
-        void  fix_component_names( EventInfo *ev );
 
 	/*** sacdata2inv_subs.c ***/
         void  writesacfile( EventInfo *ev );
@@ -90,6 +89,7 @@ void sacdata2inv_loaddata(
 		getsacfiles(
                		ev[ista].stnm,
                		ev[ista].net,
+			ev[ista].loc,
                		sacdatadir,
                		sacfiles,
                		&number_files,
@@ -98,8 +98,8 @@ void sacdata2inv_loaddata(
        		if( verbose )
        		{
                 	fprintf(stdout,
-                   	"%s: sacdata2inv_loadata(): number of SAC files=%d for station=%s network=%s\n",
-                        	progname, number_files, ev[ista].stnm, ev[ista].net );
+                   	"%s: sacdata2inv_loadata(): number of SAC files=%d for station=%s network=%s location=%s\n",
+                        	progname, number_files, ev[ista].stnm, ev[ista].net, ev[ista].loc );
 
                 	for( ifiles=0; ifiles<number_files; ifiles++ )
                 	{
@@ -139,55 +139,94 @@ void sacdata2inv_loaddata(
         	ev[ista].ns.data = (float *)calloc(MAXDATAPTS,sizeof(float));
         	ev[ista].ew.data = (float *)calloc(MAXDATAPTS,sizeof(float));
 
-		n3cmp = 0;
-		for( ifiles=0; ifiles < number_files; ifiles++ )
+
+		if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
 		{
+		  fprintf( stdout, "%s: %s: %s: loading %s data\n", progname, __FILE__, __func__, ev[ista].wavetype );
+
+		  n3cmp = 0;
+		  for( ifiles=0; ifiles < number_files; ifiles++ )
+		  {
 			found = 0;
-			if( n3cmp >= 3 ) break; /*** if more than 3 SAC files do not read the rest ***/
-			ev[ista].ew.data = (float *)getsacdata( "EW",  ev[ista].ew.data, &(ev[ista].ew.s),
-                                sacfiles[ifiles], ev[ista].ew.filename, &found, verbose );
-			if(found)
-                	{
-                        	n3cmp++;
-                        	continue;
-                	}
-			ev[ista].ns.data = (float *)getsacdata( "NS",  ev[ista].ns.data, &(ev[ista].ns.s),
-                                        sacfiles[ifiles], ev[ista].ns.filename, &found, verbose );
-			if(found)
-                	{
-                        	n3cmp++;
-                        	continue;
-                	}
-			ev[ista].z.data  = (float *)getsacdata( "VER", ev[ista].z.data,  &(ev[ista].z.s),
-                                        sacfiles[ifiles], ev[ista].z.filename, &found, verbose );
-			if( found )
-                	{
-                        	n3cmp++;
-                        	continue;
-                	}
 
-			if(verbose)
-                	{
-                        	fprintf(stdout,
-                         	"%s: sacdata2inv_loadata(): done with getsacdata only n3cmp=%d will be read\n",
-                                progname, n3cmp );
-                	}
+			if( n3cmp >= 3 ) break;   /*** if more than 3 SAC files do not read the rest ***/
 
-                	if( n3cmp < 3 )
-                	{
-                        	fprintf( stderr,
-                          	"%s: STDERR sacdata2inv_loadata(): FATAL ERROR only n3cmp=%d read 3 needed. Quitting.\n",
-                                progname, n3cmp );
+			ev[ista].ew.data = (float *)getsacdata( "EW",  ev[ista].ew.data, &(ev[ista].ew.s), sacfiles[ifiles], ev[ista].ew.filename, &found, verbose );
+                         
+			if(found) { n3cmp++; continue; }
+       
+			ev[ista].ns.data = (float *)getsacdata( "NS",  ev[ista].ns.data, &(ev[ista].ns.s), sacfiles[ifiles], ev[ista].ns.filename, &found, verbose );
+			
+			if(found) { n3cmp++; continue; }
 
-                        	fprintf( stdout,
-                          	"%s: STDOUT sacdata2inv_loadata(): FATAL ERROR only n3cmp=%d read 3 needed. Quitting.\n",
-                                progname, n3cmp );
+			ev[ista].z.data  = (float *)getsacdata( "VER", ev[ista].z.data,  &(ev[ista].z.s), sacfiles[ifiles], ev[ista].z.filename, &found, verbose );
+                                        
+			if(found) { n3cmp++; continue; }
 
-                        	exit(-1);
-                	}
+		  } /*** loop over files ***/
 
-        	} /*** loop over ifiles ***/
+		  if(verbose)
+		    fprintf(stdout, "%s: %s: %s: done! only n3cmp=%d will be read\n", progname, __FILE__, __func__, n3cmp );
 
+              	  if( n3cmp < 3 )
+               	  {
+			fprintf( stderr, "%s: %s: %s: STDERR: FATAL ERROR only n3cmp=%d read 3 needed. Quitting.\n", progname, __FILE__, __func__, n3cmp );
+                        fprintf( stdout, "%s: %s: %s: STDOUT: FATAL ERROR only n3cmp=%d read 3 needed. Quitting.\n", progname, __FILE__, __func__, n3cmp );
+                       	exit(-1);
+               	  }
+
+		} /**** if the wavetype is translational seismogram "Surf/Pnl" *******/
+
+/***********************************************************************************/
+/*** G.Ichinose Nov  7 2019  - Added support for rotational GFs w1, w2, w3       ***/
+/*** Rotational component about EW         x1-axis U -> w1 -> z -> z             ***/
+/*** Rotational component about NS         x2-axis V -> w2 -> r -> ns            ***/
+/*** Rotational component about z-vertical x3-axis W -> w3 -> t -> ew            ***/
+/*** for now we will shoe-horn in the rotational into the ew,ns,z                ***/
+/***********************************************************************************/
+/***
+U -> w1  z z
+V -> w2  r ns
+W -> w3  t ew
+***/
+		if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+		{
+
+		  fprintf( stdout, "%s: %s: %s: loading %s data\n", progname, __FILE__, __func__, ev[ista].wavetype );
+
+		  n3cmp = 0;
+
+		  for( ifiles=0; ifiles < number_files; ifiles++ )
+		  {
+			found = 0;
+
+			if( n3cmp >= 3 ) break;
+
+			ev[ista].z.data = (float *)getsacdata( "W1", ev[ista].z.data, &(ev[ista].z.s), sacfiles[ifiles], ev[ista].z.filename, &found, verbose );
+			if(found) { if(verbose) fprintf(stdout, "%s: %s: %s: found cmp=%s filename=%s\n", progname, __FILE__, __func__, "W1", ev[ista].z.filename ); }
+			if(found) { n3cmp++; continue; }
+
+			ev[ista].ns.data = (float *)getsacdata( "W2", ev[ista].ns.data, &(ev[ista].ns.s), sacfiles[ifiles], ev[ista].ns.filename, &found, verbose );
+			if(found) { if(verbose) fprintf(stdout, "%s: %s: %s: found cmp=%s filename=%s\n", progname, __FILE__, __func__, "W2", ev[ista].ns.filename ); }
+			if(found) { n3cmp++; continue; }
+
+			ev[ista].ew.data  = (float *)getsacdata( "W3", ev[ista].ew.data,  &(ev[ista].ew.s),  sacfiles[ifiles], ev[ista].ew.filename,  &found, verbose );
+			if(found) { if(verbose) fprintf(stdout, "%s: %s: %s: found cmp=%s filename=%s\n", progname, __FILE__, __func__, "W3", ev[ista].ew.filename ); }
+			if(found) { n3cmp++; continue; }
+
+		  } /*** loop over ifiles ***/
+
+		  if(verbose) 
+			fprintf(stdout, "%s: %s: %s: done! only n3cmp=%d will be read\n", progname, __FILE__, __func__, n3cmp );
+
+		  if( n3cmp < 3 )
+		  {
+			fprintf( stderr, "%s: %s: %s: STDERR: FATAL ERROR only n3cmp=%d rotational read 3 needed. Quitting.\n", progname, __FILE__, __func__, n3cmp );
+                        fprintf( stdout, "%s: %s: %s: STDOUT: FATAL ERROR only n3cmp=%d rotational read 3 needed. Quitting.\n", progname, __FILE__, __func__, n3cmp );
+                        exit(-1);
+		  }
+
+		}   /**** if the wavetype is rotational seismogram "Rotational" *******/
 
 /********************************************************************************/
 /*** give a warning that more than 3 sac files exist for this station.network ***/
@@ -197,26 +236,9 @@ void sacdata2inv_loaddata(
 
         	if( n3cmp > 3 )
         	{
-          	fprintf(stdout,
-            	"%s: sacdata2inv_loadata(): warning more than 3 components found for station=%s.%s(ista=%d).\n",
-                	progname, ev[ista].stnm, ev[ista].net, ista );
-        	}
-
-
-/*****************************************************************/
-/*** fix broken kcmpnm  and khole character fields set by IRIS ***/
-/*****************************************************************/
-
-        	fix_component_names( &ev[ista] );
-
-        	if(verbose)
-        	{
-                	fprintf( stdout,  "%s: sacdata2inv_loadata(): %s khole= ns=(%s) ew=(%s) z=(%s)\n",
-                        	progname,
-                        	ev[ista].z.filename,
-                        	ev[ista].ns.s.khole,
-                        	ev[ista].ew.s.khole,
-                        	ev[ista].z.s.khole );
+          	  fprintf(stdout, 
+            	  "%s: %s: %s: WARNING! more than 3 components found for station=%s.%s(ista=%d).\n",
+                	progname, __FILE__, __func__, ev[ista].stnm, ev[ista].net, ista );
         	}
 
 /********************************************************/
@@ -226,20 +248,18 @@ void sacdata2inv_loaddata(
 		chdir( currentdir );
 
 		if(verbose)
-        	{
-                	fprintf( stdout,
-                  	"%s: sacdata2inv_loadata(): cwd=%s\n\t looking for SAC_PZs files in dir=%s\n",
-                        progname, currentdir, respdir );
-        	}
+               	  fprintf( stdout, "%s: %s: %s: cwd=%s\n\t looking for SAC_PZs files in dir=%s\n",
+                        progname, __FILE__, __func__, currentdir, respdir );
 
 		sprintf( ev[ista].ew.sacpzfile, " " );
-        	sprintf( ev[ista].ns.sacpzfile, " " );
-        	sprintf( ev[ista].z.sacpzfile, " " );
+                sprintf( ev[ista].ns.sacpzfile, " " );
+                sprintf( ev[ista].z.sacpzfile, " " );
 
 		getrespfile(
                 	respdir,
                 	ev[ista].stnm,
                 	ev[ista].net,
+			ev[ista].loc,
                 	ev[ista].ew.s.kcmpnm,
                 	ev[ista].ew.s.khole,
                 	verbose,
@@ -249,6 +269,7 @@ void sacdata2inv_loaddata(
                 	respdir,
                 	ev[ista].stnm,
                 	ev[ista].net,
+			ev[ista].loc,
                 	ev[ista].ns.s.kcmpnm,
                 	ev[ista].ns.s.khole,
                 	verbose,
@@ -258,24 +279,43 @@ void sacdata2inv_loaddata(
                 	respdir,
                 	ev[ista].stnm,
                 	ev[ista].net,
+			ev[ista].loc,
                 	ev[ista].z.s.kcmpnm,
                 	ev[ista].z.s.khole,
                 	verbose,
                 	ev[ista].z.sacpzfile );
 
 		fprintf( stdout,
-          	"%s: sacdata2inv_loadata(): Response files =\n \tew=(%s)\n \tns=(%s)\n \tz=(%s)\n",
-                	progname,
+          		"%s: %s: %s: Response files =\n \tew=(%s)\n \tns=(%s)\n \t z=(%s)\n",
+                	progname, __FILE__, __func__,
                 	ev[ista].ew.sacpzfile,
                 	ev[ista].ns.sacpzfile,
                 	ev[ista].z.sacpzfile );
-	
+		
 	/*** reset the current directory for writting output files ***/
 
         	chdir( currentdir );
 
+	/*** check the sampling rate, otherwise there will be some bad stuff in interpolate_fft()  ***/
+	
+		if( ev[ista].dt < ev[ista].z.s.delta ) 
+		{
+			fprintf( stderr, "\n\n%s: %s: %s:\n", progname, __FILE__, __func__ );
+			fprintf( stderr, "%s: %s: %s: STDERR: FATAL ERROR: %s.%s.%s the sampling rate %g (sec/samp) of the SAC data is greater than requested in mtinv.par file dt=%g (sec/samp)\n",
+				progname, __FILE__, __func__, ev[ista].net, ev[ista].stnm, ev[ista].loc, ev[ista].z.s.delta, ev[ista].dt );
+			fprintf( stderr, "%s: %s: %s:\n\n\n", progname, __FILE__, __func__ );
+			fflush(stderr);
+
+			fprintf( stdout, "\n\n%s: %s: %s:\n", progname, __FILE__, __func__ );
+                        fprintf( stdout, "%s: %s: %s: STDOUT: FATAL ERROR: %s.%s.%s the sampling rate %g (sec/samp) of the SAC data is greater than requested in mtinv.par file dt=%g (sec/samp)\n",
+                                progname, __FILE__, __func__, ev[ista].net, ev[ista].stnm, ev[ista].loc, ev[ista].z.s.delta, ev[ista].dt );
+                        fprintf( stdout, "%s: %s: %s:\n\n\n", progname, __FILE__, __func__ );
+                        fflush(stdout);
+
+			exit(-1);
+		}
+
 	} /*** loop over ista ***/
 
-	fprintf( stdout,
-		"%s: sacdata2inv_loadata(): done loading\n\n", progname );
+	fprintf( stdout, "%s: %s: %s: done loading\n\n", progname, __FILE__, __func__ );
 }

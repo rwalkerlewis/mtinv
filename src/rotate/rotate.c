@@ -30,8 +30,8 @@ void rotate( float *ns, int ns_nt, float *ns_cmpaz, float ns_cmpinc,
 
         if( ew_nt != ns_nt )
         {
-		printf("%s: rotate(): error nt not same ns=%d ew=%d\n", 
-			progname, ns_nt, ew_nt);
+		fprintf( stdout, "%s: %s: %s: error nt not same ns=%d ew=%d\n", 
+			progname, __FILE__, __func__, ns_nt, ew_nt);
                 exit(-1);
         }
 
@@ -39,7 +39,8 @@ void rotate( float *ns, int ns_nt, float *ns_cmpaz, float ns_cmpinc,
 
 	if(verbose)
 	{
-          fprintf( stdout, "%s: rotate(): back angle=%g\n", progname, angle );
+          fprintf( stdout, "%s: %s: %s: back angle=%g\n",
+		progname, __FILE__, __func__, angle );
         }
 
         if( *ew_cmpaz == -12345 || *ns_cmpaz == -12345 || 
@@ -53,8 +54,8 @@ void rotate( float *ns, int ns_nt, float *ns_cmpaz, float ns_cmpinc,
         }
 	if(verbose)
 	{
-		printf("%s: rotate(): rotate by angle=%g\n", 
-			progname, angle );
+		fprintf( stdout, "%s: %s: %s: rotate by angle=%g\n", 
+			progname, __FILE__, __func__, angle );
 	}
         deg2rad = M_PI/180;
         cosa = cos( deg2rad * angle );

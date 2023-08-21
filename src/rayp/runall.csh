@@ -16,7 +16,7 @@ damp=1.
 kmax=20000
 eps=0.0005
 smin=0.0005
-modeldb=/Users/ichinose/Work/mtinv.v2.1/data/modeldb/
+modeldb=../../data/modeldb/
 stadb=./rdseed.stations
 noverbose
 nodump
@@ -64,13 +64,13 @@ set z = 2
 cat /dev/null >! run.out
 
 foreach i ( 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 )
-
-rayp z=${z} par=${mod}.par stnm=TE${i} net=XX >> run.out
-
+  rayp z=${z} par=${mod}.par stnm=TE${i} net=XX >> run.out
 end
 
-psmeca -R0/1/0/1 -JM5i -Sa2i -G255/0/0 -W1p/0 -L1p/0 -K -P >! test.ps << EOF
+gmt psmeca -R0/1/0/1 -JM5i -Sa2i -Gred -W1p,black -L1p,black -K -P >! test.ps << EOF
 0.5 0.5 0 45 60 -80 5.0 test
 EOF
-pspolar run.out -R0/1/0/1 -JM5i -N -D0.5/0.5 -Sc0.2i -E0/255/0 -e1p/0 -G0/0/255 -g1p/0 -T0.0/0/5/12  -W1p/0 -M2i -O >> test.ps
+
+gmt pspolar run.out -R0/1/0/1 -JM5i -N -D0.5/0.5 -Sc0.2i -Egreen -e1p,black -Gblue -T0.0/0/5/12  -W1p,black -M2i -O >> test.ps
+
 gs test.ps

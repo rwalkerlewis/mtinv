@@ -49,9 +49,9 @@ static Color Orange= { 0.3, 1.0,  0.64, 0.0  };
 static Color Cyan  = { 0.3, 0.0,  1.0,  1.0  };
 static Color Yellow= { 0.3, 1.0,  1.0,  0.0  };
 
-char progname[128];
+extern char progname[128];
 
-void plot_dc_clvd_mech( float xc, float yc, float rad, Solution *sol, 
+void plot_dc_clvd_mech( float xc, float yc, float rad, Solution *sol, EventInfo *ev,
 	Greens **grn, int iz, int nsta, int iplanes, int ifill, int imode, int verbose )
 {
 	int ista, npts, k, j, i, kk;
@@ -409,12 +409,27 @@ void plot_dc_clvd_mech( float xc, float yc, float rad, Solution *sol,
 			toa = 180 - grn[ista][iz].Ptakeoff;
 			azi = grn[ista][iz].baz;
 		}
-			
+
+		/***/
+		/*** do not pass EventInfo structure storing 
+			the EventInfo[ista].iused field
+			put maybe in Greens or pass eventinfo? ***/
+		/***/
+
 		rp = rad * sqrt(2) * sin( 0.5 * d2r * toa );
 		xp = xc + rp * sin( azi * d2r );
 		yp = yc + rp * cos( azi * d2r );
-		draw_ps_marker( Purple, xp, yp, 0, 5.5 );
-		draw_ps_marker( Yellow, xp, yp, 0, 1.5 ); 
+
+		if( ev[ista].iused == 1 )
+		{
+			draw_ps_marker( Black, xp, yp, 0, 5.5 );
+			draw_ps_marker( Black, xp, yp, 0, 2.0 ); 
+		}
+		else
+		{
+			draw_ps_marker( Black, xp, yp, 0, 5.5 );
+			draw_ps_marker( White, xp, yp, 0, 2.0 );
+		}
 	}
 
 /********************************************/

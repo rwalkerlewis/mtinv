@@ -41,7 +41,7 @@ void write_sac_file( char *filename, Sac_File *s, int verbose )
 void compute_synthetics_special( int ista, int iz, EventInfo *ev, Greens **grn, Solution *sol, int mtdegfree )
 {
 	int it, nt;
-	float d2r, fi;
+	/* float d2r, fi; */
 
 	float *w, *u, *v;
 
@@ -57,8 +57,8 @@ void compute_synthetics_special( int ista, int iz, EventInfo *ev, Greens **grn, 
 
 /* see include/mt.h Mo = math.pow( 10.0, 1.5*(Mw+10.73) ) = 1.2445146117713818e+16; Reference Mw = 0.0 */
 
-	d2r = M_PI/180;
-	fi = ev[ista].az * d2r; 
+	/* d2r = M_PI/180; */
+	/* fi = ev[ista].az * d2r;  */
 	nt = ev[ista].nt;
 	/* fi = grn[ista][iz].az * d2r; */
 	/* nt = grn[ista][iz].nt; */
@@ -209,12 +209,22 @@ void minmax_print( float *x, char *label, int nt )
 	fflush(stdout);
 }
 
+/*** added ev->wavetype Surf/Pnl or Rotational for translational synthetics 
+               and rotational synthetics ***/
+
 void compute_synthetics( int is, int iz, EventInfo *ev, Greens **grn, Solution *sol, int mtdegfree )
 {
 	int it, nt;
 	float d2r, fi;
+
 	float *w, *u, *v;
 	float *rss, *rds, *rdd, *rep, *zss, *zds, *zdd, *zep, *tss, *tds;
+	
+	float *w1, *w2, *w3;
+	float *w1ss, *w1ds, *w1dd, *w1ex;
+        float *w2ss, *w2ds, *w2dd, *w2ex;
+        float *w3ss, *w3ds, *w3dd, *w3ex;
+
 	float Mxx, Myy, Mzz, Mxy, Mxz, Myz;
 
 /* see include/mt.h Mo = math.pow( 10.0, 1.5*(Mw+10.73) ) = 1.2445146117713818e+16; Reference Mw = 0.0 */
@@ -230,30 +240,129 @@ void compute_synthetics( int is, int iz, EventInfo *ev, Greens **grn, Solution *
 	Mxz = sol[iz].moment_tensor[1][3] / base_moment;
 	Myz = sol[iz].moment_tensor[2][3] / base_moment;
 
-	fprintf( stdout, "%s: %s: %s: Mxx=%g Myy=%g Mzz=%g Mxy=%g Mxz=%g Myz=%g\n",
+	fprintf( stdout, "%s: %s: %s: is=%d iz=%d Mxx=%g Myy=%g Mzz=%g Mxy=%g Mxz=%g Myz=%g mtdegfree=%d wavetype=%s\n",
 		progname,
 		__FILE__,
 		__func__,
-		Mxx, Myy, Mzz, Mxy, Mxz, Myz );
+		is, iz,
+		Mxx, Myy, Mzz, Mxy, Mxz, Myz,
+		mtdegfree, ev[is].wavetype );
 
-	w = calloc( nt, sizeof(float) );
-	u = calloc( nt, sizeof(float) );
-	v = calloc( nt, sizeof(float) );
-	
-	w = ev[is].syn_t.data;
-	u = ev[is].syn_r.data;
-	v = ev[is].syn_z.data;
+	 w = calloc( nt, sizeof(float) );
+         u = calloc( nt, sizeof(float) );
+         v = calloc( nt, sizeof(float) );
 
-	rss = grn[is][iz].g.rss;
-	rds = grn[is][iz].g.rds;
-	rdd = grn[is][iz].g.rdd;
-	rep = grn[is][iz].g.rep;
-	zss = grn[is][iz].g.zss;
-	zds = grn[is][iz].g.zds;
-	zdd = grn[is][iz].g.zdd;
-	zep = grn[is][iz].g.zep;
-	tss = grn[is][iz].g.tss;
-	tds = grn[is][iz].g.tds;
+/***
+U -> w1  z z
+V -> w2  r ns
+W -> w3  t ew
+***/
+	if( strcmp( ev[is].wavetype, "Rotational" ) == 0 )
+	{
+
+		w = ev[is].syn_t.data;
+		v = ev[is].syn_r.data;
+		u = ev[is].syn_z.data;
+
+		w1ss = grn[is][iz].g.w1ss;
+                w1ds = grn[is][iz].g.w1ds;
+                w1dd = grn[is][iz].g.w1dd;
+                w1ex = grn[is][iz].g.w1ex;
+
+                w2ss = grn[is][iz].g.w2ss;
+                w2ds = grn[is][iz].g.w2ds;
+                w2dd = grn[is][iz].g.w2dd;
+                w2ex = grn[is][iz].g.w2ex;
+
+                w3ss = grn[is][iz].g.w3ss;
+                w3ds = grn[is][iz].g.w3ds;
+                w3dd = grn[is][iz].g.w3dd;
+                w3ex = grn[is][iz].g.w3ex;
+		
+        /*** assume w3 has same radiation pattern as transverse component? ***/
+/***
+U -> w1  z z
+V -> w2  r ns
+W -> w3  t ew
+***/
+		for( it = 0; it < nt; it++ )
+		{
+			if( mtdegfree == FULL_MOMENT_TENSOR )
+			{
+
+                u[it] = ( Mxx * ( -sixth*w1dd[it] + half*cos(2*fi)*w1ss[it] + third*w1ex[it] )
+                        + Myy * ( -sixth*w1dd[it] - half*cos(2*fi)*w1ss[it] + third*w1ex[it] )
+                        + Mxy * (  sin(2*fi) * w1ss[it] )
+                        + Mxz * (  cos(fi)   * w1ds[it] )
+                        + Myz * (  sin(fi)   * w1ds[it] )
+                        + Mzz * (  third*w1dd[it] + third*w1ex[it] ) );
+
+                v[it] = ( Mxx * ( -sixth*w2dd[it] + half*cos(2*fi)*w2ss[it] + third*w2ex[it] )
+                        + Myy * ( -sixth*w2dd[it] - half*cos(2*fi)*w2ss[it] + third*w2ex[it] )
+                        + Mxy * (  sin(2*fi) * w2ss[it] )
+                        + Mxz * (  cos(fi)   * w2ds[it] )
+                        + Myz * (  sin(fi)   * w2ds[it] )
+                        + Mzz * (  third*w2dd[it] + third*w2ex[it] ) );
+
+	/** w3dd not used ***/
+
+                w[it] =-( Mxx * (  half * sin(2*fi) * w3ss[it] )
+                        + Myy * ( -half * sin(2*fi) * w3ss[it] )
+                        + Mxy * (        -cos(2*fi) * w3ss[it] )
+                        + Mxz * (         sin(fi)   * w3ds[it] )
+                        + Myz * (        -cos(fi)   * w3ds[it] ) );
+
+			} 
+ 			else if( mtdegfree == DEVIATORIC_MOMENT_TENSOR )
+			{
+
+                u[it] = ( Mxx * ( -half*w1dd[it] + half*cos(2*fi)*w1ss[it] )
+                        + Myy * ( -half*w1dd[it] - half*cos(2*fi)*w1ss[it] )
+                        + Mxy * (  sin(2*fi) * w1ss[it] )
+                        + Mxz * (  cos(fi)   * w1ds[it] )
+                        + Myz * (  sin(fi)   * w1ds[it] ) );
+
+                v[it] = ( Mxx * ( -half*w2dd[it] + half*cos(2*fi)*w2ss[it] )
+                        + Myy * ( -half*w2dd[it] - half*cos(2*fi)*w2ss[it] )
+                        + Mxy * (  sin(2*fi) * w2ss[it] )
+                        + Mxz * (  cos(fi)   * w2ds[it] )
+                        + Myz * (  sin(fi)   * w2ds[it] ) );
+
+                w[it] =-( Mxx * (  half * sin(2*fi) * w3ss[it] )
+                        + Myy * ( -half * sin(2*fi) * w3ss[it] )
+                        + Mxy * (       -cos(2*fi) * w3ss[it] )
+                        + Mxz * (        sin(fi)   * w3ds[it] )
+                        + Myz * (       -cos(fi)   * w3ds[it] ) );
+
+			}
+			else if( mtdegfree == FORCE_EXPLOSION )
+			{
+			w[it]=(Mxx*(third*w3ex[it]) + Myy*(third*w3ex[it]) + Mzz*(third*w3ex[it]));
+			v[it]=(Mxx*(third*w2ex[it]) + Myy*(third*w2ex[it]) + Mzz*(third*w2ex[it]));
+			u[it]=(Mxx*(third*w1ex[it]) + Myy*(third*w1ex[it]) + Mzz*(third*w1ex[it]));
+			}
+
+		} /*** loop over it ***/
+
+	} /*** Rotational  ***/
+
+	else if( strcmp( ev[is].wavetype, "Surf/Pnl" ) == 0 )
+	{
+
+        w = ev[is].syn_t.data;
+        u = ev[is].syn_r.data;
+        v = ev[is].syn_z.data;
+
+	 rss = grn[is][iz].g.rss;
+	 rds = grn[is][iz].g.rds;
+	 rdd = grn[is][iz].g.rdd;
+	 rep = grn[is][iz].g.rep;
+	 zss = grn[is][iz].g.zss;
+	 zds = grn[is][iz].g.zds;
+	 zdd = grn[is][iz].g.zdd;
+	 zep = grn[is][iz].g.zep;
+	 tss = grn[is][iz].g.tss;
+	 tds = grn[is][iz].g.tds;
 
 	for( it = 0; it < nt; it++ )
 	{
@@ -310,8 +419,19 @@ void compute_synthetics( int is, int iz, EventInfo *ev, Greens **grn, Solution *
 		fprintf( stderr, "%s: %s: %s: unknown mtdegfree %d\n",
 			progname, __FILE__, __func__, mtdegfree );
 	  }
-	}
-}
+
+         } /*** loop over vector ***/
+
+/*
+          ev[ista].syn_t.data[it] = w[it];
+          ev[ista].syn_r.data[it] = u[it];
+          ev[ista].syn_z.data[it] = v[it];
+*/
+	} /*** if wavetype == 0 translational syn ****/
+
+} /*** end of compute_synthetics ***/
+
+
 
 float compute_l2norm_error( float *a, float *b, int n )
 {
@@ -454,6 +574,7 @@ void write_email_message( FILE *fp, int nsta, int iz, Solution *sol, EventInfo *
 /*** get the username from shell environment ***/
 	username = getenv( "USER" );
 
+
 /*** get the system time now ***/
 
 	gmtnow = (MyTime *)calloc(1,sizeof(MyTime));
@@ -464,9 +585,9 @@ void write_email_message( FILE *fp, int nsta, int iz, Solution *sol, EventInfo *
 
 /*** is this a inversion result or forward calculation ***/
 	if( ifwd )
-		fprintf( fp, "Seismic Moment Tensor (Forward Calculaiton)\n\n" );
+		fprintf( fp, "Seismic Moment Tensor (Forward Calculaiton)\n" );
 	else
-		fprintf( fp, "Seismic Moment Tensor Solution\n\n" );
+		fprintf( fp, "Seismic Moment Tensor Solution\n" );
 
 	fprintf(fp, "%4d/%02d/%02d (%03d) %02d:%02d:%05.2f %.4f %.4f %s\n",
 		ev[0].ot.year, ev[0].ot.month, ev[0].ot.mday, ev[0].ot.jday,
@@ -475,8 +596,7 @@ void write_email_message( FILE *fp, int nsta, int iz, Solution *sol, EventInfo *
 
 	fprintf(fp, "\tDepth = %5.1f (km)\n", grn[0][iz].evdp );
 	fprintf(fp, "\tMw    = %5.2f\n", sol[iz].mw );
-	fprintf(fp, "\tMo    = %5.2fx10^%2d (dyne x cm)\n", sol[iz].abcassa, sol[iz].exponent );
-	fprintf(fp, "\n" );
+	fprintf(fp, "\tMo    = %7.4fx10^%2d (dyne x cm)\n", sol[iz].abcassa, sol[iz].exponent );
 
 	if( ifwd )
 	{
@@ -490,8 +610,10 @@ void write_email_message( FILE *fp, int nsta, int iz, Solution *sol, EventInfo *
 		fprintf( fp, "\tPercent Double Couple = %3.0f %%\n", sol[iz].PDC );
 		fprintf( fp, "\tPercent CLVD          = %3.0f %%\n", sol[iz].PCLVD );
 		fprintf( fp, "\tPercent Isotropic     = %3.0f %%\n", sol[iz].PISO );
-		fprintf( fp, "\tLune latitude=%.3f longitude=%.3f\n", 
+
+		fprintf( fp, "\tLune latitude=%.5f longitude=%.5f\n", 
 			sol[iz].lune_lat, sol[iz].lune_lon );
+
 		fprintf( fp, "\tEpsilon=%0.2f k=%0.2f F-factor=%0.2f\n",
 			sol[iz].epsilon, sol[iz].k, sol[iz].f_factor );
 	}
@@ -504,7 +626,8 @@ void write_email_message( FILE *fp, int nsta, int iz, Solution *sol, EventInfo *
 	}
 
 	fprintf(fp, "\t Percent Variance Reduction = %6.2f %%\n", sol[iz].var_red );
-	fprintf(fp, "\t Total Fit                  =  %.2f \n", sol[iz].total_fitness1 );
+
+	/* fprintf(fp, "\t Total Fit                  =  %.2f \n", sol[iz].total_fitness1 ); */
 
 	fprintf(fp, "\tMajor Double Couple\n" );
 	fprintf(fp, "\t\t            strike dip   rake\n");
@@ -518,26 +641,27 @@ void write_email_message( FILE *fp, int nsta, int iz, Solution *sol, EventInfo *
 	if( sol[iz].mt_type == FULL_MT    ) fprintf( fp, "\tFULL MOMENT TENSOR\n" );
 	if( sol[iz].mt_type == EXPLOSION  ) fprintf( fp, "\tEXPLOSION ONLY MOMENT TENSOR\n" );
 
+/***
 	fprintf(fp, "\n\tMoment Tensor Elements: Spherical Coordinates\n" );
 	fprintf(fp, "\t\tMrr=%6.2f Mtt=%6.2f Mff=%6.2f\n", sol[iz].mrr, sol[iz].mtt, sol[iz].mff );
 	fprintf(fp, "\t\tMrt=%6.2f Mrf=%6.2f Mtf=%6.2f EXP=%2d\n", 
 		sol[iz].mrt, sol[iz].mrf, sol[iz].mtf, sol[iz].exponent );
 	fprintf(fp, "\n" );
+***/
+	fprintf(fp, "\tMoment Tensor Elements: Cartesian Coordinates\n" );
+	fprintf(fp, "\t\t%8.4f %8.4f %8.4f\n", sol[iz].mxx, sol[iz].mxy, sol[iz].mxz );
+	fprintf(fp, "\t\t%8.4f %8.4f %8.4f\n", sol[iz].mxy, sol[iz].myy, sol[iz].myz );
+	fprintf(fp, "\t\t%8.4f %8.4f %8.4f\n", sol[iz].mxz, sol[iz].myz, sol[iz].mzz );
 
-	fprintf(fp, "\n\tMoment Tensor Elements: Cartesian Coordinates\n" );
-	fprintf(fp, "\t\t%5.2f %5.2f %5.2f\n", sol[iz].mxx, sol[iz].mxy, sol[iz].mxz );
-	fprintf(fp, "\t\t%5.2f %5.2f %5.2f\n", sol[iz].mxy, sol[iz].myy, sol[iz].myz );
-	fprintf(fp, "\t\t%5.2f %5.2f %5.2f\n", sol[iz].mxz, sol[iz].myz, sol[iz].mzz );
+	fprintf(fp, "\tEigenvalues:\n");
+	fprintf(fp, "\t\tT-axis eigenvalue=%8.4f\n", sol[iz].FullMT.T.ev );
+	fprintf(fp, "\t\tN-axis eigenvalue=%8.4f\n", sol[iz].FullMT.B.ev );
+	fprintf(fp, "\t\tP-axis eigenvalue=%8.4f\n", sol[iz].FullMT.P.ev );
 
-	fprintf(fp, "\n\tEigenvalues:\n");
-	fprintf(fp, "\t\tT-axis eigenvalue=%6.2f\n", sol[iz].FullMT.T.ev );
-	fprintf(fp, "\t\tN-axis eigenvalue=%6.2f\n", sol[iz].FullMT.B.ev );
-	fprintf(fp, "\t\tP-axis eigenvalue=%6.2f\n", sol[iz].FullMT.P.ev );
-
-	fprintf(fp, "\n\tEigenvalues and eigenvectors of the Major Double Couple:\n");
-	fprintf(fp, "\t\tT-axis ev=%5.2f trend=%.0f plunge=%.0f\n", sol[iz].Maj.T.ev, sol[iz].Maj.T.az, sol[iz].Maj.T.pl );
-	fprintf(fp, "\t\tN-axis ev=%5.2f trend=%.0f plunge=%.0f\n", sol[iz].Maj.B.ev, sol[iz].Maj.B.az, sol[iz].Maj.B.pl );
-	fprintf(fp, "\t\tP-axis ev=%5.2f trend=%.0f plunge=%.0f\n", sol[iz].Maj.P.ev, sol[iz].Maj.P.az, sol[iz].Maj.P.pl );
+	fprintf(fp, "\tEigenvalues and eigenvectors of the Major Double Couple:\n");
+	fprintf(fp, "\t\tT-axis ev=%8.4f trend=%.0f plunge=%.0f\n", sol[iz].Maj.T.ev, sol[iz].Maj.T.az, sol[iz].Maj.T.pl );
+	fprintf(fp, "\t\tN-axis ev=%8.4f trend=%.0f plunge=%.0f\n", sol[iz].Maj.B.ev, sol[iz].Maj.B.az, sol[iz].Maj.B.pl );
+	fprintf(fp, "\t\tP-axis ev=%8.4f trend=%.0f plunge=%.0f\n", sol[iz].Maj.P.ev, sol[iz].Maj.P.az, sol[iz].Maj.P.pl );
 
 	nsta_used = 0;
 	for( ista=0; ista<nsta; ista++ ) 
@@ -563,8 +687,12 @@ void write_email_message( FILE *fp, int nsta, int iz, Solution *sol, EventInfo *
 			grd_mo_type = ' ';
 			if( ev[ista].grd_mo_type == DISPLACEMENT ) grd_mo_type = 'D';
 			if( ev[ista].grd_mo_type == VELOCITY ) grd_mo_type = 'V';
-			fprintf(fp, " %s.%s.%c", 
-				grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type );
+
+			fprintf(fp, " %s.%s.%s-%c", 
+				grn[ista][iz].net,
+				grn[ista][iz].stnm, 
+				grn[ista][iz].loc,
+				grd_mo_type );
 			kk++;
 		}
 	}	
@@ -594,8 +722,12 @@ void write_email_message( FILE *fp, int nsta, int iz, Solution *sol, EventInfo *
 		if( ev[ista].grd_mo_type == DISPLACEMENT ) grd_mo_type = 'D';
 		if( ev[ista].grd_mo_type == VELOCITY ) grd_mo_type = 'V';
 
-		fprintf(fp, "%s.%s (%c) \t%c \t%8.1f  \t%3.0f  \t%3.0f  \t%.3f \t%.3f %s\n",
-			grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, defining,
+		fprintf(fp, "%s.%s.%s-(%c) \t%c \t%8.1f  \t%3.0f  \t%3.0f  \t%.3f \t%.3f %s\n",
+			grn[ista][iz].net,
+			grn[ista][iz].stnm,
+			grn[ista][iz].loc,
+			grd_mo_type,
+			defining,
 			grn[ista][iz].rdist, grn[ista][iz].az, grn[ista][iz].baz,
 			ev[ista].lf, ev[ista].hf, ev[ista].glib_filename );
 	}
@@ -794,23 +926,6 @@ fprintf(fp, "%.4f %.4f %5.1f %5.2f %4d/%02d/%02d %02d:%02d:%05.2f %5.2f %5.2e %3
                 sol[iz].l2norm_error
         );
 
-                /*
-                sol[iz].mrr,
-                sol[iz].mtt,
-                sol[iz].mff,
-                sol[iz].mrt,
-                sol[iz].mrf,
-                sol[iz].mtf,
-                */
-
-/**
-               sol[iz].moment_tensor[3][3],
-                sol[iz].moment_tensor[1][1],
-                sol[iz].moment_tensor[2][2],
-                sol[iz].moment_tensor[1][3],
-                -sol[iz].moment_tensor[2][3],
-                -sol[iz].moment_tensor[1][2],
-**/
 	/***          17    18   19    20    21    22   23   24    25    26     ***/
 	/***         mzz   mxx   myy   mxz  -myz  -mxy  exp  Teig  Peig  Beig   ***/
         fprintf(fp, "%6.2f %6.2f %6.2f %6.2f %6.2f %6.2f %2d %6.2f %6.2f %6.2f ",
@@ -886,8 +1001,9 @@ void sdr_to_mt( float **mt, float str, float dip, float rak, float Mw, int verbo
 	M.zy = M.yz;
 	if(verbose)
 	{
-		printf("%s:sdr_to_mt(): coef Mxx=%g Myy=%g Mzz=%g Mxy=%g Mxz=%g Myz=%g\n",
-			progname, M.xx, M.yy, M.zz, M.xy, M.xz, M.yz );
+		fprintf( stdout, "%s: %s: %s: coef Mxx=%g Myy=%g Mzz=%g Mxy=%g Mxz=%g Myz=%g\n",
+			progname, __FILE__, __func__,
+			M.xx, M.yy, M.zz, M.xy, M.xz, M.yz );
 	}
 
         mt[1][1] = M.xx * Mo/Mo0;
@@ -902,10 +1018,10 @@ void sdr_to_mt( float **mt, float str, float dip, float rak, float Mw, int verbo
 
 	if(verbose)
 	{
-		printf( "%s: sdr_to_mt: moment tensor\n", progname );
-		printf( "%s: sdr_to_mt:\t %6.2e %6.2e %6.2e\n", progname, mt[1][1], mt[1][2], mt[1][3] );
-		printf( "%s: sdr_to_mt:\t %6.2e %6.2e %6.2e\n", progname, mt[2][1], mt[2][2], mt[2][3] );
-		printf( "%s: sdr_to_mt:\t %6.2e %6.2e %6.2e\n", progname, mt[3][1], mt[3][2], mt[3][3] );
+		printf( "%s: %s: %s: moment tensor:\n", progname, __FILE__, __func__ );
+		printf( "%s: %s: %s: %6.2e %6.2e %6.2e\n", progname, __FILE__, __func__, mt[1][1], mt[1][2], mt[1][3] );
+		printf( "%s: %s: %s: %6.2e %6.2e %6.2e\n", progname, __FILE__, __func__, mt[2][1], mt[2][2], mt[2][3] );
+		printf( "%s: %s: %s: %6.2e %6.2e %6.2e\n", progname, __FILE__, __func__, mt[3][1], mt[3][2], mt[3][3] );
 	}
 }
 
@@ -950,8 +1066,8 @@ void normalize_moment_tensor( MomentTensor *Ma, MomentTensor *Mn, float Mo, int 
 	if(verbose)
 	{
 		fprintf( stdout,
-		  "%s: %s: %s: calling normalize_moment_tensor: \n",
-			progname, __FILE__, __func__ );
+		  "%s: %s: %s: calling normalize_moment_tensor: Mo=%e\n",
+			progname, __FILE__, __func__, Mo );
 	}
 
 /*** compute the total scaler seismic moment ***/
@@ -964,7 +1080,7 @@ void normalize_moment_tensor( MomentTensor *Ma, MomentTensor *Mn, float Mo, int 
 /***	Miso = fabs| ( m1 + m2 + m3 ) / 3 |                                                ***/
 /***	Mdev = | max(m) - Miso |                                                           ***/
 /*********************************************************************************************/
-/***
+/***************************************************************************
 	for( i = 1; i <= 3; i++ )
 	{
 		for( j = 1; j <= 3; j++ )
@@ -973,11 +1089,25 @@ void normalize_moment_tensor( MomentTensor *Ma, MomentTensor *Mn, float Mo, int 
 		}
 	}
 	Ma->moment  = sqrt( Ma->moment / 2.0 ) * base_moment;
-***/
+******************************************************************************/
 	Ma->moment = Mo;
 	Ma->Mw      = log10( Ma->moment )/1.5 - 10.73;
 	Ma->expon    = (int)log10( Ma->moment );
 	Ma->abcassa = Ma->moment/pow(10.0, Ma->expon );
+
+/***** this may cause problems ********/
+/***
+	if( Ma->abcassa > 1.1 )
+	{
+		Ma->abcassa /= 10;
+		Ma->expon += 1;
+	}
+****/
+	if(verbose)
+	{
+	  fprintf( stdout, "%s: %s: %s: Mo=%e %g x10^ %d\n",
+		progname, __FILE__, __func__, Mo, Ma->abcassa, Ma->expon );
+	}
 
 /*** normalized moment tensor ***/
 
@@ -1035,12 +1165,20 @@ void normalize_moment_tensor( MomentTensor *Ma, MomentTensor *Mn, float Mo, int 
 	}
 }
 
+/******************************************************************/
+/*** set_moment_tensor()                                        ***/
+/*** form the moment tensor from solution vector x              ***/
+/*** col1-Mxx, col2-Myy, col3-Mxy, col4-Mxz, col5-Myz, col6-Mzz ***/
+/*** store the original moment tensor to solution structure     ***/
+/*** base_moment was applied                                    ***/
+/******************************************************************/
+
 void set_moment_tensor( MomentTensor *Ma, float *x, int idf, int verbose )
 {
 	int i, j;
 
 	if(verbose)
-	  fprintf(stdout, "%s: mtinv_subs.c: set_moment_tensor():\n", progname );
+	  fprintf(stdout, "%s: %s: %s:\n", progname, __FILE__, __func__ );
 
 /*** set the ABS moment tensor from x vector ***/
 	Ma->xx = x[1];
@@ -1049,7 +1187,6 @@ void set_moment_tensor( MomentTensor *Ma, float *x, int idf, int verbose )
 	Ma->xz = x[4];
 	Ma->yz = x[5];
 	Ma->zz = x[6];
-
 	if( idf == 5 ) Ma->zz = -( Ma->xx + Ma->yy );
 	Ma->yx = Ma->xy;
 	Ma->zx = Ma->xz;
@@ -1081,7 +1218,7 @@ void mt2eig( MomentTensor Ma, Solution *sol, int iz, int verbose )
 	void tqli(float d[], float e[], int n, float **z);
 
 	if(verbose)
-	  fprintf(stdout, "%s: mtinv_subs.c: mt2eig(): \n", progname );
+	  fprintf(stdout, "%s: %s: %s:\n", progname, __FILE__, __func__ );
 
 /*** allocate memory ***/
 	eval1 = vector( 0, 4 );
@@ -1103,22 +1240,22 @@ void mt2eig( MomentTensor Ma, Solution *sol, int iz, int verbose )
 
 /*** do the eigenvalue/eigenvector calculations ***/
 
-	fprintf( stdout, "%s: %s: %s: z1[][] = \n %g %g %g \n %g %g %g \n %g %g %g\n",
+	if(verbose)
+	{
+	  fprintf( stdout, "%s: %s: %s: z1[][] = \n %g %g %g \n %g %g %g \n %g %g %g\n",
                 progname, __FILE__, __func__,
                 z1[1][1], z1[1][2], z1[1][3],
                 z1[2][1], z1[2][2], z1[2][3],
                 z1[3][1], z1[3][2], z1[3][3] );
+	}
 
 	tred2( z2, nx, eval1, eval2 );
 
-	fprintf( stdout, "%s: %s: %s: z2[][] = \n %g %g %g \n %g %g %g \n %g %g %g\n",
-		progname, __FILE__, __func__,
-		z2[1][1], z2[1][2], z2[1][3], 
-		z2[2][1], z2[2][2], z2[2][3], 
-		z2[3][1], z2[3][2], z2[3][3] );
- 
-	fprintf( stdout, "eval1: %g %g %g\n", eval1[1], eval1[2], eval1[3] );
-	fprintf( stdout, "eval2: %g %g %g\n", eval2[1], eval2[2], eval2[3] );
+/*** dont print out "z2" or "eval2", its just scratch space ***/
+
+	if(verbose)
+	  fprintf( stdout, "%s: %s: %s: eval1: %g %g %g\n", 
+		progname, __FILE__, __func__, eval1[1], eval1[2], eval1[3] );
 
 	tqli( eval1, eval2, nx, z2 );
 
@@ -1129,8 +1266,9 @@ void mt2eig( MomentTensor Ma, Solution *sol, int iz, int verbose )
 		for( i=1; i<=nx; i++ )
 		{
 			/*** eigenvalues ***/
-			fprintf( stdout, "%s: mtinv_subs.c: mt2eig(): eval1=%6.2e z2=", 
-				progname, eval1[i]);
+			fprintf( stdout, "%s: %s: %s: eval1=%6.2e z2=", 
+				progname, __FILE__, __func__, eval1[i]);
+
 			/*** eigenvectors ***/
 			for( j=1; j<=nx; j++)
 			{
@@ -1178,20 +1316,19 @@ void eig2iso( Solution *sol, int iz, int verbose )
 	void floatsort( float *, int );
 	float fsign( float );
 	void indexx( int, float *, int * );
-	void sac_absmax( float *, int, float *);
 
 /** set the eigenvalues of the full moment tensor ***/
 	
 	if(verbose) 
 	{
-	  fprintf(stdout, "%s: mtinv_subs.c: eig2iso(): Full moment tensor:\n", progname );
+	  fprintf(stdout, "%s: %s: %s: Full moment tensor:\n", progname, __FILE__, __func__ );
 	}
 
 	for( i=1; i<=nx; i++ )
 	{
 		if(verbose)	
-		  fprintf( stdout, "%s: mtinv_subs.c: eig2iso(): val=%6.2e vec=", 
-			progname, 
+		  fprintf( stdout, "%s: %s: %s: val=%6.2e vec=", 
+			progname, __FILE__, __func__, 
 			sol[iz].FullMT.eig[i].val );
 
 		etmp[i] = sol[iz].FullMT.eig[i].val;
@@ -1218,7 +1355,7 @@ void eig2iso( Solution *sol, int iz, int verbose )
 
 	if(verbose)
 	{
-		fprintf( stdout, "%s: mtinv_subs.c: eig2iso(): FULL sorted eigenvalues = ", progname );
+		fprintf( stdout, "%s: %s: %s: FULL sorted eigenvalues = ", progname, __FILE__, __func__ );
 		fprintf( stdout, "%e <= %e <= %e.\n",
 			sol[iz].FullMT.eig[index[1]].val,
 			sol[iz].FullMT.eig[index[2]].val,
@@ -1258,8 +1395,8 @@ void eig2iso( Solution *sol, int iz, int verbose )
 		if(verbose)
 		{
         		fprintf( stdout,
-		  "%s: mtinv_subs.c: eig2iso(): fabs(iso)=%e > 1.0E+12\n", 
-				progname, 
+		  "%s: %s: %s: fabs(iso)=%e > 1.0E+12\n", 
+				progname, __FILE__, __func__,
 				fabs(iso) ); 
 		}
 
@@ -1289,8 +1426,8 @@ void eig2iso( Solution *sol, int iz, int verbose )
 
 	if(verbose)
 	  fprintf( stdout,
-		"%s: mtinv_subs.c: eig2iso(): deviatoric moment tensor\n",
-			progname );
+		"%s: %s: %s: deviatoric moment tensor\n",
+			progname, __FILE__, __func__ );
 
 	for( i=1; i<=3; i++ )
 	{
@@ -1300,8 +1437,9 @@ void eig2iso( Solution *sol, int iz, int verbose )
 		if(verbose)
 		{
 			fprintf( stdout,
-			  "%s: mtinv_subs.c: eig2iso():\t val=%6.2e vec=",
-				progname, sol[iz].Dev.eig[i].val );
+			  "%s: %s: %s: eig2iso():\t val=%6.2e vec=",
+				progname, __FILE__, __func__,
+				sol[iz].Dev.eig[i].val );
 		}
 
 		for( j=1; j<=3; j++ )
@@ -1323,10 +1461,10 @@ void eig2iso( Solution *sol, int iz, int verbose )
 	indexx(3,&etmp[0],&index[0]);
 	if(verbose)
 	{
-		fprintf( stdout, "%s: mtinv_subs.c: eig2iso(): deviatoric sorted eigenvalues: ", 
-			progname );
-		fprintf( stdout, "%s: mtinv_subs.c: eig2iso(): %g %g %g\n",
-			progname, 
+		fprintf( stdout, "%s: %s: %s: deviatoric sorted eigenvalues: ", 
+			progname, __FILE__, __func__ );
+		fprintf( stdout, "%s: %s: %s: %g %g %g\n",
+			progname, __FILE__, __func__,
 			sol[iz].Dev.eig[index[1]].val,
 			sol[iz].Dev.eig[index[2]].val,
 			sol[iz].Dev.eig[index[3]].val );
@@ -1364,9 +1502,12 @@ void eig2iso( Solution *sol, int iz, int verbose )
 
 	if(verbose) 
 	{
-	 fprintf( stdout, "%s: mtinv_subs.c: eig2iso(): Absolute Value Eigenvalue Sorted : E1 > E2 > E3 \n", progname );
-	 fprintf( stdout, "%s: mtinv_subs.c: eig2iso(): |Eigval|\t %e %e %e\n", progname, etmp[1], etmp[2], etmp[3] );
-	 fprintf( stdout, "%s: mtinv_subs.c: eig2iso(): signs \t %g %g %g\n", progname, sign[1], sign[2], sign[3] );
+	 fprintf( stdout, "%s: %s: %s: Absolute Value Eigenvalue Sorted : E1 > E2 > E3 \n", 
+		progname, __FILE__, __func__ );
+	 fprintf( stdout, "%s: %s: %s: |Eigval|\t %e %e %e\n", 
+		progname, __FILE__, __func__, etmp[1], etmp[2], etmp[3] );
+	 fprintf( stdout, "%s: %s: %s: signs \t %g %g %g\n", 
+		progname, __FILE__, __func__, sign[1], sign[2], sign[3] );
 	}
 
 /********************************************************/
@@ -1384,6 +1525,9 @@ void eig2iso( Solution *sol, int iz, int verbose )
 /*****************************************************************************/
 
 	void flt_sort_asc(int npts, float *fvec_a, float *fvec_b);
+
+/**** does this memory really need to by dynamically allocated, use static fixed arrays? ***/
+/**** the memory is deallocated later down so it is ok for now ****/
 
 	float  *tmp_abs_dev_eigen   = (float *)calloc( 4, sizeof(float) );
 	float  *tmp_dev_eigen       = (float *)calloc( 4, sizeof(float) );
@@ -1414,7 +1558,7 @@ void eig2iso( Solution *sol, int iz, int verbose )
 	if(verbose)
 	{
 	  fprintf( stdout,
-		"%s: %s: %s(): Dev eigen values, in ascending order w.r.t their abs values: %6.2e %6.2e %6.2e\n",
+		"%s: %s: %s: Dev eigen values, in ascending order w.r.t their abs values: %6.2e %6.2e %6.2e\n",
 		progname,
 		__FILE__,
 		__func__,
@@ -1484,16 +1628,19 @@ void eig2iso( Solution *sol, int iz, int verbose )
 		sol[iz].k = 0;
 	}
 
+	sol[iz].T = (2.0*sol[iz].epsilon);
+
 	if( verbose )
 	{
 	  fprintf( stdout, 
-"%s: %s: %s: iz=%d z=%g k=%5.3f epsilon=%5.3f Mdev=%g F-factor=%g (Mdc=%g Mclvd=%g Miso=%g sum=%g) Mtotal=%g(Miso+Mdev)\n",
+"%s: %s: %s: iz=%d z=%g k=%5.3f T=%5.3f epsilon=%5.3f Mdev=%g F-factor=%g (Mdc=%g Mclvd=%g Miso=%g sum=%g) Mtotal=%g(Miso+Mdev)\n",
 		progname,
 		__FILE__,
 		__func__,
 		iz,
 		sol[iz].evdp,
 		sol[iz].k, 
+		sol[iz].T,
 		sol[iz].epsilon,
 		sol[iz].Mdev,
 		sol[iz].f_factor,
@@ -1550,10 +1697,11 @@ void Eig2MajorDC( Solution *sol, int iz, int verbose )
 	int index[4], i, j;
 	float evd[4];
 	void indexx( int, float *, int * );
-	void trans1( Solution *, int, int *, int );
-	void tpdss( Solution *, int );
 
-	if(verbose) fprintf(stdout, "%s: calling Eig2MajorDC\n", progname );
+	void trans1( Solution *sol, int iz, int index[], int mode );  /*** mode: 0 = major-couple, 1 = minor-couple ***/
+	void tpdss( Solution *sol, int iz );
+
+	if(verbose) fprintf(stdout, "%s: %s: %s: calling Eig2MajorDC\n", progname, __FILE__, __func__ );
 
 /*** transfer the deviatoric eigenvalues to majordc ***/
 	for( i=1; i<=3; i++ )
@@ -1598,19 +1746,20 @@ void Eig2MajorDC( Solution *sol, int iz, int verbose )
 
 	if(verbose)
 	{
-	  fprintf(stdout, "Eig2MajorDC(): iz=%d Major Double Couple:\n", iz );
+	  fprintf(stdout, "%s: %s: %s: iz=%d Major Double Couple:\n", progname, __FILE__, __func__, iz );
+
 	  for( i=1; i<=3; i++ )
 	  {
-		printf( "Eig2MajorDC: \t val=%6.2e vec=", sol[iz].Maj.eig[index[i]].val );
+		fprintf( stdout, "%s: %s: %s:\t val=%6.2e vec=", progname, __FILE__, __func__, sol[iz].Maj.eig[index[i]].val );
 		for( j=1; j<=3; j++ )
-			printf( "%5.2f ", sol[iz].Maj.eig[index[i]].vec[j]);
-		printf("\n");
+			fprintf( stdout, "%5.2f ", sol[iz].Maj.eig[index[i]].vec[j] );
+		fprintf( stdout, "\n");
 	  }
-	  fprintf(stdout, "Eig2MajorDC:\t T-axis trend=%3.0f pl=%3.0f Ev=%6.2e\n", sol[iz].Maj.T.az, sol[iz].Maj.T.pl, sol[iz].Maj.T.ev );
-	  fprintf(stdout, "Eig2MajorDC:\t P-axis trend=%3.0f pl=%3.0f Ev=%6.2e\n", sol[iz].Maj.P.az, sol[iz].Maj.P.pl, sol[iz].Maj.P.ev );
-	  fprintf(stdout, "Eig2MajorDC:\t B-axis trend=%3.0f pl=%3.0f Ev=%6.2e\n", sol[iz].Maj.B.az, sol[iz].Maj.B.pl, sol[iz].Maj.B.ev );
-	  fprintf(stdout, "Eig2MajorDC:\t NP1: stk=%3.0f dip=%3.0f rak=%3.0f\n", sol[iz].Maj.P1.s, sol[iz].Maj.P1.d, sol[iz].Maj.P1.r );
-	  fprintf(stdout, "Eig2MajorDC:\t NP2: stk=%3.0f dip=%3.0f rak=%3.0f\n", sol[iz].Maj.P2.s, sol[iz].Maj.P2.d, sol[iz].Maj.P2.r );
+	  fprintf(stdout, "%s: %s: %s:\t T-axis trend=%3.0f pl=%3.0f Ev=%6.2e\n", progname, __FILE__, __func__, sol[iz].Maj.T.az, sol[iz].Maj.T.pl, sol[iz].Maj.T.ev );
+	  fprintf(stdout, "%s: %s: %s:\t P-axis trend=%3.0f pl=%3.0f Ev=%6.2e\n", progname, __FILE__, __func__, sol[iz].Maj.P.az, sol[iz].Maj.P.pl, sol[iz].Maj.P.ev );
+	  fprintf(stdout, "%s: %s: %s:\t B-axis trend=%3.0f pl=%3.0f Ev=%6.2e\n", progname, __FILE__, __func__, sol[iz].Maj.B.az, sol[iz].Maj.B.pl, sol[iz].Maj.B.ev );
+	  fprintf(stdout, "%s: %s: %s:\t NP1: stk=%3.0f dip=%3.0f rak=%3.0f\n", progname, __FILE__, __func__, sol[iz].Maj.P1.s, sol[iz].Maj.P1.d, sol[iz].Maj.P1.r );
+	  fprintf(stdout, "%s: %s: %s:\t NP2: stk=%3.0f dip=%3.0f rak=%3.0f\n", progname, __FILE__, __func__, sol[iz].Maj.P2.s, sol[iz].Maj.P2.d, sol[iz].Maj.P2.r );
 	  fprintf(stdout, "\n");
 	}
 
@@ -1624,10 +1773,11 @@ void Eig2MinorDC( Solution *sol, int iz, int verbose )
 	int index[4], i, j;
 	float evd[4];
 	void indexx( int, float *, int * );
-	void trans1( Solution *, int, int *, int );
-	void tpdss( Solution *, int );
 
-	if(verbose) fprintf(stdout, "%s: calling Eig2MinorDC\n", progname );
+	void trans1( Solution *sol, int iz, int index[], int mode );  /*** mode: 0 = major-couple, 1 = minor-couple ***/
+	void tpdss( Solution *sol, int iz );
+
+	if(verbose) fprintf(stdout, "%s: %s: %s: calling Eig2MinorDC\n", progname, __FILE__, __func__ );
 
 	for( i=1; i<=3; i++ )
 	{
@@ -1670,19 +1820,19 @@ void Eig2MinorDC( Solution *sol, int iz, int verbose )
 
 	if(verbose)
 	{
-	  fprintf(stdout, "Eig2MinorDC(): Minor Double Couple:\n");
+	  fprintf(stdout, "%s: %s: %s: Minor Double Couple:\n", progname, __FILE__, __func__ );
 	  for( i=1; i<=3; i++ )
 	  {
-		printf( "Eig2MinorDC:\t val=%6.2e vec=", sol[iz].Min.eig[index[i]].val );
+		fprintf( stdout, "%s: %s: %s:\t val=%6.2e vec=", progname, __FILE__, __func__, sol[iz].Min.eig[index[i]].val );
 		for( j=1; j<=3; j++ )
-			printf( "%6.3f ", sol[iz].Min.eig[i].vec[j]);
+			fprintf( stdout, "%6.3f ", sol[iz].Min.eig[i].vec[j]);
 		printf("\n");
 	  }
-	  fprintf(stdout, "Eig2MinorDC:\t T-axis trend=%3.0f pl=%3.0f Ev=%6.2e\n", sol[iz].Min.T.az, sol[iz].Min.T.pl, sol[iz].Min.T.ev );
-	  fprintf(stdout, "Eig2MinorDC:\t P-axis trend=%3.0f pl=%3.0f Ev=%6.2e\n", sol[iz].Min.P.az, sol[iz].Min.P.pl, sol[iz].Min.P.ev );
-	  fprintf(stdout, "Eig2MinorDC:\t B-axis trend=%3.0f pl=%3.0f Ev=%6.2e\n", sol[iz].Min.B.az, sol[iz].Min.B.pl, sol[iz].Min.B.ev );
-	  fprintf(stdout, "Eig2MinorDC:\t NP1: stk=%3.0f dip=%3.0f rak=%3.0f\n", sol[iz].Min.P1.s, sol[iz].Min.P1.d, sol[iz].Min.P1.r );
-	  fprintf(stdout, "Eig2MinorDC:\t NP2: stk=%3.0f dip=%3.0f rak=%3.0f\n", sol[iz].Min.P2.s, sol[iz].Min.P2.d, sol[iz].Min.P2.r );
+	  fprintf(stdout, "%s: %s: %s:\t T-axis trend=%3.0f pl=%3.0f Ev=%6.2e\n", progname, __FILE__, __func__, sol[iz].Min.T.az, sol[iz].Min.T.pl, sol[iz].Min.T.ev );
+	  fprintf(stdout, "%s: %s: %s:\t P-axis trend=%3.0f pl=%3.0f Ev=%6.2e\n", progname, __FILE__, __func__, sol[iz].Min.P.az, sol[iz].Min.P.pl, sol[iz].Min.P.ev );
+	  fprintf(stdout, "%s: %s: %s:\t B-axis trend=%3.0f pl=%3.0f Ev=%6.2e\n", progname, __FILE__, __func__, sol[iz].Min.B.az, sol[iz].Min.B.pl, sol[iz].Min.B.ev );
+	  fprintf(stdout, "%s: %s: %s:\t NP1: stk=%3.0f dip=%3.0f rak=%3.0f\n", progname, __FILE__, __func__, sol[iz].Min.P1.s, sol[iz].Min.P1.d, sol[iz].Min.P1.r );
+	  fprintf(stdout, "%s: %s: %s:\t NP2: stk=%3.0f dip=%3.0f rak=%3.0f\n", progname, __FILE__, __func__, sol[iz].Min.P2.s, sol[iz].Min.P2.d, sol[iz].Min.P2.r );
 	  fprintf(stdout, "\n");
 	}
 
@@ -1781,8 +1931,8 @@ float *load_greens( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, int verb
         {
                 if( (fpg=fopen( ev[ista].ginv_filename, "rb" )) == NULL )
                 {
-                        fprintf( stdout, "%s: Fatal Error cannot open file %s\n",
-                                progname, ev[ista].ginv_filename );
+                        fprintf( stdout, "%s: %s: %s: Fatal Error cannot open file %s\n",
+                                progname, __FILE__, __func__, ev[ista].ginv_filename );
                         exit(-1);
                 }
 
@@ -1795,8 +1945,8 @@ float *load_greens( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, int verb
                 fread( &nz, sizeof(int), 1, fpg );
                 if(verbose) 
 		{
-			fprintf( stdout, "%s: ista=%d nz=%d from %s\n", 
-				progname, ista, nz, ev[ista].ginv_filename );
+			fprintf( stdout, "%s: %s: %s: ista=%d nz=%d from %s\n", 
+				progname, __FILE__, __func__, ista, nz, ev[ista].ginv_filename );
 		}
 
                 z = malloc( nz*sizeof(*z) );
@@ -1844,6 +1994,8 @@ float *load_greens( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, int verb
                                 grn[ista][iz].nt, min, max, grn[ista][iz].filename, grn[ista][iz].v.modfile );
                         }
                         grn[ista][iz].ts0 = ev[ista].ts0;
+
+		/*** do I really need to allocate space for this, or can I wait till it is needed? ***/
 
 			grn[ista][iz].tra = (float *)calloc(grn[ista][iz].nt, sizeof(float) );
 			grn[ista][iz].rad = (float *)calloc(grn[ista][iz].nt, sizeof(float) );
@@ -2034,7 +2186,8 @@ void shift_data( EventInfo *ev, int nsta, float ts0, int verbose )
 
                 if( ts0 == 0 ) 
 		{
-			fprintf( stdout, "%s: %s: %s: shift ts0=%g is zero, no need to shift.\n",
+			if(verbose)
+			  fprintf( stdout, "%s: %s: %s: shift ts0=%g is zero, no need to shift.\n",
                                 progname, __FILE__, __func__, ts0 );
 			break;
 		}
@@ -2318,4 +2471,81 @@ void flt_swap(float *a, float *b)
 	}
 
 	return;
+}
+
+void writeMatrix( int rows, int cols, float **a_matrix, float *b_vector, float *s_vector, float *x_vector )
+{
+	int i, j;
+	FILE *fp;
+
+	fprintf( stderr, "%s: %s: %s: rows=%d cols=%d\n",
+		progname, __FILE__, __func__, rows, cols );
+
+/*** write out data vector in column form ****/
+	fp = fopen( "b_vector.m", "w" );
+	fprintf( fp, "brows=%d\n", rows );
+	fprintf( fp, "b=[\n" );
+	for( i = 1; i <= rows; i++ )
+	{
+		fprintf( fp, "%g\n", b_vector[i] );
+	}
+	fprintf( fp, "];\n" );
+	fclose(fp);
+
+/*** write out synthetic vector in column form ****/
+	fp = fopen( "s_vector.m", "w" );
+	fprintf( fp, "srows=%d\n", rows );
+	fprintf( fp, "s=[\n" );
+        for( i = 1; i <= rows; i++ )
+        {       
+                fprintf( fp, "%g\n", s_vector[i] );
+        }
+        fprintf( fp, "];\n" );
+	fclose(fp);
+
+/*** write out the moment tensor solution in row vector form Mxy=[Mxx,Mxy,Mxz,Myy,Myz,Mzz] ***/
+        /******************************************************************/
+        /*** form the moment tensor from solution vector x              ***/
+        /*** col1-Mxx, col2-Myy, col3-Mxy, col4-Mxz, col5-Myz, col6-Mzz ***/
+        /*** store the original moment tensor to solution structure     ***/
+        /******************************************************************/
+
+	fp = fopen( "x_vector.m", "w" );
+	fprintf( fp, "xcols=%d\n", cols );
+
+	fprintf( fp, "Mxx=%g; Myy=%g; Mxy=%g; Mxz=%g; Myz=%g; Mzz=%g\n",
+		x_vector[1], x_vector[2], x_vector[3], x_vector[4], x_vector[5], x_vector[6] );
+
+        fprintf( fp, "x = [ " );
+        for( i = 1; i <= cols; i++ )
+        {       
+                fprintf( fp, "%g, ", x_vector[i] );
+        }
+        fprintf( fp, "];\n" );
+        fclose(fp);
+
+/*** write out the A matrix ***/
+
+	fp = fopen( "a_matrix.m", "w" );
+
+	fprintf( fp, "Arows=%d\n", rows );
+	fprintf( fp, "Acols=%d\n", cols );
+
+	fprintf( fp, "t = [ 1:1:Arows ]; \n" );
+
+        fprintf( fp, "A = [\n" );
+        for( i = 1; i <= rows; i++ )
+	{
+		for( j = 1; j <= cols; j++ )
+        	{       
+                	fprintf( fp, "%g", a_matrix[i][j] );
+			if( j < cols ) fprintf( fp, ", " );
+			if( j == cols ) fprintf( fp, "\n" );
+		}
+        }
+        fprintf( fp, "];\n" );
+
+	fprintf( fp, "plot( t,A(:,1),'r', t,A(:,2),'g', t,A(:,3),'b', t,A(:,4),'o', t,A(:,5),'h', t,A(:,6),'r' ) \n" );
+
+        fclose(fp);
 }

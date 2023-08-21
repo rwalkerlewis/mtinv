@@ -1,45 +1,82 @@
 #!/bin/csh
 
-if( $#argv != 1 ) then
-	echo "$0 needs 1 arguments"
-	exit
+if( $#argv == 1 ) then
+	set tar_file=$1
+	set tar_directory=(`echo $tar_file | cut -d. -f1` )
+
+        echo " unpacking tar file ${tar_file} into director ${tar_directory} "
 else
-  set seedfile=$argv[1]
+        echo "$0 needs 1 argument"
+        echo " Usage : $0 tar_file "
+        exit
 endif
 
-set RDSEED=/Users/ichinose1/bin/rdseed
-which rdseed
-echo $RDSEED
+### untar the iris download 
+###
+if( -e ${tar_file} ) then
+  tar xvf ${tar_file}
+else
+  echo "$0 ERROR! IRIS download tar file does NOT exist in current directory"
+  exit(-1)
+endif
 
-## run ${RDSEED} to unpack station file
-##
-${RDSEED} -p -S -f ${seedfile}
+### rename the SAC files and move them to the ../Data directory
+###
+cd ${tar_directory}
+renamesac *.SAC
+mkdir ../Data
+mv 1*.SAC 2*.SAC ../Data
+/bin/ls
+/bin/rm -f *.SAC
 
-## run rdseed to unpack event file (if available, typically included in WILBURv3 downloads)
-${RDSEED} -e -f ${seedfile}
+### rename and move the responses
+###
+foreach i ( * )
+cd $i
+ rename_SACPZs.csh
+cd ..
+end
 
-## run rdseed to unpack SAC files
-##
-${RDSEED} -d -o 1 -f ${seedfile}
+mkdir ../Resp
+mv */SAC_PZs_* ../Resp
+/bin/rm -r *
 
-## move data files into ./Data and response files into ./Resp
-##
-mkdir Data
-mv rdseed.stations *.SAC Data
+cd ..
+/bin/rm -rf ${tar_directory}
 
-mkdir Resp
-mv SAC_PZs* Resp
+### create rdseed.station file and make a GMT map from SAC files
+###
+cd ./Data
+sac2gmtmap -gmt4 -include-epicenter -include-sta-label -rdseed.station *.??Z.?.SAC *.??Z.SAC
+cd ..
 
-mkdir dev full
+mkdir dev
+cd dev
 
-cat >! dev/setup.csh << EOF
+cat >! setupMT.csh << EOF_SETUPMT.CSH
 #!/bin/csh
-#
-# For help type: > setupMT -help 
-# Rdseed find event information by typing: > cat ../rdseed.events
-#
- 
-setupMT -depth 10 -comment "comment" -origintime "2004/12/16,18:59:12.0" -gmt5 ../Data/*BHZ*SAC
+
+### exclude stations file
+cat >! exclude.sta << EOF
+# sta code(s), one per line
 EOF
 
-chmod a+x dev/setup.csh
+###
+### Usage: setupMT -z [depth(km)] -ev [lat lon] -mod [model_basename] -ot ["YYYY-MM-DDTHH:mm:SS.SS"] 
+###                -com ["Comment"] -fil [lo_f(Hz) hi_f(Hz)] -evid [eventID] -exclude_sta [file name] 
+###                -gmt4 -interactive -help -verbose [sac files]
+###
+
+#setupMT -z  2 -ev 41.7392 +73.377 -mod wus -ot "2009-12-22T05:54:35" -com "Kambrata, Kyrgyzs" -fil 0.033 0.100 ../Data/*Z.?.SAC ../Data/*Z.SAC
+
+#setupMT -z  2 -ev 35.8767 -84.898 -mod cus -ot "2021-08-13T11:57:35" -com "Franklin Mine, TN" -fil 0.075 0.120 ../Data/*Z.?.SAC ../Data/*Z.SAC
+
+#setupMT -z 16 -ev 36.9077 -90.543 -mod cus -ot "2021-11-18T02:53:04" -com "New Madrid, MO"    -fil 0.075 0.150 ../Data/*Z.?.SAC ../Data/*Z.SAC
+
+#setupMT -z 10 -ev 34.5379 122.567 -mod mdj2 -ot 2023-04-25T15:34:29  -com "Yellow Sea"        -fil 0.02  0.05  ../Data/*Z.?.SAC ../Data/*Z.SAC
+
+EOF_SETUPMT.CSH
+
+chmod a+x setupMT.csh
+
+cd ..

@@ -7,7 +7,7 @@
 #include "../include/nrutil.h"     /** numerical recipes **/
 #include "../include/mt.h"         /** global datatype and structure declarations **/
 
-char progname[128];
+extern char progname[128];
 
 void demultiplex( Greens **grn, EventInfo *ev, int iz, float *s_vector, int nsta )
 {
@@ -58,6 +58,7 @@ void computeStationChannel_VarianceReduction_v2(
 	float *tdat, *rdat, *zdat;
         float *tsyn, *rsyn, *zsyn;
         float *dat, *syn;
+	char loc[8];
 
 	FILE *fp;
 	static char output_filename[] = { "var_red.out" };
@@ -81,8 +82,8 @@ void computeStationChannel_VarianceReduction_v2(
 	}
 
 	fprintf( fp,
-"#   sta     net       evdp otsec ts0    dist  az  flo    fhi  used vr_ev  vr_sta  vr_z   vr_r   vr_t        snr_z        snr_r        snr_t\n" );
-
+"#   sta     net      loc      evdp otsec ts0    dist  az  flo    fhi  used vr_ev  vr_sta  vr_z   vr_r   vr_t        snr_z        snr_r        snr_t\n" );
+/*23 12345678 12345678 12345678 
 	fprintf( stdout,
 	"%s: %s: %s: Event.Station.Channel Variance Reduction for best depth z= %g and ts0= %g otsec= %g var_red= %6.1f\n",
                 progname,
@@ -93,8 +94,9 @@ void computeStationChannel_VarianceReduction_v2(
 		ev[0].ot_shift, 
 		sol[iz].var_red );
 	fflush(stdout);
+***/
 
-/*** mtinv_subs.c: compute_synthetics()  start at ( it = 0; it < nt; it++ )***/
+/*** mtinv_subs.c: compute_synthetics()  start at ( it = 0; it < nt; it++ ) ***/
 /*** mtinv_subs.c: load_the_data()  fread(&(ev[ista].z.data[0]),  ev[ista].z.s.npts  * sizeof(float), 1, fpd ); ***/
 
 	for( ista = 0; ista < nsta; ista++ )
@@ -161,14 +163,20 @@ void computeStationChannel_VarianceReduction_v2(
 
 		ev[ista].vred_sta =  variance_reduction( dat, syn, 0, (3*nt) );
 
+		if( strcmp( ev[ista].z.s.khole, "-12345" ) == 0 || strcmp( ev[ista].z.s.khole, "" ) == 0 )
+			strcpy( loc, "--" );
+		else
+			strcpy( loc, ev[ista].z.s.khole );
+		
                 fprintf( stdout,
-  "%s: %s: %s: ista= %2d %8s %8s iz= %2d z= %g otsec= %g iused= %2d vred_ev = %6.1f vred_sta= %6.1f z= %6.1f r= %6.1f t= %6.1f\n",
+  "%s: %s: %s: ista= %2d %8s %8s %8s iz= %2d z= %g otsec= %g iused= %2d vred_ev = %6.1f vred_sta= %6.1f z= %6.1f r= %6.1f t= %6.1f\n",
                         progname,
                         __FILE__,
                         __func__,
 			ista, 
 			ev[ista].z.s.kstnm,
 			ev[ista].z.s.knetwk,
+			loc,
 			iz,
                         grn[ista][iz].evdp,
 			ev[0].ot_shift, 
@@ -179,12 +187,13 @@ void computeStationChannel_VarianceReduction_v2(
                         ev[ista].vred_rcmp,
                         ev[ista].vred_tcmp );
 
-		/*** sta net evdp otsec ts0 dist az flo fhi iused vred_ev vred_sta vred_cmpz vred_cmpr vred_cmpt snr_z snr_r snr_t **/
+		/*** sta net loc evdp otsec ts0 dist az flo fhi iused vred_ev vred_sta vred_cmpz vred_cmpr vred_cmpt snr_z snr_r snr_t **/
 		fprintf( fp, 
-			"%03d %-8s %-8s %4g %3g %3g %8.1f %3.0f %6.3f %6.3f %2d %6.1f %6.1f %6.1f %6.1f %6.1f %12.5f %12.5f %12.5f\n",
+			"%03d %-8s %-8s %-8s %4g %3g %3g %8.1f %3.0f %6.3f %6.3f %2d %6.1f %6.1f %6.1f %6.1f %6.1f %12.5f %12.5f %12.5f\n",
 			ista,
 			ev[ista].z.s.kstnm,
 			ev[ista].z.s.knetwk,
+			loc,
 			grn[ista][iz].evdp,
 			ev[0].ot_shift,
 			ev[0].ts0,
@@ -365,8 +374,12 @@ void mtinv_dumpSAC( EventInfo *ev, Greens **grn, int nsta, int iz, float *s_vect
 
 	  if( ev[ista].iused != 1 ) continue;
 
+/************************************************************************************************************************/
+
 /*** synthetic radial component ***/
-	  sprintf( sac_file_name, "%s.%s.%02d.%02d.syn.r.sac", ev[ista].stnm, ev[ista].net, iz, ista );
+	                        /*  N  S L C   iz    ista */
+	  sprintf( sac_file_name, "%s.%s.%s.%s.%02d.%02d.syn.r.sac", 
+			ev[ista].net, ev[ista].stnm, ev[ista].loc, ev[ista].ns.s.kcmpnm, iz, ista );
 
 	  ev[ista].syn_r.s = ev[ista].ns.s;
 
@@ -377,7 +390,8 @@ void mtinv_dumpSAC( EventInfo *ev, Greens **grn, int nsta, int iz, float *s_vect
 	  write_sac_file( sac_file_name, &(ev[ista].syn_r), verbose );
 
 /*** synthetic vertical component ***/
-	  sprintf( sac_file_name, "%s.%s.%02d.%02d.syn.z.sac", ev[ista].stnm, ev[ista].net, iz, ista );
+	  sprintf( sac_file_name, "%s.%s.%s.%s.%02d.%02d.syn.z.sac",
+                        ev[ista].net, ev[ista].stnm, ev[ista].loc, ev[ista].z.s.kcmpnm, iz, ista );
 
 	  ev[ista].syn_z.s = ev[ista].z.s;
 
@@ -387,7 +401,8 @@ void mtinv_dumpSAC( EventInfo *ev, Greens **grn, int nsta, int iz, float *s_vect
 	  write_sac_file( sac_file_name, &(ev[ista].syn_z), verbose );
 
 /*** synthetic transverse component ***/
-	  sprintf( sac_file_name, "%s.%s.%02d.%02d.syn.t.sac", ev[ista].stnm, ev[ista].net, iz, ista ); 
+	  sprintf( sac_file_name, "%s.%s.%s.%s.%02d.%02d.syn.t.sac",
+                        ev[ista].net, ev[ista].stnm, ev[ista].loc, ev[ista].ew.s.kcmpnm, iz, ista );
 
 	  ev[ista].syn_t.s = ev[ista].ew.s;
 
@@ -397,16 +412,23 @@ void mtinv_dumpSAC( EventInfo *ev, Greens **grn, int nsta, int iz, float *s_vect
 
 	  write_sac_file( sac_file_name, &(ev[ista].syn_t), verbose );
 
+/************************************************************************************************************************/
+
 /*** data radial componet ***/
-	  sprintf( sac_file_name, "%s.%s.%02d.%02d.dat.r.sac", ev[ista].stnm, ev[ista].net, iz, ista );
+	  sprintf( sac_file_name, "%s.%s.%s.%s.%02d.%02d.dat.r.sac",
+                        ev[ista].net, ev[ista].stnm, ev[ista].loc, ev[ista].ns.s.kcmpnm, iz, ista );
+
 	  write_sac_file( sac_file_name, &(ev[ista].ns), verbose );
 	  
 /*** data vertical component ***/
-	  sprintf( sac_file_name, "%s.%s.%02d.%02d.dat.z.sac", ev[ista].stnm, ev[ista].net, iz, ista ); 
+	  sprintf( sac_file_name, "%s.%s.%s.%s.%02d.%02d.dat.z.sac",
+                        ev[ista].net, ev[ista].stnm, ev[ista].loc, ev[ista].z.s.kcmpnm, iz, ista );
+
 	  write_sac_file( sac_file_name, &(ev[ista].z), verbose );
 
 /*** data transverse component ***/
-	  sprintf( sac_file_name, "%s.%s.%02d.%02d.dat.t.sac", ev[ista].stnm, ev[ista].net, iz, ista ); 
+	  sprintf( sac_file_name, "%s.%s.%s.%s.%02d.%02d.dat.t.sac",
+                        ev[ista].net, ev[ista].stnm, ev[ista].loc, ev[ista].ew.s.kcmpnm, iz, ista );
 	  write_sac_file( sac_file_name, &(ev[ista].ew), verbose );
 	}
 

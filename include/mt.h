@@ -78,21 +78,46 @@ typedef struct {
 	float sigma[MAX_MODEL_LAYERS];
 } VelMod;
 
-/* change 2048 to 4096 */
-typedef struct {
-        float rss[4096], rds[4096], rdd[4096], rep[4096];
-	float zss[4096], zds[4096], zdd[4096], zep[4096];
-	float tss[4096], tds[4096];
-} Greens_Function;
+/**************************************************************************************************/
+/*** change array size from 2048 to 4096 ***/
+/*** dont forget to change greensf.f     ***/
+/*** same as fkstrain.h/fkstrain.c       ***/
+/**************************************************************************************************/
 
 typedef struct {
-	char filename[256], stnm[8], net[8];
+
+	/*** the original 3-fundamental faulting orientations + 1-isotropic Gf ***/
+	/*** 3-component displacement r-radial z-vertical t-transverse ***/
+
+        float rss[4096], rds[4096], rdd[4096], rep[4096];
+	float zss[4096], zds[4096], zdd[4096], zep[4096];
+	float tss[4096], tds[4096];  /*** tdd=0 and tep=0 ***/
+
+	/*** the 3-fundamental faulting orientations + 1-isotropic Gf ***/
+	/*** 3 components of rotation w3-rotation about vertical axes, ***/
+	/***      w1-rot about E-W, w2-rot about N-S axis ***/
+
+	float w3ss[4096], w3ds[4096], w3dd[4096], w3ex[4096];
+        float w2ss[4096], w2ds[4096], w2dd[4096], w2ex[4096];
+        float w1ss[4096], w1ds[4096], w1dd[4096], w1ex[4096];
+
+} Greens_Function;
+
+/*******************************************************************************************************/
+/*** new GLIB filename format net.sta.loc.model.glib             ***/
+/*** new data filename format net.sta.loc.[v/d].ista#.data       ***/
+/*** new ginv filename format net.sta.loc.model.[v/d].#ista.ginv ***/
+
+typedef struct {
+				   /*sta=stnm*/
+	char filename[256], net[8], stnm[8], loc[8];
 	float stla, stlo, stel, evla, evlo, evdp;
 	float rdist, az, baz;
         float t0, dt, twin, fmax, damp, eps, smin, rigidity;
 	float redv, ts0, tstart, tend;
 
 /** newly added 2010/11/27 G. Ichinose see rayp_subs.c ***/
+
 	float Ptakeoff, Prayparameter, Pttime, Praybottom;
 
 	int kmax, nt;
@@ -100,6 +125,10 @@ typedef struct {
         Greens_Function g;
 	float *rad, *tra, *ver;
 } Greens;
+
+/*******************************************************************************************************/
+/*** wrapper for sac header and floating point waveform data with some additional info ***/
+/*******************************************************************************************************/
 
 typedef struct {
 	int id;
@@ -118,11 +147,27 @@ typedef struct {
         float  *data; /*** cannot use fixed array because it is used to load raw data in sacdata2inv.c ***/
 } Sac_File;
 
+/*******************************************************************************************************/
+/***
+	EventInfo Data Structure - holds event-origin, source MT, station-inversion fit information 
+		Storage of the SAC formated waveform and meta-data, raw, processed and temp storage for plotting synthetics
+***/
+/*******************************************************************************************************/
+
+/*** new GLIB filename format net.sta.loc.model.glib             ***/
+/*** new data filename format net.sta.loc.[v/d].ista#.data       ***/
+/*** new ginv filename format net.sta.loc.model.[v/d].#ista.ginv ***/
+
 typedef struct {
-        char net[8], stnm[8], modfile[256];
+        char net[8], stnm[8], loc[8], modfile[256];
         char data_filename[256], glib_filename[256], ginv_filename[256];
 	char comment[256];
-	char wavetype[32];
+
+/*** holds space for future use:  ***/
+	/*** wavetype:  "" or "Surf/Pnl" (typical 3C ZRT waveform data, default) ***/
+	/*** wavetype: "Rotational"  (new case, not typical, U,W,V 3-C rotational data Array-Derived or 3C BB rot-sensor ***/
+                        
+	char wavetype[32];  
 
 	long evid,orid;
 	char dbuser[32],dbsid[32];
@@ -161,7 +206,8 @@ typedef struct {
 	int grd_mo_type; /*** 0=disp 1=vel ***/
 	float mul_factor;  /*** on-the-fly scaling of all the data ***/
 	float weight;
-	float time_shift_all;
+	float time_shift_all; /*** this gets updated with new cross correlation shift ***/
+	float time_shift_user;  /*** this is read in and does not get updated ***/
 
 	/*** mini Greens ***/
 	float rdist;
@@ -172,8 +218,11 @@ typedef struct {
         float rtzGxy[24][4096];
 
 	/* Sac_File r,t; */
-	Sac_File ns, ew, z;            /*** these store data ***/
+	Sac_File ns, ew, z;            /*** these store translational (NS,EW,Z) data ***/
 	Sac_File syn_r, syn_t, syn_z;  /*** these store synthetics ***/
+
+	/** we are going to shoe-horn in the rotational with the translational for now ***/
+	/* Sac_File w1, w2, w3; */           /*** rotational data (U,V,W) ***/
 
 } EventInfo;
 
@@ -202,7 +251,7 @@ typedef struct {
 	float evlo, evla, evdp, ot;
 	int mt_type;
 	float epsilon;
-	float k;
+	float k, T;
 	float fIso, fiso, fclvd;
 	float f_factor;
 	float lune_lat, lune_lon;
@@ -287,6 +336,9 @@ typedef struct {
 
 /*** added 08/07/2008 to swap information about the Greens function depths ***/
 typedef struct {
-	float zmin, zinc, zmax;
+	int type; /* type=0 z=single depth, type=1 zrange=zmin,zinc,zmax, type=2 multiple irregular */
 	int nz;
+	float zmin, zinc, zmax;
+	float *zvec;
 } Depth_Info;
+

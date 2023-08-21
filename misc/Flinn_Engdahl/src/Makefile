@@ -9,7 +9,8 @@ LIBDIR = -L../../../lib
 LIBS = -lget -lm
 INSTALL_BIN = ../../../bin
 
-all : grn2db updateMTdb FlinnEngdahl FlinnEngdahlTest
+#all : FlinnEngdahl FlinnEngdahlTest grn2db updateMTdb
+all : FlinnEngdahl grn2db updateMTdb
 
 updateMTdb.o : updateMTdb.c
 grn2db.o : grn2db.c

@@ -23,7 +23,10 @@ int main( int ac, char **av )
 	void rtrend_sac( float *x, int n, float dt, float beg, int verbose );
 
 	void rtrend( float x0, float dx, float *y, int n, int verbose );
+	int setpar(),mstpar();
+	void endpar();
 
+/*** begin main ***/
 	strcpy( progname, av[0] );
 
 	setpar(ac,av);

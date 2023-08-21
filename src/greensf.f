@@ -1,4 +1,4 @@
-*************************************************************************************
+*(************************************************************************************
 ***  Calculating frequency wavenumber reflectivity synthetic Green's functions for
 ***  the 10 fundamental faulting orientations ZSS,ZDS,ZDD,ZEP,RSS,RDS,RDD,REP,TSS,TDS
 ***  in a layered medium over a half space.  Source is double couple.
@@ -19,7 +19,7 @@
 	parameter( MXL = 1024 )
 
 *** Greens
-        character filename*256, kstnm*8, knet*8
+        character filename*256, knet*8, kstnm*8, kloc*8
         real*4 stla,stlo,stel,evla,evlo,evdp
         real*4 rdist,az,baz
         real*4 t0,dt,twin,fmax,damp,eps,smin,rigidity
@@ -35,6 +35,10 @@
 *** Greens.Greens_Function
         real*4 g01(4096),g02(4096),g03(4096),g04(4096),g05(4096)
         real*4 g06(4096),g07(4096),g08(4096),g09(4096),g10(4096)
+*** rotational greens functions (w1SS,w2DS,w3DD,w3EX)
+        real*4 g11(4096),g12(4096),g13(4096),g14(4096)
+        real*4 g15(4096),g16(4096),g17(4096),g18(4096)
+        real*4 g19(4096),g20(4096),g21(4096),g22(4096)
 
 *** local variables
 	dimension h(MXL),vp(MXL),Qp(MXL),vs(MXL),Qs(MXL),dens(MXL)
@@ -60,13 +64,16 @@
 	logical up
 
 *** typedef struct Greens
-        common/grn/filename,kstnm,knet,stla,stlo,stel,evla,evlo,evdp,
+        common/grn/filename,knet,kstnm,kloc,
+     $    stla,stlo,stel,evla,evlo,evdp,
      $    rdist,az,baz,t0,dt,twin,fmax,damp,eps,smin,rigidity,redv,
      $    ts0,tstart,tend,Ptakeoff,Prayparameter,Pttime,Praybottom,
      $    kmax,nt,modfile,modpath,mynlay,maxlay,
      $    hh,zz,va,vb,qa,qb,rho,sigma,
-     $    g01,g02,g03,g04,g05,g06,g07,g08,g09,g10
-     
+     $    g01,g02,g03,g04,g05,g06,g07,g08,g09,g10,
+     $    g11,g12,g13,g14,g15,g16,g17,g18,g19,g20,
+     $    g21,g22
+
 *** local common block
 	common/para/one,zero,ga,nu,kbeta,ka,kb,dens,z,I11,I12,
      +              I21,I22,I31,I32,Ish11,Ish12,Ish21,Ish22,
@@ -82,6 +89,7 @@
 	  write(*,*)'filename=', filename
 	  write(*,*)'kstnm=', kstnm
 	  write(*,*)'knet=', knet
+	  write(*,*)'kloc=', kloc
 	  write(*,*)'stla=', stla
 	  write(*,*)'stlo=',  stlo
 	  write(*,*)'stel=', stel
@@ -171,10 +179,15 @@
 	  write(*,11)i,h(i),zz(i),vp(i),Qp(i),vs(i),Qs(i),dens(i)
 11	  format(i2,7f9.2)
 	  endif
-
-	  zlay0 = zz(i)
-	  zlay1 = zz(i) + h(i)
-cccc
+cccc**********************************************
+c	  zlay0 = zz(i)
+c	  zlay1 = zz(i) + h(i)
+c	  if( sdep .eq. zlay0 .or. sdep .eq. zlay1 ) then
+c	    write(*,*) "AT INTERFACE z=",sdep," i=",i, " z=",zlay0,zlay1
+c	   else if( sdep .gt. zlay0 .and. sdep .lt. zlay1 ) then
+c	    write(*,*) "INSIDE z=",sdep," i=",i, " z=",zlay0,zlay1
+c	  endif
+c
 c	  if( sdep .gt. zlay0 .and. sdep .lt. zlay1 )then
 c	    rigidity = (vs(i) * 1.0E+05)**2 * dens(i)
 c	  endif
@@ -191,22 +204,36 @@ c  set repeated source interval
 c
 	al=vp(nlay)*twin+r
 	dk=pi2/al
+
+c
+c model averages
+c
 	vs1=0.0
+	vp1=0.0
 	dens1=0.0
+
 	do 5 i=1,nlay-1
 	   vs1=vs1+vs(i)
+	   vp1=vp1+vp(i)
 	   dens1=dens1+dens(i)
   5	continue
+
 	if(nlay.gt.1)then
 	  vs1=vs1/float(nlay-1)
+	  vp1=vp1/float(nlay-1)
 	  dens1=dens1/float(nlay-1)
 	else
 	  vs1=vs(1)
+	  vp1=vp(1)
 	  dens1=dens(1)
 	endif
+c
+c normalize density
+c
 	do 10 i=1,nlay
 	   dens(i)=dens1/dens(i)
  10	continue
+
 	do 25 n=1,2
 	  if(n.eq.1)then
 	    dep=rdep
@@ -236,6 +263,8 @@ c
 	sdep=smax
 	up=.true.
 	if(ns.gt.nr.or.(ns.eq.nr.and.sdep.gt.rdep))up=.not.up
+
+c       write(*,*) "sdep,dep,rdep,ns,nr,up=",sdep,dep,rdep,ns,nr,up
 c
 c	fi=fi-azm
 c	a1= cos(rak)*cos(dip)*cos(fi)-sin(rak)*cos(2.0*dip)*sin(fi)
@@ -294,6 +323,7 @@ c
 	  kb(i)=(vs1/cvs(i))**2
 	  z(i)=h(i)*cw/vs1
  40	continue
+
 	rdepn=rdep*cw/vs1
 	sdepn=sdep*cw/vs1
 	r0=r*cw/vs1
@@ -306,8 +336,10 @@ c
 	  S0(i)=zero
 	  S1(i)=zero
  45	continue
+
 	S1(5)=zero
 	S1(6)=zero
+
 c
 c  loop for the wavenumber sum
 c
@@ -337,10 +369,10 @@ c
 c
 c  calculate the source field and propagate them to the receiver
 c
-	do 61 i=1,2
-	  do 62 j=1,2
+	do 60 i=1,2
+	  do 61 j=1,2
 	    aux(i,j)=zero
-	    do 63 l=1,2
+	    do 62 l=1,2
 	       if(up)then
 	         aux(i,j)=aux(i,j)-exu(ns-1,i)*HRu(ns-1,i,l)
      +	                 *exd(ns,l)*HRd(ns,l,j)
@@ -348,13 +380,14 @@ c
 	         aux(i,j)=aux(i,j)-exd(ns,i)*HRd(ns,i,l)
      +	                 *exu(ns-1,l)*HRu(ns-1,l,j)
 	       endif
- 63	continue
- 62	continue
- 61	continue
+ 62         continue
+ 61       continue
+ 60	continue
 
 	call cinv2(aux,ainv)
 c
 	do 140 n=1,2
+
 	  if(n.eq.1)then
 	    Sd(1)=dens(ns)
   	    Sd(2)=dens(ns)*ak/ga(ns)
@@ -373,11 +406,10 @@ c
 	      auxi(i)=Sd(i)
 	      do 66 j=1,2
 	        auxi(i)=auxi(i)+exu(ns-1,i)*HRu(ns-1,i,j)*Su(j)
- 66	      continue
+ 66 	      continue
  65	    continue
 
 	  else
-
 	    do 70 i=1,2
 	      auxi(i)=Su(i)
 	      do 71 j=1,2
@@ -386,14 +418,13 @@ c
  70	    continue
 
 	  endif
-
 	  do 80 i=1,2
 	    Es(i)=zero
 	    do 81 j=1,2
 	      Es(i)=Es(i)+ainv(i,j)*auxi(j)
- 81         continue
+ 81	    continue
  80	  continue
-
+c
 	  if(up)then
 	    do 100 i=ns,nr-1
 
@@ -401,9 +432,8 @@ c
 	        Ed(j)=zero
 	        do 91 l=1,2
 	           Ed(j)=Ed(j)+HTd(i,j,l)*Es(l)
- 91             continue
+ 91	        continue
  90	      continue
-
 	      Es(1)=Ed(1)
 	      Es(2)=Ed(2)
 100	    continue
@@ -415,7 +445,7 @@ c
 	      Eu(i)=zero
 	      do 106 j=1,2
 	         Eu(i)=Eu(i)+HRd(nr,i,j)*Ed(j)
-106           continue
+106	      continue
 105	    continue
 
 	  else
@@ -426,7 +456,7 @@ c
 	        Eu(j)=zero
 	        do 111 l=1,2
 	           Eu(j)=Eu(j)+HTu(i,j,l)*Es(l)
-111             continue
+111	        continue
 110	      continue
 
 	      Es(1)=Eu(1)
@@ -440,11 +470,10 @@ c
 	      Ed(i)=zero
 	      do 131 j=1,2
 	         Ed(i)=Ed(i)+HRu(nr-1,i,j)*Eu(j)
-131           continue
+131	      continue
 130	    continue
 
 	  endif
-
 	  if(n.eq.1)then
 	dUr0=I11(1,1)*Ed(1)+I11(1,2)*Ed(2)+I12(1,1)*Eu(1)+I12(1,2)*Eu(2)
       dS0(1)=I21(1,1)*Ed(1)+I21(1,2)*Ed(2)+I22(1,1)*Eu(1)+I22(1,2)*Eu(2)
@@ -465,16 +494,20 @@ c
 	if(up)then
 	  Edsh=(Sdsh+Sush*exu(ns-1,2)*HRush(ns-1))
      +	      /(one-exd(ns,2)*exu(ns-1,2)*HRdsh(ns)*HRush(ns-1))
+
 	  do 145 i=ns,nr-1
 	    Edsh=HTdsh(i)*Edsh
 145	  continue
+
 	  Eush=HRdsh(nr)*Edsh
 	else
 	  Eush=(Sush+Sdsh*exd(ns,2)*HRdsh(ns))
      +	      /(one-exd(ns,2)*exu(ns-1,2)*HRdsh(ns)*HRush(ns-1))
+
 	  do 150 i=ns-1,nr,-1
 	    Eush=HTush(i)*Eush
 150	  continue
+
 	  Edsh=HRush(nr-1)*Eush
 	endif
 	dUf1=Ish11*Edsh+Ish12*Eush
@@ -535,43 +568,46 @@ c  source using reciprocity relations
 	S1(6)=S1(6)-tmp
 
 **** keep slip4pi in src term
+*   cw = complex frequency
+*   dk = twopi/( vp(nlay)*twin + r )
 *	mu = kb(nr)*kb(nr)*dens(nr)
 *	tmp=cw*slip4pi*dk*vs1*dens1/mu(nr)
-c
+*
 	tt(iw) = cw/vs1 * dk 
+*	write(6,*) "iw,cw,vs1,dk,tt(iw)=", iw,cw,vs1,dk,tt(iw),cw*dk/vs1
 
 	zss(iw) = 0.5*( -S0(3) + S0(4) )     *src(iw)*tt(iw)*df
 	zds(iw) = S0(1)                      *src(iw)*tt(iw)*df
 	zdd(iw) = (-S0(2)+0.5*(S0(3)+S0(4))) *src(iw)*tt(iw)*df
-
 *	rss(iw) =  0.5*( S1(4) - S1(5) )     *src(iw)*tt(iw)*df
 *	rds(iw) = -S1(1)                     *src(iw)*tt(iw)*df
 *	rdd(iw) =  (S1(3)-0.5*(S1(4)+S1(5))) *src(iw)*tt(iw)*df
-
         rss(iw) = -0.5*( S1(4) - S1(5) )     *src(iw)*tt(iw)*df
         rds(iw) = +S1(1)                     *src(iw)*tt(iw)*df
         rdd(iw) = -(S1(3)-0.5*(S1(4)+S1(5))) *src(iw)*tt(iw)*df
-
 *       tss(iw) =  S1(6) *src(iw)*tt(iw)*df
 *       tds(iw) = -S1(2) *src(iw)*tt(iw)*df
-
 	tss(iw) = -S1(6) *src(iw)*tt(iw)*df
 	tds(iw) = +S1(2) *src(iw)*tt(iw)*df
 ***
-*** see not from yuehua zeng below
+*** see note from yuehua zeng below
 *** EXPLOSION SOURCES G.A.Ichinose 2017DEC29 - similar for above, div out mu
 ***                                              rigidity added later
 ***          most codes use 1.0E+20 dyne*cm we use 1.2445146117e+16
 ***          so the ratio of the moments is 1.0E+20 / 1.2445146117e+16 = 8035
 ***          this is the mulitplication factor needed to compare Green functions
-***
-	mu(ns) = kb(ns)*kb(ns)*dens(ns)
-        ctmp = (3.0*dens(ns)/ka(ns)-4.0*mu(ns))
-	tt(iw) =(-cw/(3.0*dens(ns)/ka(ns)-4.0)*dk)/cdabs(ctmp)
+**** 20201016 gichinose
+****
+	tt(iw) = (cw*dk)*( 0.40 * dens1 / ( vp1 * vs1 ) )
 
-*	rep(iw) = -(S1(3)+S1(4)+S1(5)) * src(iw)*tt(iw)*df
-        rep(iw) = (S1(3)+S1(4)+S1(5)) * src(iw)*tt(iw)*df
-	zep(iw) = (S0(2)+S0(3)+S0(4)) * src(iw)*tt(iw)*df
+********************************************************************************
+*        1         2         3         4         5         6         7         8
+*2345678901234567890123456789012345678901234567890123456789012345678901234567890
+********************************************************************************
+**	write(6,*)"iw,nr,ns,tt(iw)=",iw,nr,ns,tt(iw)
+
+        rep(iw) = -(S1(3)+S1(4)+S1(5)) * src(iw)*tt(iw)*df
+	zep(iw) = -(S0(2)+S0(3)+S0(4)) * src(iw)*tt(iw)*df
 
 ******* note from yuehua zeng 
 *tmp=cw*slip4pi*dk*vs1*dens1/mu(nr)

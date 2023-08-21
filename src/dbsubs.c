@@ -9,12 +9,12 @@
 #include "../include/mt.h"
 #include "../include/NNSA_schemas.h"
 
-char progname[128];
-long evid;
+extern char progname[128];
 
 void db_sqlite3_create( void )
 {
 	FILE *fp;
+	extern long evid;
 
         char moment_table_name[256];
         char focal_plane_table_name[256];
@@ -337,6 +337,115 @@ fprintf(fp, "CREATE TABLE     nodeid_seq (    nodeid INTEGER PRIMARY KEY AUTOINC
 } /*** db_sqlite3_create() ***/
 
 
+
+/****************************************************************************************************************************/
+/****************************************************************************************************************************/
+/********
+# orid    (link to origin table for origin time, lat, lon, depth) NA not allowed
+# mt_type (moment tensor type = DEV, DC, FULL, ISO, NA='-')
+# momag    moment magnitude (NA=-999)
+# M0      scalar seismic moment (N*m)  NA=-1
+# %DC     percent isotropic  NA = -1
+# %CLVD   percent compensated linear vector dipole NA = -1
+# %ISO    percent double couple NA = -1
+# %VR     (percent variance reduction  NA = 999)
+# Mij     (Mxx,Myy,Mzz,Mxy,Mxz,Myz in Nm) NA not allowed
+# author  (LLNL OUN is good)  NA = '-'
+#
+#orid     mt_type momag   m0       pdc  pclvd piso var_red  mxx       myy         mzz         mxy         mxz        myz        author     depth
+#8109218  FULL    4.72    1.49e+16  12  36    53   86.41    -1.29e+15  -5.21e+14  -5.47e+14    4.15e+13   4.29e+14    2.75e+12  ichinose1  1.0
+***/
+/****************************************************************************************************************************/
+/****************************************************************************************************************************/
+
+void llnl_db_write(  EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int AutoAuth, int verbose )
+{
+	MyTime *now;
+	FILE *fp;
+        char *username;
+        long orid = 10000001;
+	extern long evid;
+	char mt_type[24];
+	int mtdegfree;
+	float mxx, myy, mzz, mxy, mxz, myz;
+	float DyneCm_to_Netwon_M = 1.0E-07;
+
+	char now_string[32];
+	char ot_string[32];
+	
+/*** get the username from shell environment ***/
+
+        username = calloc(32,sizeof(char));
+
+        if( AutoAuth )
+                sprintf( username, "AutoMT:%s", ev[0].dbuser );
+        else
+                username = getenv( "USER" );
+
+        username[15] = '\0';
+
+/*** get the system time now ***/
+
+        now = (MyTime *)calloc( 1, sizeof( MyTime ) );
+        now = myGMTtime( now );
+
+/*** get mt type ***/
+
+	if( sol[iz].mt_type == EXPLOSION  ) sprintf( mt_type, "ISO" );
+        if( sol[iz].mt_type == DEVIATORIC ) sprintf( mt_type, "DEV" );
+        if( sol[iz].mt_type == FULL_MT    ) sprintf( mt_type, "FULL" );
+
+/*** convert mt coordinate system to X-Y and units to Nm ***/
+
+/**** this is for llnl db loader ****/
+/**** this is not correct coversion from cartesian to spherical coordinate systems need to fix or use below ****/
+/******
+	mxx =  sol[iz].mrr * pow( 10.0, sol[iz].exponent ) * DyneCm_to_Netwon_M;
+        myy =  sol[iz].mtt * pow( 10.0, sol[iz].exponent ) * DyneCm_to_Netwon_M;
+        mzz =  sol[iz].mff * pow( 10.0, sol[iz].exponent ) * DyneCm_to_Netwon_M;
+        mxy =  sol[iz].mrt * pow( 10.0, sol[iz].exponent ) * DyneCm_to_Netwon_M;
+        mxz = -sol[iz].mrf * pow( 10.0, sol[iz].exponent ) * DyneCm_to_Netwon_M;
+        myz = -sol[iz].mtf * pow( 10.0, sol[iz].exponent ) * DyneCm_to_Netwon_M;
+*****/
+	mxx  = sol[iz].moment_tensor[1][1] * DyneCm_to_Netwon_M;
+	myy  = sol[iz].moment_tensor[2][2] * DyneCm_to_Netwon_M;
+	mzz  = sol[iz].moment_tensor[3][3] * DyneCm_to_Netwon_M;
+
+	mxy  = sol[iz].moment_tensor[1][2] * DyneCm_to_Netwon_M;
+	mxz  = sol[iz].moment_tensor[1][3] * DyneCm_to_Netwon_M;
+	myz  = sol[iz].moment_tensor[2][3] * DyneCm_to_Netwon_M;
+
+/*** write out the solution ***/
+	
+	fp = fopen( "llnl_db.load.txt", "a"  );
+
+	sprintf( ot_string, "%04d-%02d-%02dT%02d:%02d:%06.3f",
+		ev[0].ot.year,  ev[0].ot.month, ev[0].ot.mday, ev[0].ot.hour, ev[0].ot.min, ev[0].ot.fsec );
+	sprintf( now_string, "%04d-%02d-%02dT%02d:%02d:%06.3f",
+		now->year, now->month, now->mday, now->hour, now->min, now->fsec );
+
+	fprintf( fp, "orid     mt_type momag m0        pdc  pclvd piso var_red   mxx        myy        mzz        mxy        mxz        myz        author       depth\n" );
+        fprintf( fp, "%ld %s %8.2f %8.2e  %3.0f %3.0f   %3.0f  %8.2f   %+6.2e  %+6.2e  %+6.2e  %+6.2e  %+6.2e  %+6.2e  %s %8.2f %s %s_%s_%s\n",
+		orid,
+                mt_type,
+		sol[iz].mw,
+                sol[iz].dmoment * DyneCm_to_Netwon_M,
+		sol[iz].PDC,
+                sol[iz].PCLVD,
+		sol[iz].PISO,
+		sol[iz].var_red,
+		mxx, myy, mzz, mxy, mxz, myz,
+		username,
+		grn[0][iz].evdp,
+		ot_string,
+		now_string,
+		progname,
+		Version_Label );
+
+	fclose(fp);
+	free(now);
+}
+
 void db_sqlite3_write( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int AutoAuth, int verbose )
 {
 	Moment *moment;
@@ -344,7 +453,11 @@ void db_sqlite3_write( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int
 	MT_Data *mt_data;
 	MT_Filter *mt_filter;
 	Origin *origin;
-	
+	extern long evid;
+
+	float mxx, myy, mzz, mxy, mxz, myz;
+        float DyneCm_to_Netwon_M = 1.0E-07;
+
 	int ista, ichan, ilay;
 	char chan[8];
 	char mt_type[24];
@@ -369,10 +482,13 @@ void db_sqlite3_write( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int
 
 /*** get the username from shell environment ***/
 
+	username = calloc(32,sizeof(char));
+
 	if( AutoAuth )
 		sprintf( username, "AutoMT:%s", ev[0].dbuser );
 	else
 		username = getenv( "USER" );
+
 	username[15] = '\0';
 
 /*** get the system time now ***/
@@ -432,14 +548,26 @@ void db_sqlite3_write( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int
 	fprintf( fp, " (SELECT   max(mtid) FROM mtid_seq), \n" );
 	fprintf( fp, " (SELECT   max(fpid) FROM fpid_seq), \n" );
 	fprintf( fp, " (SELECT max(mtorid) FROM mtorid_seq), \n" );
-        fprintf( fp, "    %6.2e, %6.2e, %6.2e, %6.2e, %6.2e, %6.2e, \n",
+
+/*** this is output for sqlite3 *******/
+/**** this is not correct coversion from cartesian to spherical coordinate systems need to fix or use below ****/
+/***
                 sol[iz].mrr * pow( 10.0, sol[iz].exponent ),
                 sol[iz].mtt * pow( 10.0, sol[iz].exponent ),
                 sol[iz].mff * pow( 10.0, sol[iz].exponent ),
                 sol[iz].mrt * pow( 10.0, sol[iz].exponent ),
                 -sol[iz].mrf * pow( 10.0, sol[iz].exponent ),
                 -sol[iz].mtf * pow( 10.0, sol[iz].exponent )
-         );
+****/
+	mxx  = sol[iz].moment_tensor[1][1] * DyneCm_to_Netwon_M;
+        myy  = sol[iz].moment_tensor[2][2] * DyneCm_to_Netwon_M;
+        mxy  = sol[iz].moment_tensor[1][2] * DyneCm_to_Netwon_M;
+        mxz  = sol[iz].moment_tensor[1][3] * DyneCm_to_Netwon_M;
+        myz  = sol[iz].moment_tensor[2][3] * DyneCm_to_Netwon_M;
+        mzz  = sol[iz].moment_tensor[3][3] * DyneCm_to_Netwon_M;
+
+        fprintf( fp, "    %6.2e, %6.2e, %6.2e, %6.2e, %6.2e, %6.2e, \n", 
+				mxx, myy, mzz, mxy, mxz, myz );
 
         /***   type  Mo     Mw     PDC   PCLVD   PISO   kiso   kclvd  eps    f_fac */
         fprintf( fp, " '%s', %8.2e, %8.2f, %3.0f, %3.0f, %3.0f, %8.2f, %7.2f, %8.3f, %9.4f, \n",
@@ -892,6 +1020,7 @@ void db_oracle_write( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int 
 	MT_Data *mt_data;
 	MT_Filter *mt_filter;
 	Origin *origin;
+	extern long evid;
 
 	int ista, ichan, ilay;
 	char chan[8];
@@ -905,6 +1034,9 @@ void db_oracle_write( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int 
 	long orid,fpid,mtid,mtdataid,mtwfsegid,mtfilterid,mtvmodid,nodeid;
 	int jdate;
 
+	float mxx, myy, mzz, mxy, mxz, myz;
+        float DyneCm_to_Netwon_M = 1.0E-07;
+
 	char moment_table_name[256];
         char focal_plane_table_name[256];
         char origin_table_name[256];
@@ -915,6 +1047,7 @@ void db_oracle_write( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int 
         char mt_earthmodel_node_table_name[256];
 
 /*** get the username from shell environment ***/
+	username = calloc(32,sizeof(char));
 
 	if( AutoAuth )
 		sprintf( username, "AutoMT:%s", ev[0].dbuser );
@@ -980,6 +1113,21 @@ void db_oracle_write( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int 
         fprintf( fp, " var_red, residual, \n" );
         fprintf( fp, " algorithm, epi_fixed, time_fixed, depth_fixed, auth, lddate ) VALUES \n" );
 	fprintf( fp, " ( mtid_seq.nextval, fpid_seq.nextval, mtorid_seq.nextval, " );
+
+
+	mxx  = sol[iz].moment_tensor[1][1] * DyneCm_to_Netwon_M;
+        myy  = sol[iz].moment_tensor[2][2] * DyneCm_to_Netwon_M;
+        mxy  = sol[iz].moment_tensor[1][2] * DyneCm_to_Netwon_M;
+        mxz  = sol[iz].moment_tensor[1][3] * DyneCm_to_Netwon_M;
+        myz  = sol[iz].moment_tensor[2][3] * DyneCm_to_Netwon_M;
+        mzz  = sol[iz].moment_tensor[3][3] * DyneCm_to_Netwon_M;
+
+	fprintf( fp, "    %6.2e, %6.2e, %6.2e, %6.2e, %6.2e, %6.2e, \n",
+		mxx, myy, mzz, mxy, mxz, myz );
+
+/**** this is for Oracle ****/
+/**** this is not correct coversion from cartesian to spherical coordinate systems need to fix or use below ****/
+/****
 	fprintf( fp, "    %6.2e, %6.2e, %6.2e, %6.2e, %6.2e, %6.2e, \n",
                 sol[iz].mrr * pow( 10.0, sol[iz].exponent ),
                 sol[iz].mtt * pow( 10.0, sol[iz].exponent ),
@@ -988,6 +1136,7 @@ void db_oracle_write( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int 
                 -sol[iz].mrf * pow( 10.0, sol[iz].exponent ),
                 -sol[iz].mtf * pow( 10.0, sol[iz].exponent )
          );
+****/
 
 	/***   type  Mo     Mw     PDC   PCLVD   PISO   kiso   kclvd  eps    f_fac */
         fprintf( fp, " '%s', %8.2e, %8.2f, %3.0f, %3.0f, %3.0f, %8.2f, %7.2f, %8.3f, %9.4f, \n",
@@ -1301,6 +1450,10 @@ void db_mysql_write( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int i
 	MT_Data *mt_data;
 	MT_Filter *mt_filter;
 	Origin *origin;
+	extern long evid;
+
+	float mxx, myy, mzz, mxy, mxz, myz;
+        float DyneCm_to_Netwon_M = 1.0E-07;
 
 	int ista, ichan, ilay;
 	char chan[8];
@@ -1324,6 +1477,7 @@ void db_mysql_write( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int i
 	char mt_earthmodel_node_table_name[256];
 
 /*** get the username from shell environment ***/
+	username = calloc(32,sizeof(char));
         username = getenv( "USER" );
 
 /*** get the system time now ***/
@@ -1367,6 +1521,19 @@ void db_mysql_write( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int i
 	/* fprintf( fp, " ( %ld, %ld, %ld, %6.2e, %6.2e, %6.2e, %6.2e, %6.2e, %6.2e, \n", */
 		/* mtid, fpid, orid,  */
 
+	mxx  = sol[iz].moment_tensor[1][1] * DyneCm_to_Netwon_M;
+        myy  = sol[iz].moment_tensor[2][2] * DyneCm_to_Netwon_M;
+        mxy  = sol[iz].moment_tensor[1][2] * DyneCm_to_Netwon_M;
+        mxz  = sol[iz].moment_tensor[1][3] * DyneCm_to_Netwon_M;
+        myz  = sol[iz].moment_tensor[2][3] * DyneCm_to_Netwon_M;
+        mzz  = sol[iz].moment_tensor[3][3] * DyneCm_to_Netwon_M;
+
+	fprintf( fp, " ( NULL, NULL, NULL, %6.2e, %6.2e, %6.2e, %6.2e, %6.2e, %6.2e, \n",
+		 mxx, myy, mzz, mxy, mxz, myz );
+
+/*** this is for mysql ****/
+/**** this is not correct coversion from cartesian to spherical coordinate systems need to fix or use below ****/
+/****
 	fprintf( fp, " ( NULL, NULL, NULL, %6.2e, %6.2e, %6.2e, %6.2e, %6.2e, %6.2e, \n",
 		sol[iz].mrr * pow( 10.0, sol[iz].exponent ),
                 sol[iz].mtt * pow( 10.0, sol[iz].exponent ),
@@ -1375,6 +1542,7 @@ void db_mysql_write( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int i
                 -sol[iz].mrf * pow( 10.0, sol[iz].exponent ),
                 -sol[iz].mtf * pow( 10.0, sol[iz].exponent )
 	 );
+****/
 
 	if( sol[iz].mt_type == EXPLOSION  ) mtdegfree = 1;
         if( sol[iz].mt_type == DEVIATORIC ) mtdegfree = 5;
@@ -1703,6 +1871,7 @@ void mysql_db_create( void )
 	sprintf( mt_filter_table_name, "MT_FILTER_STAGE" );
  	sprintf( mt_earthmodel_table_name, "MT_EARTHMODEL_STAGE" );
 	sprintf( mt_earthmodel_node_table_name, "MT_EARTHMODEL_NODE_STAGE" );
+	extern long evid;
 
 /***/
 	fp = fopen( "create.sql", "w");
@@ -1960,6 +2129,7 @@ void oracle_db_create( void )
         char mt_filter_table_name[256];
         char mt_earthmodel_table_name[256];
         char mt_earthmodel_node_table_name[256];
+	extern long evid;
 
 	sprintf( moment_table_name, "MOMENT_STAGE" );
         sprintf( focal_plane_table_name, "FOCAL_PLANE_STAGE" );

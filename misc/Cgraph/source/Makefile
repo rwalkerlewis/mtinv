@@ -1,6 +1,6 @@
 # Makefile for multi-architecture Cgraph library
 
-CC=cc
+CC=gcc
 INCLUDE_DIR=../../../include
 LIB_DIR=../../../lib
 #

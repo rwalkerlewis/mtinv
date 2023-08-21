@@ -12,22 +12,25 @@ typedef struct {
 	char modfilename[64];
 	char staname[8];
 	char network[8];
+	char location[8];
 	pid_t pid;
 } PARFILE;
 
-#define MAXTHREADS 50  /*** this is the maximum number of threads (stations/rows) allowed to be launched at once ***/
+#define MAXTHREADS 60  /*** this is the maximum number of threads (stations/rows) allowed to be launched at once ***/
 
 char progname[128];
 
 int main( int ac, char *av[] )
 {
-	char args[][64] = { "/Users/ichinose/Work/mtinv.v3.0.3/bin/mkgrnlib", "par=", "stnm=", "net=", "dt=", "\0" };
+	int NumPars = 5; /* par= stnm= net= loc= dt= */
+	char args[][64] = { "/Users/ichinose/Work/mtinv.v3.0.3/bin/mkgrnlib", "par=", "stnm=", "net=", "loc=", "dt=", "\0" };
 	char executable_pathname[256];
 
 	/* char args[128][128]; */
 
 	PARFILE pf[MAXTHREADS];
-	int i, j, n;
+	int i, j;
+	int NumSta;
 	int retv, wait_status, wait_pid, last_pid;
 	char parfilename[128];
 	char executable_path[256];
@@ -38,7 +41,13 @@ int main( int ac, char *av[] )
 	void endpar();
 	int verbose = 0;
 
+	void  Print_Usage(void);
+
+/**** main ****/
+
 	strcpy( progname, av[0] );
+
+	if( ac <= 1 ) Print_Usage();
 
 	setpar(ac,av);
 	mstpar("parfile", "s", parfilename);
@@ -81,12 +90,12 @@ int main( int ac, char *av[] )
 
 /*** do a safety check for file existance ***/
 
-	read_parfile( parfilename, pf, &n );
+	read_parfile( parfilename, pf, &NumSta );
 
-	if( n > MAXTHREADS )
+	if( NumSta > MAXTHREADS )
 	{
-	  fprintf( stderr, "%s: STDERR: n = %d MAXTHREADS %d exceeded. EXIT!\n", progname, n, MAXTHREADS );
-	  fprintf( stdout, "%s: STDOUT: n = %d MAXTHREADS %d exceeded. EXIT!\n", progname, n, MAXTHREADS );
+	  fprintf( stderr, "%s: STDERR: NumSta = %d MAXTHREADS %d exceeded. EXIT!\n", progname, NumSta, MAXTHREADS );
+	  fprintf( stdout, "%s: STDOUT: NumSta = %d MAXTHREADS %d exceeded. EXIT!\n", progname, NumSta, MAXTHREADS );
 	  fflush(stderr);
 	  fflush(stdout);
 	  exit(-1);
@@ -94,21 +103,22 @@ int main( int ac, char *av[] )
 
 	if(verbose)
 	{
-		fprintf( stdout, "nrows read = %d\n", n );
+		fprintf( stdout, "nrows read NumSta=%d\n", NumSta );
 		fflush(stdout);
 	}
 
 	if(verbose)
 	{
-	  for( i = 0; i < n; i++ )
+	  for( i = 0; i < NumSta; i++ )
 	  {
 		strcpy(  args[0], executable_pathname );
                 sprintf( args[1], "par=%s",  pf[i].modfilename );
                 sprintf( args[2], "stnm=%s", pf[i].staname );
                 sprintf( args[3], "net=%s",  pf[i].network );
-                sprintf( args[4], "dt=%g",   pf[i].dt );
+		sprintf( args[4], "loc=%s",  pf[i].location );
+                sprintf( args[5], "dt=%g",   pf[i].dt );
 
-		for( j = 0; j <= 4; j++ )
+		for( j = 0; j <= NumPars; j++ )
 			fprintf( stdout, "(%d)%s ", j, args[j] );
 
 		fprintf( stdout, "\n" );
@@ -118,7 +128,7 @@ int main( int ac, char *av[] )
 	sleep(3);
 
 /***********************************************************************************/
-	for( i = 0; i < n; i++ )
+	for( i = 0; i < NumSta; i++ )
 	{
 		pf[i].pid = fork();
 
@@ -132,13 +142,14 @@ int main( int ac, char *av[] )
 			sprintf( args[1], "par=%s",  pf[i].modfilename );
 			sprintf( args[2], "stnm=%s", pf[i].staname );
 			sprintf( args[3], "net=%s",  pf[i].network );
-			sprintf( args[4], "dt=%g",   pf[i].dt );
+			sprintf( args[4], "loc=%s",  pf[i].location );
+			sprintf( args[5], "dt=%g",   pf[i].dt );
 
-			retv = execlp( args[0], args[0], args[1], args[2], args[3], args[4], (char *)0 );
+			retv = execlp( args[0], args[0], args[1], args[2], args[3], args[4], args[5], (char *)0 );
 
 		} /* if fork pid */
 
-	} /* loop over n */
+	} /* loop over NumSta */
 
 	while( (wait_pid = waitpid( -1, NULL, 0 ))  ) 
 	{
@@ -170,9 +181,10 @@ PARFILE *read_parfile( char *parfilename, PARFILE *pf, int *nrows )
 		/**** skip comment ****/
 		if( rec[0] == '#' ) continue;
 
-		sscanf(rec,"%s %s %s %f",
+		sscanf(rec,"%s %s %s %s %f",
 			pf[i].staname,
 			pf[i].network,
+			pf[i].location, 
 			pf[i].modfilename,
 			&(pf[i].dt) 
 		);
@@ -182,3 +194,28 @@ PARFILE *read_parfile( char *parfilename, PARFILE *pf, int *nrows )
 	*nrows = i;
 	return (PARFILE *)pf;
 }
+
+void Print_Usage( void )
+{
+	fprintf( stderr, "\n" );
+	fprintf( stderr, "Usage: %s parfile=(string) executable_pathname=(string) [no]verbose\n", progname );
+	fprintf( stderr, "\n" );
+	fprintf( stderr, "REQUIRED:\n" );
+	fprintf( stderr, "\t parfile=(string) this is the mkgrnlib.par file\n" );
+	fprintf( stderr, "\t executable_pathname=(string) this is the full path to mkgrnlib\n" );
+	fprintf( stderr, "\n" );
+        fprintf( stderr, "OPTIONAL:\n" );
+	fprintf( stderr, "\t [no]verbose\n" );
+	fprintf( stderr, "\n" );
+	fprintf( stderr, "FORMAT mkgrnlib.par: \n" );
+	fprintf( stderr, "### station-code network-code location-code mkgrnlib.parfile dt(sec/sample) ### comments\n" );
+	fprintf( stderr, "ANMO             IU          \"00\"          wus.par          0.1            ### comments\n" );
+	fprintf( stderr, "XAN              IC          \"\"           asia.par          0.1            ### comments\n" );
+	fprintf( stderr, "\n" );
+        fprintf( stderr, "see mkgrnlib man page for FORMAT mkgrnlib.parfile \n" );
+	fprintf( stderr, "\n" );
+	fprintf( stderr, "DESCRIPTION: wrapper routine for multithreaded mkgrnlib using fork process, limits to 50 stations\n" );
+	
+}
+
+

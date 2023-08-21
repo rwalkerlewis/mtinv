@@ -249,19 +249,23 @@ int main( int ac, char **av )
 
 	for( ista=0; ista<nsta; ista++ )
 	{
+		if( strcmp( ev[ista].loc, "" ) == 0 ) strcpy( ev[ista].loc, "--" );
 
 		fprintf( stdout, 
-"\n%s.%s\n\tZ:  Tnoi=%.1f Tsig=%.1f log10amp=%.5f/%.5f snr=%.5f\n\tNS: Tnoi=%.1f Tsig=%.1f log10amp=%.5f/%.5f snr=%.5f\n\tEW: Tnoi=%.1f Tsig=%.1f log10amp=%.5f/%.5f snr=%.5f\n",
-  ev[ista].stnm, ev[ista].net, 
+"\n%s.%s.%s\n\tZ:  Tnoi=%.1f Tsig=%.1f log10amp=%.5f/%.5f snr=%.5f\n\tNS: Tnoi=%.1f Tsig=%.1f log10amp=%.5f/%.5f snr=%.5f\n\tEW: Tnoi=%.1f Tsig=%.1f log10amp=%.5f/%.5f snr=%.5f\n",
+	ev[ista].net, 
+	ev[ista].stnm, 
+	ev[ista].loc,
   ev[ista].z.pha[NOISE].period,  ev[ista].z.pha[SIGNAL].period,  log10(ev[ista].z.pha[SIGNAL].amp),  log10(ev[ista].z.pha[NOISE].amp),  ev[ista].z.P2P_snr, 
   ev[ista].ns.pha[NOISE].period, ev[ista].ns.pha[SIGNAL].period, log10(ev[ista].ns.pha[SIGNAL].amp), log10(ev[ista].ns.pha[NOISE].amp), ev[ista].ns.P2P_snr,
   ev[ista].ew.pha[NOISE].period, ev[ista].ew.pha[SIGNAL].period, log10(ev[ista].ew.pha[SIGNAL].amp), log10(ev[ista].ew.pha[NOISE].amp), ev[ista].ew.P2P_snr );
 
 		fprintf( fp_SNR, 
-		  "%8s %8s %8s %6.3f %6.3f %7.1f %3.0f %3.0f %7.2f %7.2f %9.5f %9.5f %11.5f\n",
+		  "%8s %8s %8s %8s %6.3f %6.3f %7.1f %3.0f %3.0f %7.2f %7.2f %9.5f %9.5f %11.5f\n",
 			ev[ista].stnm,
 			ev[ista].net,
-			"BHZ", 
+			ev[ista].loc,
+			ev[ista].z.s.kcmpnm,
 			ev[ista].lf,
 			ev[ista].hf, 
 			ev[ista].rdistkm,
@@ -274,10 +278,11 @@ int main( int ac, char **av )
 			ev[ista].z.P2P_snr );
 
 		fprintf( fp_SNR,
-                  "%8s %8s %8s %6.3f %6.3f %7.1f %3.0f %3.0f %7.2f %7.2f %9.5f %9.5f %11.5f\n",
+                  "%8s %8s %8s %8s %6.3f %6.3f %7.1f %3.0f %3.0f %7.2f %7.2f %9.5f %9.5f %11.5f\n",
                         ev[ista].stnm,
                         ev[ista].net,
-                        "BHR",
+			ev[ista].loc,
+                        ev[ista].ns.s.kcmpnm,
 			ev[ista].lf,
                         ev[ista].hf,
                         ev[ista].rdistkm,
@@ -290,10 +295,11 @@ int main( int ac, char **av )
 			ev[ista].ns.P2P_snr );
 
 		fprintf( fp_SNR,
-                  "%8s %8s %8s %6.3f %6.3f %7.1f %3.0f %3.0f %7.2f %7.2f %9.5f %9.5f %11.5f\n",
+                  "%8s %8s %8s %8s %6.3f %6.3f %7.1f %3.0f %3.0f %7.2f %7.2f %9.5f %9.5f %11.5f\n",
 			ev[ista].stnm,
                         ev[ista].net,
-                        "BHT",
+			ev[ista].loc,
+			ev[ista].ew.s.kcmpnm,
 			ev[ista].lf,
                         ev[ista].hf,
                         ev[ista].rdistkm,
