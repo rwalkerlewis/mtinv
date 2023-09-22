@@ -3,6 +3,27 @@
 #include "../include/mt.h"
 extern char progname[128];
 
+void check_iso_depth( FixISOZ *myfixisoz, float *z, int nz, int verbose )
+{
+	int is_my_z_valid( float, float *, int );
+
+	if( ( myfixisoz->indexz = is_my_z_valid( myfixisoz->z, z, nz )) == -999 )
+	{
+		fprintf( stderr, "%s: %s: %s: ERROR! FixISOZ.z=%g is ***NOT*** a valid depth in ginv file\n",
+	  	  progname, __FILE__, __func__, myfixisoz->z );
+		exit(-1);
+	}
+	else
+	{
+		if( verbose )
+		{
+			fprintf( stderr,
+			  "%s: %s: %s: FixISOZ.z=%g FixISOZ.index=%d is a valid depth in ginv files\n",
+			    progname, __FILE__, __func__, myfixisoz->z, myfixisoz->indexz );
+		}
+	}
+}
+
 void check_depth( float FixMyZ, int *FixMyiz, float *z, int nz, int verbose )
 {
 	int is_my_z_valid( float, float *, int );

@@ -9,7 +9,7 @@
 
 typedef struct {
 	float dt;
-	char modfilename[32];
+	char modfilename[64];
 	char staname[8];
 	char network[8];
 	char location[8];
@@ -25,6 +25,8 @@ int main( int ac, char *av[] )
 	int NumPars = 5; /* par= stnm= net= loc= dt= */
 	char args[][64] = { "/Users/ichinose/Work/mtinv.v3.0.3/bin/mkgrnlib", "par=", "stnm=", "net=", "loc=", "dt=", "\0" };
 	char executable_pathname[256];
+
+	/* char args[128][128]; */
 
 	PARFILE pf[MAXTHREADS];
 	int i, j;
@@ -110,11 +112,11 @@ int main( int ac, char *av[] )
 	  for( i = 0; i < NumSta; i++ )
 	  {
 		strcpy(  args[0], executable_pathname );
-                snprintf( args[1], 68, "par=%s",  pf[i].modfilename );  /* 64 */
-                snprintf( args[2], 13, "stnm=%s", pf[i].staname );     /* 8 */
-                snprintf( args[3], 12, "net=%s",  pf[i].network );     /* 8 */
-		snprintf( args[4], 12, "loc=%s",  pf[i].location );     /* 8 */
-                snprintf( args[5], 16, "dt=%g",   pf[i].dt );            /* 1 */
+                sprintf( args[1], "par=%s",  pf[i].modfilename );
+                sprintf( args[2], "stnm=%s", pf[i].staname );
+                sprintf( args[3], "net=%s",  pf[i].network );
+		sprintf( args[4], "loc=%s",  pf[i].location );
+                sprintf( args[5], "dt=%g",   pf[i].dt );
 
 		for( j = 0; j <= NumPars; j++ )
 			fprintf( stdout, "(%d)%s ", j, args[j] );
@@ -137,11 +139,11 @@ int main( int ac, char *av[] )
 		else if( pf[i].pid == 0 )
 		{
 			strcpy( args[0], executable_pathname );
-			snprintf( args[1], 68, "par=%s",  pf[i].modfilename );  /* 64 */
-                	snprintf( args[2], 13, "stnm=%s", pf[i].staname );     /* 8 */
-       	        	snprintf( args[3], 12, "net=%s",  pf[i].network );     /* 8 */
-       	        	snprintf( args[4], 12, "loc=%s",  pf[i].location );     /* 8 */
-	                snprintf( args[5], 16, "dt=%g",   pf[i].dt );            /* 1 */
+			sprintf( args[1], "par=%s",  pf[i].modfilename );
+			sprintf( args[2], "stnm=%s", pf[i].staname );
+			sprintf( args[3], "net=%s",  pf[i].network );
+			sprintf( args[4], "loc=%s",  pf[i].location );
+			sprintf( args[5], "dt=%g",   pf[i].dt );
 
 			retv = execlp( args[0], args[0], args[1], args[2], args[3], args[4], args[5], (char *)0 );
 

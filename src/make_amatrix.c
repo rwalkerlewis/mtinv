@@ -31,7 +31,7 @@ static float third=0.333333333;
 /*********************************************************************************/
 
 void make_amatrix2( Greens **grn, EventInfo *ev, int nsta, int iz, float **a_matrix, 
-	float *b_vector, int mtdegfree, int Distance_Normalize, float DistNormR0 )
+	float *b_vector, int mtdegfree, int Distance_Normalize, float DistNormR0, FixISOZ myfixisoz )
 {
 	int it, nt, ista, irow;
 	float fi;
@@ -42,6 +42,7 @@ void make_amatrix2( Greens **grn, EventInfo *ev, int nsta, int iz, float **a_mat
 	float Rnorm = 1;
 	float wt = 1;
 	int verbose = 0;
+	int ziso;
 
 /************************************************/
 /*** set some constants                       ***/
@@ -90,6 +91,11 @@ void make_amatrix2( Greens **grn, EventInfo *ev, int nsta, int iz, float **a_mat
 			}
 		}
 
+		if( myfixisoz.iswitch )
+			ziso = myfixisoz.indexz;
+		else
+			ziso = iz;
+
 	/************************************************/
 	/*** create pointers to the Green's functions ***/
 	/************************************************/
@@ -97,11 +103,11 @@ void make_amatrix2( Greens **grn, EventInfo *ev, int nsta, int iz, float **a_mat
 		rss = grn[ista][iz].g.rss; 
 		rds = grn[ista][iz].g.rds;
 		rdd = grn[ista][iz].g.rdd;
-		rep = grn[ista][iz].g.rep;
+		rep = grn[ista][ziso].g.rep;
 		zss = grn[ista][iz].g.zss;
 		zds = grn[ista][iz].g.zds;
 		zdd = grn[ista][iz].g.zdd;
-		zep = grn[ista][iz].g.zep;
+		zep = grn[ista][ziso].g.zep;
 		tss = grn[ista][iz].g.tss;
 		tds = grn[ista][iz].g.tds;
 
@@ -174,7 +180,8 @@ void make_amatrix(
 	float *b_vector,
 	int mtdegfree,
 	int Distance_Normalize,
-	float DistNormR0 )
+	float DistNormR0,
+	FixISOZ myfixisoz )
 {
 	int it = 0, nt = 0, ista = 0, irow = 0;
 	float fi;
@@ -193,6 +200,7 @@ void make_amatrix(
         float Rnorm = 1.0;
 	float wt = 1.0;
         int verbose = 0; /****** this is fixed and not a functional argument ************/
+        int ziso = 0;
 
 	void  writesacfile( EventInfo *ev );
 
@@ -254,6 +262,14 @@ void make_amatrix(
                         }
                 }
 
+                if( myfixisoz.iswitch )
+                        ziso = myfixisoz.indexz;
+                else
+                        ziso = iz;
+                 
+		if(verbose) fprintf( stdout, "%s: %s: %s: myfixisoz.iswitch=%d myfixisoz.indexz=%d ziso=%d iz=%d\n",
+				progname, __FILE__, __func__, myfixisoz.iswitch, myfixisoz.indexz, ziso, iz );
+                                                                                                                   
         /************************************************/
         /*** create pointers to the Green's functions ***/
         /************************************************/
@@ -261,12 +277,12 @@ void make_amatrix(
                 rss = grn[ista][iz].g.rss;
                 rds = grn[ista][iz].g.rds;
                 rdd = grn[ista][iz].g.rdd;
-                rep = grn[ista][iz].g.rep;
+                rep = grn[ista][ziso].g.rep;
 
                 zss = grn[ista][iz].g.zss;
                 zds = grn[ista][iz].g.zds;
                 zdd = grn[ista][iz].g.zdd;
-                zep = grn[ista][iz].g.zep;
+                zep = grn[ista][ziso].g.zep;
 
                 tss = grn[ista][iz].g.tss;
                 tds = grn[ista][iz].g.tds;
@@ -274,22 +290,22 @@ void make_amatrix(
 		w1ss = grn[ista][iz].g.w1ss; 
 		w1ds = grn[ista][iz].g.w1ds; 
 		w1dd = grn[ista][iz].g.w1dd; 
-		w1ex = grn[ista][iz].g.w1ex;
+		w1ex = grn[ista][ziso].g.w1ex;
 
 		w2ss = grn[ista][iz].g.w2ss;
 		w2ds = grn[ista][iz].g.w2ds;
 		w2dd = grn[ista][iz].g.w2dd;
-		w2ex = grn[ista][iz].g.w2ex;
+		w2ex = grn[ista][ziso].g.w2ex;
 
 		w3ss = grn[ista][iz].g.w3ss; 
 		w3ds = grn[ista][iz].g.w3ds;
 		w3dd = grn[ista][iz].g.w3dd;
-		w3ex = grn[ista][iz].g.w3ex;
+		w3ex = grn[ista][ziso].g.w3ex;
 
 		if(verbose)
 		{
 		  fprintf(stdout,
-  "%s: %s: %s: sta(ista=%d)=%s z(iz=%d)=%g dist=%g Distance_Normalize=%d DistNormR0=%g Rnorm=%g iz=%d mtdegfree=%d nt=%d fi=%g wt=%g\n",
+  "%s: %s: %s: sta(ista=%d)=%s z(iz=%d)=%g dist=%g Distance_Normalize=%d DistNormR0=%g Rnorm=%g ziso=%d iz=%d mtdegfree=%d nt=%d fi=%g wt=%g\n",
 			progname, 
 			__FILE__,
 			__func__,
@@ -301,6 +317,7 @@ void make_amatrix(
 			Distance_Normalize,
 			DistNormR0,
 			Rnorm,
+			ziso,
 			iz,
 			mtdegfree,
 			nt,
@@ -546,7 +563,8 @@ void make_amatrix_special(
 	float *b_vector,
 	int mtdegfree,
 	int Distance_Normalize,
-	float DistNormR0 )
+	float DistNormR0,
+	FixISOZ myfixisoz )
 {
 	int it = 0, nt = 0, ista = 0, irow;
 	float fi;
@@ -555,6 +573,7 @@ void make_amatrix_special(
 	float Rnorm = 1.0;
 	float wt = 1.0;
 	int verbose = 0;
+	int ziso = 0;
 	static float d2r = 0.017453292519943295;
 	static float r2d = 57.29577951308232;
 
@@ -634,6 +653,11 @@ void make_amatrix_special(
 			}
 		}
 
+		if( myfixisoz.iswitch )
+			ziso = myfixisoz.indexz;
+		else
+			ziso = iz;
+
 /************************************************/
 /*** create pointers to the Green's functions ***/
 /************************************************/
@@ -641,16 +665,16 @@ void make_amatrix_special(
 		rss = grn[ista][iz].g.rss;
                 rds = grn[ista][iz].g.rds;
                 rdd = grn[ista][iz].g.rdd;
-                rep = grn[ista][iz].g.rep;
+                rep = grn[ista][ziso].g.rep;
                 zss = grn[ista][iz].g.zss;
                 zds = grn[ista][iz].g.zds;
                 zdd = grn[ista][iz].g.zdd;
-                zep = grn[ista][iz].g.zep;
+                zep = grn[ista][ziso].g.zep;
                 tss = grn[ista][iz].g.tss;
                 tds = grn[ista][iz].g.tds;
 
                 fprintf(stdout,
-         "%s: %s: %s: sta(ista=%d)=%s z(iz=%d)=%g dist=%g Distance_Normalize=%d DistNormR0=%g Rnorm=%g iz=%d mtdegfree=%d nt=%d fi=%g wt=%g\n",
+         "%s: %s: %s: sta(ista=%d)=%s z(iz=%d)=%g dist=%g Distance_Normalize=%d DistNormR0=%g Rnorm=%g ziso=%d iz=%d mtdegfree=%d nt=%d fi=%g wt=%g\n",
                         progname, 
                         __FILE__,
                         __func__,
@@ -662,6 +686,7 @@ void make_amatrix_special(
                         Distance_Normalize,
                         DistNormR0,
                         Rnorm,
+                        ziso,
                         iz,
                         mtdegfree,
                         nt,

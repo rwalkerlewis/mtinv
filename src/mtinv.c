@@ -88,6 +88,8 @@ int main(int ac, char **av)
 	float cortol = 1.0;
 	float maxtimeshift = 0; /*** about 1 cycle 25 < maxtimeshift < 5 sec ***/
 
+	FixISOZ myfixisoz;
+
 	int PltXcorLabel = 1;
 	int idumpxy = 0;
 	int iorientation = LANDSCAPE; /* orientation for gmtwf.csh */
@@ -140,7 +142,8 @@ int main(int ac, char **av)
 			int idump, 
 			int mtdegfree,
 			int Distance_Normalize,
-			float DistNormR0 );
+			float DistNormR0, 
+			FixISOZ myfixisoz );
 
 	/*** mtinv.c ***/
 	void invert(	EventInfo *ev,
@@ -153,6 +156,7 @@ int main(int ac, char **av)
 			int mtdegfree,
 			int Distance_Normalize,
 			float DistNormR0,
+			FixISOZ myfixisoz,
 			int specialLoadGrnMxy,
 			int dev_mt_largest_vr );
 
@@ -168,6 +172,9 @@ int main(int ac, char **av)
 			int forward,
 			int PltXcorLabel,
 			int PS_Output_Screen );
+
+	/*** check_depths.c ***/
+	void check_iso_depth( FixISOZ *myfixisoz, float *z, int nz, int verbose );
 
 	/*** check_depths.c ***/
 	void check_depth( float FixMyZ, int *FixMyiz, float *z, int nz, int verbose );
@@ -213,8 +220,8 @@ int main(int ac, char **av)
 	void write_sol_rec( FILE *fp, int iz, int nsta, EventInfo *ev, Solution *sol, Greens **grn );
 
 	/*** mtinv_gmtsubs.c ***/
-	void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g, int verbose );
-	void make_map_gmt4( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g, int verbose );
+	void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g );
+	void make_map_gmt4( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g );
 
 	/*** crosscorrelation/cross_correlation.c ***/
 	void xcorr(
@@ -253,7 +260,6 @@ int main(int ac, char **av)
 	char sort_by_value[32];
 	int print_gmtwf_mt_info = 0;
 	void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int verbose, char *sort_by_value, int print_gmtwf_mt_info );
-	void wfplot2_gmt4( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int verbose, char *sort_by_value, int print_gmtwf_mt_info );
 
 	/*** dumpSAC.c ***/
 	void computeStationChannel_VarianceReduction_v2(
@@ -343,7 +349,8 @@ int main(int ac, char **av)
 		mstpar( "R0", "f", &DistNormR0 );
 	}
 	getpar( "PltXcorLabel", "b", &PltXcorLabel );
-
+	myfixisoz.z = 0;
+	getpar( "FixISOZ", "f", &(myfixisoz.z) );
 	getpar( "shift", "b", &ishift );
 	if(ishift) 
 	{
@@ -433,6 +440,12 @@ int main(int ac, char **av)
 	if(mtdegfree==5)fprintf(stderr, "%s: %s: %s: mtdegfree=%d DEVIATORIC\n", progname, __FILE__, __func__, mtdegfree );
 	if(mtdegfree==6)fprintf(stderr, "%s: %s: %s: mtdegfree=%d FULL_MT\n", progname, __FILE__, __func__, mtdegfree );
 
+	if( myfixisoz.z > 0 )
+		myfixisoz.iswitch = 1;
+	else
+		myfixisoz.iswitch = 0;
+	
+
 	if( Distance_Normalize )
 	{
 		if(verbose)
@@ -444,6 +457,32 @@ int main(int ac, char **av)
 		if(verbose)
                 fprintf( stdout, "%s: %s: %s: Distance_Normalize is OFF\n", progname, __FILE__, __func__ );
                 fprintf( stderr, "%s: %s: %s: Distance_Normalize is OFF\n", progname, __FILE__, __func__ );
+	}
+
+	if( myfixisoz.iswitch )
+	{
+		if(verbose)
+		fprintf( stdout, 
+			"%s: %s: %s: FixISOZ z = %g iswitch= %d is ON\n", 
+			progname, 
+			__FILE__, __func__,
+			myfixisoz.z, 
+			myfixisoz.iswitch  );
+
+		fprintf( stderr,
+                        "%s: %s: %s: FixISOZ z = %g iswitch= %d is ON\n",
+                        progname,
+			__FILE__, __func__,
+                        myfixisoz.z,
+                        myfixisoz.iswitch  );
+	}
+	else
+	{
+		if(verbose)
+		fprintf( stdout, "%s: %s: %s: FixISOZ=%d is OFF\n",
+                        progname, __FILE__, __func__, myfixisoz.iswitch );
+		fprintf( stderr, "%s: %s: %s: FixISOZ=%d is OFF\n", 
+			progname, __FILE__, __func__, myfixisoz.iswitch );
 	}
 
 	if(ishift)
@@ -571,6 +610,15 @@ int main(int ac, char **av)
 	 z = (float *)load_greens( ev, grn, nsta, &nz, verbose );
 	}
 
+/*************************************/
+/*** FixISOZ check depth set index ***/
+/*************************************/
+	
+	if( myfixisoz.iswitch )
+	{
+		check_iso_depth( &myfixisoz, z, nz, verbose );
+	}
+
 /**************************************/
 /*** check if fixing solution depth ***/
 /*** iz_best get reset below        ***/
@@ -665,7 +713,8 @@ int main(int ac, char **av)
 				idump,
 				mtdegfree,
 				Distance_Normalize,
-				DistNormR0 );
+				DistNormR0,
+				myfixisoz );
 
 		/*****************************/
 		/*** what is the best fit  ***/
@@ -709,6 +758,7 @@ int main(int ac, char **av)
 			mtdegfree,
 			Distance_Normalize, 
 			DistNormR0, 
+			myfixisoz,
 			specialLoadGrnMxy,
 			dev_mt_largest_vr );
 		
@@ -1131,7 +1181,6 @@ int main(int ac, char **av)
           fflush(stdout);
 	}
 
-	/*** psplot.c ***/
 	npages = psplot( 
 		nsta,
 		iz_best,
@@ -1153,13 +1202,6 @@ int main(int ac, char **av)
 	fprintf( stderr, "%s: %s: %s: calling write_results2() to file automt.txt\n",
 		progname, __FILE__, __func__ );
 	fflush(stderr);
-
-	if(verbose)
-	{
-		fprintf( stdout, "%s: %s: %s: calling write_results2() to file automt.txt\n",
-			progname, __FILE__, __func__ );
-		fflush(stdout);
-	}
 
 	write_results2(
 		"automt.txt",
@@ -1188,36 +1230,27 @@ int main(int ac, char **av)
 	fprintf(stderr, "%s: %s: %s: making a GMT map for plotting\n", progname, __FILE__, __func__ );
 	fflush(stderr);
 
-	if( igmtmap )
+	if( igmtmap )	
 	{
-		if(verbose)
-		{
-		   fprintf(stdout, "%s: %s: %s: making a GMT map for plotting\n", 
-			progname, __FILE__, __func__ );
-		   fflush(stdout);
-		}
-
 	  if( igmt5 )
 	  {
 	  	if(verbose)
 	  	{
 			fprintf(stdout, 
-			  "%s: %s: %s:  calling make_map_gmt5(), making a GMT map for plotting\n",  
-				progname, __FILE__, __func__ );
-			fflush(stdout);
+			  "%s: mtinv.c: mtinv(): calling make_map_gmt5(), making a GMT map for plotting\n",  
+				progname );
 		}
-		make_map_gmt5( iz_best, nsta, ev, sol, grn, verbose );
+		make_map_gmt5( iz_best, nsta, ev, sol, grn );
 	  }
 	  else
 	  {
 		if(verbose)
                 {
                         fprintf(stdout,
-                          "%s: %s: %s: calling make_map_gmt4(), making a GMT map for plotting\n",
-                                progname, __FILE__, __func__ );
-			fflush(stdout);
+                          "%s: mtinv.c: mtinv(): calling make_map_gmt4(), making a GMT map for plotting\n",
+                                progname );
                 }
-                make_map_gmt4( iz_best, nsta, ev, sol, grn, verbose );
+                make_map_gmt4( iz_best, nsta, ev, sol, grn );
 	  }
 	}
 
@@ -1228,20 +1261,12 @@ int main(int ac, char **av)
 	fprintf(stderr, "%s: %s: %s: plot origin time depth fit trade offs\n", progname, __FILE__, __func__ );
         fflush(stderr);
 
-	if(verbose)
-	{
-		fprintf(stdout, "%s: %s: %s: plot origin time depth fit trade offs\n", 
-			progname, __FILE__, __func__ );
-        	fflush(stdout);
-	}
-
 	if( igmt5 )
 	{
 		if(verbose)
 		{
-		  fprintf(stdout, "%s: %s: %s: calling plot_results_gmt5()\n", 
-			progname, __FILE__, __func__ );
-		  fflush(stdout);
+		  fprintf(stdout, "%s: mtinv.c: mtinv(): calling plot_results_gmt5()\n", 
+			progname );
 		}
 		plot_results_gmt5( iz_best, sol, ev );
 	}
@@ -1249,9 +1274,8 @@ int main(int ac, char **av)
 	{
 		if(verbose)
 		{
-		  fprintf(stdout, "%s: %s: %s: calling plot_results_gmt4()\n",
-                        progname, __FILE__, __func__ );
-		  fflush(stdout);
+		  fprintf(stdout, "%s: mtinv.c: mtinv(): calling plot_results_gmt4()\n",
+                        progname );
 		}
 		plot_results_gmt4( iz_best, sol, ev );
 	}
@@ -1264,9 +1288,7 @@ int main(int ac, char **av)
 	{
 		if(verbose)
 		{
-                  fprintf(stdout, "%s: %s: %s: calling dumpxy()\n", 
-			progname, __FILE__, __func__ );
-		  fflush(stdout);
+                  fprintf(stdout, "%s: mtinv.c: mtinv(): calling dumpxy()\n", progname );
 		}
 
 		dumpxy( ev, sol, grn, nsta, iz_best, verbose );
@@ -1275,50 +1297,40 @@ int main(int ac, char **av)
 		{
 		  if(verbose)
 		  {
-			fprintf(stdout, "%s: %s: %s: calling wfplot2_gmt5( GMT 5.x.x and 6.x.x Versions )\n", 
-				progname, __FILE__, __func__ );
-			fflush(stdout);
+			fprintf(stdout, "%s: mtinv.c: mtinv(): calling wfplot2_gmt5()\n", progname );
 		  }
+
+		  /*** deprecated, why? ***/
+		  /* gmt5wfplot( ev, sol, grn, nsta, iz_best, iorientation, verbose ); */
+
 		  wfplot2_gmt5( ev, sol, grn, nsta, iz_best, verbose, sort_by_value, print_gmtwf_mt_info );
+		/* void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int verbose, char *sort_by_value, int print_gmtwf_mt_info ) */
+
 		}
 		else
 		{
 		  if(verbose)
 		  {
-		    fprintf(stdout, "%s: %s: %s: calling wfplot2_gmt4t( GMT 4.5.x version )\n", 
-			progname, __FILE__, __func__ );
-		    fflush(stdout);
+		    fprintf(stdout, "%s: mtinv.c: mtinv(): calling gmt4wfplot()\n", progname );
 		  }
-		  wfplot2_gmt4( ev, sol, grn, nsta, iz_best, verbose, sort_by_value, print_gmtwf_mt_info );
+		  gmt4wfplot( ev, sol, grn, nsta, iz_best, iorientation, verbose );
 		}
 	}
 
 	if( sqlite3_db_write )
 	{
 		if(verbose)
-		{
-		  fprintf(stdout, "%s: %s: %s: calling db_sqlite3_create()\n", 
-			progname, __FILE__, __func__ );
-		  fflush(stdout);
-		}
+		  fprintf(stdout, "%s: %s: %s: calling db_sqlite3_create()\n", progname, __FILE__, __func__ );
 
 		db_sqlite3_create();
 
 		if(verbose)
-		{
-		  fprintf(stdout, "%s: %s: %s: calling db_sqlite3_write()\n", 
-			progname, __FILE__, __func__ );
-		  fflush(stdout);
-		}
+		  fprintf(stdout, "%s: %s: %s: calling db_sqlite3_write()\n", progname, __FILE__, __func__ );
 
 		db_sqlite3_write(  ev, sol, grn, nsta, iz_best, AutoAuth, verbose );
 
 		if(verbose)
-		{
-		  fprintf( stdout, "%s: %s: %s: calling llnl_db_write\n", 
-			progname, __FILE__, __func__ );
-		  fflush(stdout);
-		}
+		  fprintf( stdout, "%s: %s: %s: calling llnl_db_write\n", progname, __FILE__, __func__ );
 		llnl_db_write( ev, sol, grn, nsta, iz_best, AutoAuth, verbose );
 	}
 
@@ -1351,15 +1363,12 @@ int main(int ac, char **av)
 /*****************************/
 /*** unallocate the memory ***/
 /*****************************/
-/****
 	if(verbose)
 	{
 	  fprintf(stdout, 
-	    "%s: %s: %s: Trying to free memory...", 
-		progname, __FILE__, __func__ );
-	  fflush(stdout);
+	    "%s: mtinv.c: mtinv(): Trying to free memory...", progname );
 	}
-
+/*
 	free(sol);
 	free(z);
 
@@ -1375,19 +1384,12 @@ int main(int ac, char **av)
 	}
 	free(ev);
 	free(grn);
-
-	if(verbose) 
-	{
-		fprintf(stdout, " Done.\n" );
-		fflush(stdout);
-	}
-***/
+*/
+	if(verbose) fprintf(stdout, " Done.\n" );
 
 	if(verbose)
 	fprintf(stdout, "%s: %s: %s: STDOUT: Program finished.  Bye-Bye!\n\n", progname, __FILE__, __func__ );
-	fflush(stdout);
         fprintf(stderr, "%s: %s: %s: STDERR: Program finished.  Bye-Bye!\n\n", progname, __FILE__, __func__ );
-	fflush(stderr);
 
 	exit(0);
 
@@ -1407,7 +1409,8 @@ void forward_calc( EventInfo *ev,
 		int idump,
 		int mtdegfree, 
 		int Distance_Normalize,
-		float DistNormR0 )
+		float DistNormR0,
+		FixISOZ myfixisoz )
 {
 	int i, j, rows, cols;
 
@@ -1448,7 +1451,8 @@ void forward_calc( EventInfo *ev,
         	float *b_vector,
         	int mtdegfree,
         	int Distance_Normalize,
-        	float DistNormR0 );
+        	float DistNormR0,
+        	FixISOZ myfixisoz );
 
 	void matmul( int conj, float **bb, int nx, float *x, int ny, float *y );
 
@@ -1779,7 +1783,7 @@ void forward_calc( EventInfo *ev,
                         progname, __FILE__, __func__, iz );
                 fflush(stdout);
 
-	make_amatrix( ev, grn, nsta, iz, a_matrix, b_vector, mtdegfree, Distance_Normalize, DistNormR0 );
+	make_amatrix( ev, grn, nsta, iz, a_matrix, b_vector, mtdegfree, Distance_Normalize, DistNormR0, myfixisoz );
 
 	matmul( 0, a_matrix, cols, x_vector, rows, s_vector );
 
@@ -1853,6 +1857,7 @@ void invert(
 	int mtdegfree,
 	int Distance_Normalize,
 	float DistNormR0, 
+	FixISOZ myfixisoz,
 	int specialLoadGrnMxy,
 	int dev_mt_largest_vr )
 {
@@ -1917,7 +1922,8 @@ void invert(
         	float *b_vector,
         	int mtdegfree,
         	int Distance_Normalize,
-        	float DistNormR0 );
+        	float DistNormR0,
+        	FixISOZ myfixisoz );
 	
 /*** if specialLoadGrnMxy == 1 ***/
 	void make_amatrix_special( 
@@ -1929,8 +1935,8 @@ void invert(
                 float *b_vector,
                 int mtdegfree,
                 int Distance_Normalize,
-                float DistNormR0 );
-                
+                float DistNormR0,
+                FixISOZ myfixisoz );
 
         void grn2disp( Greens *g, EventInfo *ev, int verbose, int mtdegfree );
 
@@ -2085,14 +2091,14 @@ void invert(
 		{
 		  fprintf( stdout, "%s: %s: %s: calling make_amatrix(): \n", progname, __FILE__, __func__ );
 		  fflush(stdout);
-		  make_amatrix( ev, grn, nsta, iz, a_matrix, b_vector, mtdegfree, Distance_Normalize, DistNormR0 );
+		  make_amatrix( ev, grn, nsta, iz, a_matrix, b_vector, mtdegfree, Distance_Normalize, DistNormR0, myfixisoz );
 		}
 
 		if(specialLoadGrnMxy==1)
 		{
 		  fprintf( stdout, "%s: %s: %s: calling make_amatrix_special(): \n", progname, __FILE__, __func__ );
 		  fflush(stdout);
-		  make_amatrix_special( ev, grn, nsta, iz, a_matrix, b_vector, mtdegfree, Distance_Normalize, DistNormR0 );
+		  make_amatrix_special( ev, grn, nsta, iz, a_matrix, b_vector, mtdegfree, Distance_Normalize, DistNormR0, myfixisoz );
 		}
 
 	/***************************************/
@@ -2432,7 +2438,7 @@ void Usage_Print()
 
 	fprintf( stderr, "USAGE: (all args)\n" );
 	fprintf( stderr, "\t %s par=(string) mtdegfree=(float) ts0=(float) [no]fwd [no]verbose [no]gmtmap [no]dumpsac [no]PltXcorLabel no]gmt5 \\ \n", progname );
-	fprintf( stderr, "\t          [no]compute_station_vred [no]AutoAuth evid=(long) fixz=(float) [no]norm R0=(float)\\ \n" );
+	fprintf( stderr, "\t          [no]compute_station_vred [no]AutoAuth evid=(long) fixz=(float) FixISOZ=(float) [no]norm R0=(float)\\ \n" );
 	fprintf( stderr, "\t          [no]shift ctol=(float) maxshift=(float) [no]use_snr minsnr=3 [no]dumpxy orientation=(string) sort_by_value=(string)\\ \n" );
 	fprintf( stderr, "\t          [no]print_gmtwf_mt_info [no]mysql [no]oracle [no]sqlite [no]sqlite3 [no]special\n" );
 	fprintf( stderr, "\n" );
@@ -2458,6 +2464,7 @@ void Usage_Print()
 
 	fprintf( stderr, "\tOPTIONAL DEPTH PARAMETERS: \n" );
 	fprintf( stderr, "\t fixz         (float) Fix the depth in kilometers. [Default is [-99] free depth MT inversion)\n" );
+	fprintf( stderr, "\t FixISOZ      (float) Fix the depth kilometers of just the isotropic Green's function components (rex and zex). Default is off\n" );
 	fprintf( stderr, "\n" );
 
 	fprintf( stderr, "\tOPTIONAL NORMALIZATION PARAMETERS: \n" );

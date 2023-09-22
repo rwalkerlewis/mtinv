@@ -656,7 +656,7 @@ int main( int ac, char **av )
 	else
 	{
 	  fprintf( fp,
-	    "mtbestfit nogmt5 evid=%ld db pretty_plot noforce_best_vred mteig decimate_factor=2\n", evid );
+	    "mtbestfit gmt4 evid=%ld db pretty_plot noforce_best_vred mteig decimate_factor=2\n", evid );
 	}
 	fclose(fp);
 

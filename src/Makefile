@@ -32,9 +32,7 @@ OBJS0 = rtrend/rtrend.o \
 	source/source_subs.o \
 	timesubs.o \
 	modsubs.o \
-	misc_tools/distaz.o \
-	misc_tools/ampshift.o \
-	misc_tools/scale_data.o \
+	misc_tools/distaz.o misc_tools/ampshift.o misc_tools/fmul.o \
 	taper/taper_subs.o \
 	rotate/rotate.o \
 	math/math.o \
@@ -150,8 +148,8 @@ pea  : pea.o tred2.o tqli.o eigsrt.o hudson_subs.o
 	$(CC) $(CFLAGS) -o $@ pea.o tred2.o tqli.o eigsrt.o hudson_subs.o -L../lib -lget $(GRN_LIBS)
 	mv $@ $(INSTALL)
 
-whatshere : whatshere.o timesubs.o
-	$(CC) $(CFLAGS) -o $@ whatshere.o timesubs.o -lm -L../lib -lget 
+whatshere : whatshere.o
+	$(CC) $(CFLAGS) -o $@ whatshere.o -lm -L../lib -lget $(GRN_LIBS)
 	mv $@ $(INSTALL)
 
 testc2 : testc2.o math/math.o

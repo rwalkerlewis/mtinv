@@ -98,7 +98,7 @@ int main( int ac, char **av )
 	int i, j, i_best_vred, i_best_fit, nsol;
 	int ista;
 	bestFitMT *a;
-	char tag[32], pstag[12], tmp[12];
+	char tag[32], pstag[32], tmp[32];
 	char rec[512];
 	float vred_max, fit_max;
 	long evid;
@@ -120,7 +120,7 @@ int main( int ac, char **av )
 	void make_run( bestFitMT *a, char *fitType, int igmt5, long evid, int pretty_plot, int idb );
 	void createResultsWebpage( bestFitMT *a );
 
-	void make_mteig( bestFitMT *a, char *fitType, float decimate_factor, int use_ts0, int igmt5 );
+	void make_mteig( bestFitMT *a, char *fitType, float decimate_factor, int use_ts0 );
 	int create_mteig = 1;
 	float decimate_factor = 2; /* decimate_factor = [1,2,4,8] */
 
@@ -275,8 +275,8 @@ int main( int ac, char **av )
 			{
 				fgets( rec, 512, fp );
 				sscanf( rec, "%s", tag );
-				
-				snprintf( pstag, 12, "PSPLOT%02d", j+1 );
+
+				sprintf( pstag, "PSPLOT%02d", j+1 );
 
 				/*** Debug ***/
 				/* fprintf( stdout, "tag=%s pstag=%s rec=%s\n", tag, pstag, rec ); */
@@ -358,7 +358,7 @@ int main( int ac, char **av )
 		}
 	
 
-		snprintf( tmp, 8, "STA%03d", ista );
+		sprintf( tmp, "STA%03d", ista );
 		if( strcmp( tag, tmp ) == 0 ) 
 		{
 			sscanf( rec,
@@ -475,15 +475,10 @@ int main( int ac, char **av )
 
 	if( force_best_vred )
 	{
-		fprintf( stderr, "%s: %s: %s: Option1: force_best_vred=%d vred=%g i_best_vred=%d\n",
+		fprintf( stderr, "%s: %s: %s: force_best_vred=%d vred=%g i_best_vred=%d\n",
 			progname, __FILE__, __func__, force_best_vred, a[i_best_vred].vred, i_best_vred );
- 		 fflush(stderr); 
-
+ 
 		make_run( &(a[i_best_vred]), "FORCE BEST VARIANCE-REDUCTION", igmt5, evid, pretty_plot, idb );
-
-		fprintf( stderr, "%s: %s: calling createResultsWebpage()\n", __FILE__, __func__ );
-		fflush(stderr);
-
                 createResultsWebpage( &(a[i_best_vred]) );
 	}
 	else
@@ -491,30 +486,12 @@ int main( int ac, char **av )
 	  if(	( fit_max > fit_max_threshold ) && 
 		( fabs( a[i_best_vred].vred - a[i_best_fit].vred ) > vred_diff_threshold ) )
 	  {
-
-		fprintf( stderr, "%s: %s: %s: Option2 fix_max=%g > fix_max_threshold=%g vred_diff=%g > vred_diff_threshold=%g\n",
-                        progname, __FILE__, __func__, fit_max, fit_max_threshold, 
-			 ( fabs( a[i_best_vred].vred - a[i_best_fit].vred ) ), vred_diff_threshold );
-                 fflush(stderr);   
-
 		make_run( &(a[i_best_fit]), "BEST FIT", igmt5, evid, pretty_plot, idb );
-
-		fprintf( stderr, "%s: %s: calling createResultsWebpage()\n", __FILE__, __func__ );
-                fflush(stderr);  
-
 		createResultsWebpage( &(a[i_best_fit]) );
 	  }
 	  else
 	  {
-		 fprintf( stderr, "%s: %s: %s: Option3 force_best_vred=%d vred=%g i_best_vred=%d\n",
-                        progname, __FILE__, __func__, force_best_vred, a[i_best_vred].vred, i_best_vred );
-                 fflush(stderr);
-
 		make_run( &(a[i_best_vred]), "BEST VARIANCE-REDUCTION", igmt5, evid, pretty_plot, idb );
-
-		fprintf( stderr, "%s: %s: calling createResultsWebpage()\n", __FILE__, __func__ );
-                fflush(stderr);  
-
 		createResultsWebpage( &(a[i_best_vred]) );
 	  }
 	}
@@ -523,23 +500,11 @@ int main( int ac, char **av )
 /*** assumes all full-MT use best %VR not best-fit ***/
 
 	if( create_mteig && strcmp( a[i_best_vred].mt_type, "FULL" ) == 0 )
-	{
-	  fprintf( stderr, "%s: %s: calling make_mteig()\n", __FILE__, __func__ );
-          fflush(stderr);
-
-	  make_mteig( &(a[i_best_vred]), "BEST VARIANCE-REDUCTION", decimate_factor, use_ts0, igmt5 );
-	}
+	  make_mteig( &(a[i_best_vred]), "BEST VARIANCE-REDUCTION", decimate_factor, use_ts0 );
 
 	if( strcmp( a[i_best_vred].mt_type, "FULL" ) == 0 )
-	{
-	  fprintf( stderr, "%s: %s: calling do_mtscreen()\n", __FILE__, __func__ );
-	  fflush(stderr);
-
 	  do_mtscreen( &(a[i_best_vred]), "mtscreen.py" );
-	}
 
-	fprintf( stderr, "%s: %s: bye-bye\n", __FILE__, __func__ );
-                fflush(stderr);
 	exit(0);
 
 } /*** END OF MAIN() ***/
@@ -571,7 +536,7 @@ void do_mtscreen( bestFitMT *a, char *python_script )
 	}
 }
 
-void make_mteig( bestFitMT *a, char *fitType, float decimate_factor, int use_ts0, int igmt5 )
+void make_mteig( bestFitMT *a, char *fitType, float decimate_factor, int use_ts0 )
 {
 	FILE *fp;
 	static char *script_filename = {"mteig.csh"};
@@ -579,18 +544,12 @@ void make_mteig( bestFitMT *a, char *fitType, float decimate_factor, int use_ts0
 	char rec[256];
 	int nt;
 	float dt, ts0;
-	char gmt_opt[8]; /*** gmt5 or nogmt5 ***/
+
 	int ista;
 	void write_mtbest( bestFitMT *a );
 	void string2lower( char *str, int n );
 
 /*** begin subroutine ***/
-
-	fprintf( stderr, "%s: %s: fitType=%s decimate_factor=%g use_ts0=%d script_filename=%s executable_filename=%s\n",
-		__FILE__, __func__, fitType, decimate_factor, use_ts0,
-		script_filename, executable_filename );
-	fflush(stderr);
-
 	/* write_mtbest(a); */
 
 	fp = fopen( script_filename, "w" );
@@ -673,7 +632,7 @@ void make_mteig( bestFitMT *a, char *fitType, float decimate_factor, int use_ts0
 		else
 			ts0 = a->s[ista].time_shift_all;
 
-		snprintf( rec, 128, "%-8s %-4s %-4s %s %2d %2d %.3f %.3f %4d %g %g %g %s %g %s %+.3f %g %s ## R=%.1f Az=%.0f",
+		sprintf( rec, "%-8s %-4s %-4s %s %2d %2d %.3f %.3f %4d %g %g %g %s %g %s %+.3f %g %s ## R=%.1f Az=%.0f",
 			a->s[ista].sta,
 			a->s[ista].net,
 			a->s[ista].loc,
@@ -714,25 +673,13 @@ void make_mteig( bestFitMT *a, char *fitType, float decimate_factor, int use_ts0
 	fprintf( fp, "sacdata2inv par=mtinv.par path=../Data respdir=../Resp noverbose nodumpsac parallel\n");
 	fprintf( fp, "\n" );
 
-	fprintf( fp, "### \n" );
-	fprintf( fp, "### changed nsim_eig=2000 to 500 to speed up runtime\n" );
-	fprintf( fp, "### \n" );
-
-	if(igmt5)
-		sprintf( gmt_opt, "gmt5" );
-	else
-		sprintf( gmt_opt, "nogmt5" );
-
 	fprintf( fp, "time mteig par=mtinv.par nthreads=8 \\\n" );
-	fprintf( fp, "                         nsim_eig=500 nsim_evec=4000 eigvec_fac=17000 \\\n" );
+	fprintf( fp, "                         nsim_eig=2000 nsim_evec=4000 eigvec_fac=17000 \\\n" );
 	fprintf( fp, "                         Mo=%e fixz=%g \\\n", a->m0_dyne_cm, a->z );
-	fprintf( fp, "                         color doplt seed=1 %s parallel \\\n", gmt_opt );
-
+	fprintf( fp, "                         color doplt seed=1 parallel \\\n" );
 	fprintf( fp, "                         title=\"%04d-%02d-%02d ",
 		a->ot.year, a->ot.month, a->ot.mday );
 	fprintf( fp, "%s", a->comment );
-	fprintf( fp, "\" " );
-
 /*** list stas ***/
 /***
 	for( ista=0; ista < a->nsta; ista++ )
@@ -745,7 +692,7 @@ void make_mteig( bestFitMT *a, char *fitType, float decimate_factor, int use_ts0
 ***/
 
 /* sol[iz].FullMT.T.ev, sol[iz].FullMT.B.ev, sol[iz].FullMT.P.ev */
-	fprintf( fp, "Add_user_Eig e0=%+g e1=%+g e2=%+g\n", a->eigt, a->eigb, a->eigp );
+	fprintf( fp, "\" Add_user_Eig e0=%+g e1=%+g e2=%+g\n", a->eigt, a->eigb, a->eigp );
 	fprintf( fp, "\n" );
 
 	fclose(fp);

@@ -15,14 +15,8 @@ extern char progname[128];
 /*** loop over each station and load its SAC files for all 3 comp ***/
 /********************************************************************/
 
-#define MAXDATAPTS 1000000.0
-#define METERS2CM  100.0
-
-/*******************
-for( ista=0; ista<nsta; ista++ ) { 
-                sacdata2inv_serial( &(ev[ista]), ...
- access ev-> 
-********************/
+#define MAXDATAPTS 1000000
+#define METERS2CM  100
 
 void sacdata2inv_serial(
 		EventInfo *ev, 
@@ -48,12 +42,8 @@ void sacdata2inv_serial(
 
 /**** function prototype ******/
 
-	/*** misc_tools/scale_data.c ***/
-	void  scale_data( float *x, int n, float a );
-
-	/*** sacio.c ***/
-	void sac_minmax( float *x, int n, float *max, float *min, float *mean );
-	void set_sac_minmax( Sac_Header *s, float *data );
+	/*** misc_tools/fmul.c ***/
+	void  fmul( float *x, int n, float a );
 
 	/*** rmean.c ***/
         void remove_mean( float *x, int n );
@@ -167,8 +157,8 @@ void sacdata2inv_serial(
 	if( verbose )
 	{
 		fprintf( stdout,
-		  "%s: %s: %s: ista=%03d sta=%s net=%s data=%s glib=%s ginv=%s\n",
-			progname, __FILE__, __func__,
+		  "%s: sacdata2inv_serial(): ista=%03d sta=%s net=%s data=%s glib=%s ginv=%s\n",
+			progname, 
 			ista, 
 			ev->stnm, 
 			ev->net,
@@ -177,8 +167,8 @@ void sacdata2inv_serial(
 			ev->ginv_filename );
 
 		fprintf( stdout,
-		  "%s: %s: %s: npole=%d pass=%d lf=%g hf=%g nt=%d dt=%g tr=%g tt=%g\n",
-			progname, __FILE__, __func__,
+		  "%s: sacdata2inv_serial(): npole=%d pass=%d lf=%g hf=%g nt=%d dt=%g tr=%g tt=%g\n",
+			progname, 
 			ev->npole, 
 			ev->npass, 
 			ev->lf,
@@ -187,8 +177,6 @@ void sacdata2inv_serial(
 			ev->dt, 
 			ev->tr, 
 			ev->tt );
-
-		fflush(stdout);
 	}
 
 /******************************************/
@@ -198,45 +186,12 @@ void sacdata2inv_serial(
 
 	if( verbose )
 	{
-	   fprintf( stdout, "%s: %s: %s: converting from meters to cm METERS2CM=%lf\n", 
-		progname, __FILE__, __func__, METERS2CM );
-	   fflush(stdout);
+	   fprintf( stdout, "%s: sacdata2inv_serial(): converting from meters to cm\n", progname );
 	}
 
-	/*
-	set_sac_minmax( &(ev->ew.s), ev->ew.data );
-        set_sac_minmax( &(ev->ns.s), ev->ns.data );
-        set_sac_minmax( &(ev->z.s),  ev->z.data  );
-
-	fprintf( stdout, "%s: %s: %s: (ew) min=%g max=%g (ns) min=%g max=%g (z) min=%g max=%g\n",
-                progname, __FILE__, __func__,
-                ev->ew.s.depmin, ev->ew.s.depmax,
-                ev->ns.s.depmin, ev->ns.s.depmax,
-                ev->z.s.depmin, ev->z.s.depmax );
-
-        fflush( stdout );
-	*/
-
-/*** when subroutine was named "fmul()" linux system did not recongnized function call ***/
-/*** so we renamed fmul to scale_data -- very wierd stuff with gcc-linux! ***/
-
-	scale_data( ev->ew.data, ev->ew.s.npts, METERS2CM );
-	scale_data( ev->ns.data, ev->ns.s.npts, METERS2CM );
-	scale_data( ev->z.data,  ev->z.s.npts,  METERS2CM );
-
-	set_sac_minmax( &(ev->ew.s), ev->ew.data );
-	set_sac_minmax( &(ev->ns.s), ev->ns.data );
-	set_sac_minmax( &(ev->z.s),  ev->z.data  );
-
-	if(verbose)
-	{
-	  fprintf( stdout, "%s: %s: %s: (ew) min=%g max=%g (ns) min=%g max=%g (z) min=%g max=%g\n",
-		progname, __FILE__, __func__,
-		ev->ew.s.depmin, ev->ew.s.depmax,
-		ev->ns.s.depmin, ev->ns.s.depmax,
-		ev->z.s.depmin, ev->z.s.depmax );
-	  fflush( stdout );
-	}
+	fmul( &(ev->ew.data[0]), ev->ew.s.npts, METERS2CM );
+	fmul( &(ev->ns.data[0]), ev->ns.s.npts, METERS2CM );
+	fmul( &(ev->z.data[0]),  ev->z.s.npts,  METERS2CM );
 
 /*************************************************/
 /*** scale amplitudes my multiplication factor ***/
@@ -244,18 +199,18 @@ void sacdata2inv_serial(
 
 	if( ev->mul_factor != 1.0 )
 	{
+
 	  if( verbose )
 	  {
 		fprintf( stdout,
-			"%s: %s: %s: scaling my mul_factor=%g\n", 
-			progname, __FILE__, __func__,
+			"%s: sacdata2inv_serial(): scaling my mul_factor=%g\n", 
+			progname,
 			ev->mul_factor );
-		fflush(stdout);
 	  }
 
-	  scale_data( &(ev->ew.data[0]), ev->ew.s.npts, ev->mul_factor );
-	  scale_data( &(ev->ns.data[0]), ev->ns.s.npts, ev->mul_factor );
-	  scale_data( &(ev->z.data[0]),  ev->z.s.npts,  ev->mul_factor );
+	  fmul( &(ev->ew.data[0]), ev->ew.s.npts, ev->mul_factor );
+	  fmul( &(ev->ns.data[0]), ev->ns.s.npts, ev->mul_factor );
+	  fmul( &(ev->z.data[0]),  ev->z.s.npts,  ev->mul_factor );
 	}
 
 /**************************************/
@@ -267,8 +222,8 @@ void sacdata2inv_serial(
 	  if(verbose)
 	  {
 	    fprintf( stdout,
-	      "%s: %s: %s: calling rtrend() ista=%d stnm=%s.%s nt=%d dt=%g b=%g\n",
-		progname, __FILE__, __func__,
+	      "%s: sacdata2inv_serial(): calling rtrend() ista=%d stnm=%s.%s nt=%d dt=%g b=%g\n",
+		progname, 
 		ista,
 		ev->stnm,
 		ev->net,
@@ -277,7 +232,6 @@ void sacdata2inv_serial(
 		ev->ew.s.b );
 	    fflush(stdout);
 	  }
-
 	  rtrend( 0.0, ev->ew.s.delta, ev->ew.data, ev->ew.s.npts, verbose );
           rtrend( 0.0, ev->ns.s.delta, ev->ns.data, ev->ns.s.npts, verbose );
           rtrend( 0.0, ev->z.s.delta,  ev->z.data,  ev->z.s.npts,  verbose );
@@ -290,11 +244,9 @@ void sacdata2inv_serial(
 	if( verbose )
 	{
 	  fprintf( stdout,
-	    "%s: %s: %s: calling set_sac_time_marker(): adding origin time to sac files: ", 
-			progname,  __FILE__, __func__ );
-	  fflush(stdout);
+	    "%s: sacdata2inv_serial(): calling set_sac_time_marker(): adding origin time to sac files: ", 
+			progname);
 	  WriteMyTime2STDOUT( &(ev->ot) );
-	  fflush(stdout);
 	}
 
 	strcpy( kmarker, "o" );
@@ -311,14 +263,13 @@ void sacdata2inv_serial(
 
 	if( verbose )
 	{
-	  fprintf( stdout, "%s: %s: %s: redv=%g ts0=%g tstart=%g tend=%g rdist=%g\n",
-			progname, __FILE__, __func__,
+		fprintf( stdout, "%s: sacdata2inv_serial(): redv=%g ts0=%g tstart=%g tend=%g rdist=%g\n",
+			progname, 
 			ev->redv, 
 			ev->ts0,
 			ev->tstart, 
 			ev->tend,
 			ev->rdist );
-	  fflush(stdout);
 	}
 
 /********************************************************/
@@ -329,11 +280,10 @@ void sacdata2inv_serial(
 	{
 		if(verbose)
 		{
-			fprintf( stdout, "%s: %s: %s: calling set_sac_time_marker(): ",
-				progname,  __FILE__, __func__ );
+			fprintf( stdout, "%s: sacdata2inv_serial(): calling set_sac_time_marker(): ",
+				progname );
 			fprintf( stdout, " adding reduction velocity to sac files rdev=%g rdist=%g\n",
 				ev->redv, ev->rdist );
-			fflush(stdout);
 		}
 
 		clone_mytime( &(ev->ew.ot), &(ev->ew.t1) );
@@ -367,13 +317,11 @@ void sacdata2inv_serial(
 
 	if( verbose )
 	{
-		fprintf( stdout, "%s: %s: %s: calling cut_sac(): cutting %g sec before and\n",
-			progname, __FILE__, __func__, precut );
-		fflush(stdout);
+		fprintf( stdout, "%s: calling cut_sac(): cutting %g sec before and\n",
+			progname, precut );
 
-		fprintf( stdout, "%s: %s: %s:   %g sec after the origin time marker\n",
-			progname, __FILE__, __func__, twincut );
-		fflush(stdout);
+		fprintf( stdout, "%s:   %g sec after the origin time marker\n",
+			progname, twincut );
 	}
 
 	ev->ew.data = (float *)cut_sac( &(ev->ew), precut, twincut, kmarker, verbose );
@@ -419,11 +367,7 @@ void sacdata2inv_serial(
 /*******************************************************************************/
 
 	if(verbose)
-	{
-		fprintf( stdout, "%s: %s: %s: bandpass filtering data \n", 
-			progname, __FILE__, __func__ );
-		fflush(stdout);
-	}
+		fprintf( stdout, "%s: sacdata2inv_serial() bandpass filtering data \n", progname );
 
 	iir_filter(
 		ev->ew.data,
@@ -472,10 +416,8 @@ void sacdata2inv_serial(
 	{
 		if(verbose)
                 {
-                   fprintf( stdout,
-		     "%s: %s: %s: converting data to velocity\n", 
-			progname, __FILE__, __func__ );
-		   fflush(stdout);
+                    fprintf( stdout,
+			"%s: sacdata2inv_serial(): converting data to velocity\n", progname );
                 }
 
 		DIFFoperator = 3;
@@ -509,19 +451,13 @@ void sacdata2inv_serial(
 /*******************************************************************************/
 /*** interpolate data to new nt and dt                                       ***/
 /*******************************************************************************/
-
 	if(verbose)
-	{
-	  fprintf( stdout, "%s: %s: %s: interpolate the data\n", 
-		progname, __FILE__, __func__ );
-	  fflush(stdout);
-	}
+	  fprintf( stdout, "%s: sacdata2inv_serial() interpolate the data\n", progname );
 /***
         interpolate_wiggins2( ev[ista].ew.data, ev[ista].ew.s.npts, ev[ista].ew.s.delta, ev[ista].ew.s.b, ev[ista].nt, ev[ista].dt, verbose );
         interpolate_wiggins2( ev[ista].ns.data, ev[ista].ns.s.npts, ev[ista].ns.s.delta, ev[ista].ns.s.b, ev[ista].nt, ev[ista].dt, verbose );
         interpolate_wiggins2( ev[ista].z.data,  ev[ista].z.s.npts,  ev[ista].z.s.delta,  ev[ista].z.s.b,  ev[ista].nt, ev[ista].dt, verbose );
 ***/
-
 /*** ensure that ev->dt < ev->z.s.delta ***/
 
 	if( ev->dt >= ev->z.s.delta ) 
@@ -595,15 +531,14 @@ void sacdata2inv_serial(
 	ev->z.s.baz  = (float)dbaz;
 
  	fprintf(stdout,
-	    "%s: %s: %s: Resetting distaz values ista=%d sta.net=%s.%s dist=%.1f az=%.1f baz=%.1f\n",
-		progname, __FILE__, __func__,
+	    "%s: sacdata2inv_serial(): Resetting distaz values ista=%d sta.net=%s.%s dist=%.1f az=%.1f baz=%.1f\n",
+		progname,
 		ista,
 		ev->stnm,
 		ev->net,
 		ev->ns.s.dist,
 		ev->ns.s.az,
 		ev->ns.s.baz );
-	fflush(stdout);
 
 	ev->rdistkm = ev->ns.s.dist;
 	ev->az      = ev->ns.s.az;
@@ -625,11 +560,10 @@ void sacdata2inv_serial(
 	  {
 		if(verbose)
 		{
-		  fprintf( stdout, "%s: %s: %s: ista=%d horizontals az not 0 and 90. ", 
-			progname, __FILE__, __func__, ista );
+		  fprintf( stdout, "%s: sacdata2inv_serial() ista=%d horizontals az not 0 and 90. ", 
+			progname, ista );
 		  fprintf( stdout, " az->(ns=%g,ew=%g) Rotating NS to 0 and EW to 90\n",
 			ev->ns.s.cmpaz, ev->ew.s.cmpaz );
-		  fflush(stdout);
 		}
 
 		angle = 360 - ev->ns.s.cmpaz;
@@ -655,9 +589,8 @@ void sacdata2inv_serial(
 	  if(verbose)
 	  {
 		fprintf( stdout, 
-		  "%s: %s: %s: ista=%d horizontals rotated by angle=%g\n",
-                     progname, __FILE__, __func__, ista, angle );
-		fflush(stdout);
+		  "%s: sacdata2inv_serial(): ista=%d horizontals rotated by angle=%g\n",
+                     progname, ista, angle );
 	  }
 
 	} /*** rotate only if ev->wavetype == Surf/Pnl ... NOT Rotational! ***/
@@ -674,52 +607,34 @@ void sacdata2inv_serial(
 	ev->ew.pha[SIGNAL].gvlo = 1.5;  ev->ew.pha[SIGNAL].gvhi = 7.0;
 	ev->ns.pha[SIGNAL].gvlo = 1.5;  ev->ns.pha[SIGNAL].gvhi = 7.0;
 	ev->z.pha[SIGNAL].gvlo  = 1.5;  ev->z.pha[SIGNAL].gvhi = 7.0;
-
-	if(verbose)
-	{
-	   fprintf( stdout, "%s: %s: %s: ista=%d %s.%s.%s NOISE=%d ew-chan gvlo=%g gvhi=%g SIGNAL=%d ew-chan gvlo=%g gvhi=%g lf=%g\n",
-		progname, __FILE__, __func__, ista, ev->net, ev->stnm, ev->loc, 
-		NOISE, ev->ew.pha[NOISE].gvlo, ev->ew.pha[NOISE].gvhi, 
-		SIGNAL, ev->ew.pha[SIGNAL].gvlo, ev->ew.pha[SIGNAL].gvhi, ev->lf );
-		
-	  fflush(stdout);
-	}
-
-	compute_Peak_to_Peak( &(ev->ew.s), ev->ew.data, 1.0/ev->lf,
+                                                                                                                                                              
+	compute_Peak_to_Peak( &(ev->ew.s), ev->ew.data, 1/ev->lf,
         	ev->ew.pha[NOISE].gvlo,  ev->ew.pha[NOISE].gvhi,
         	&(ev->ew.pha[NOISE].amp),  &(ev->ew.pha[NOISE].time),
-        	&(ev->ew.pha[NOISE].duration), NOISE, 1 /*verbose*/ );
+        	&(ev->ew.pha[NOISE].duration), NOISE, verbose );
 
 	if(verbose)
-	{
-	  fprintf( stdout, "%s: %s: %s: noise-EW-ista=%d per=%g gvlo=%g gvhi=%g amp=%g time=%g dur=%g\n",
-                progname, __FILE__, __func__, 
-		ista, (1.0/ev->lf),
-                ev->ew.pha[NOISE].gvlo,
-                ev->ew.pha[NOISE].gvhi,
-                ev->ew.pha[NOISE].amp,
-                ev->ew.pha[NOISE].time,
-                ev->ew.pha[NOISE].duration );
-	  fflush( stdout );
-	}
+	fprintf( stderr, "%s: %s: %s: noise-EW-ista=%d per=%g gvlo=%g gvhi=%g amp=%g time=%g dur=%g\n",
+                progname, __FILE__, __func__, ista, (1/ev[ista].lf),
+                ev[ista].ew.pha[NOISE].gvlo,
+                ev[ista].ew.pha[NOISE].gvhi,
+                ev[ista].ew.pha[NOISE].amp,
+                ev[ista].ew.pha[NOISE].time,
+                ev[ista].ew.pha[NOISE].duration );
 
 	compute_Peak_to_Peak( &(ev->ew.s), ev->ew.data, 1/ev->lf,
         	ev->ew.pha[SIGNAL].gvlo, ev->ew.pha[SIGNAL].gvhi,
         	&(ev->ew.pha[SIGNAL].amp), &(ev->ew.pha[SIGNAL].time),
-        	&(ev->ew.pha[SIGNAL].duration), SIGNAL, 1 /* verbose */ );
+        	&(ev->ew.pha[SIGNAL].duration), SIGNAL, verbose );
 
 	if(verbose)
-	{
-	  fprintf( stdout, "%s: %s: %s: signal-EW-ista=%d per=%g gvlo=%g gvhi=%g amp=%g time=%g dur=%g\n",
-                progname, __FILE__, __func__,
-		ista, (1.0/ev->lf),
-                ev->ew.pha[SIGNAL].gvlo,
-                ev->ew.pha[SIGNAL].gvhi,
-                ev->ew.pha[SIGNAL].amp,
-                ev->ew.pha[SIGNAL].time,
-                ev->ew.pha[SIGNAL].duration );
-	  fflush(stdout);
-	}
+	fprintf( stderr, "%s: %s: %s: signal-EW-ista=%d per=%g gvlo=%g gvhi=%g amp=%g time=%g dur=%g\n",
+                progname, __FILE__, __func__, ista, (1/ev[ista].lf),
+                ev[ista].ew.pha[SIGNAL].gvlo,
+                ev[ista].ew.pha[SIGNAL].gvhi,
+                ev[ista].ew.pha[SIGNAL].amp,
+                ev[ista].ew.pha[SIGNAL].time,
+                ev[ista].ew.pha[SIGNAL].duration );
 
 	ev->ew.pha[NOISE].period     = 2 * ev->ew.pha[NOISE].duration;
 	ev->ew.pha[NOISE].frequency  = 1 / ev->ew.pha[NOISE].period;
@@ -771,9 +686,7 @@ void sacdata2inv_serial(
 	ev->ienvelope = ienvelope;
 	if( ev->ienvelope == 1 )
 	{
-		fprintf( stdout, "%s: %s: %s: ista=%d computing envelope\n", 
-			progname, __FILE__, __func__, ista );
-		fflush( stdout );
+		fprintf( stdout, "%s: sacdata2inv_serial(): ista=%d computing envelope \n", progname, ista );
 		envelope( ev->ew.data, ev->ew.s.npts, ev->ew.s.delta );
 		envelope( ev->ns.data, ev->ns.s.npts, ev->ns.s.delta );
 		envelope( ev->z.data,  ev->z.s.npts,  ev->z.s.delta );
@@ -790,18 +703,17 @@ void sacdata2inv_serial(
 	sac_minmax( ev->ns.data, ev->ns.s.npts,
 		&(ev->ns.s.depmax), &(ev->ns.s.depmin), &(ev->ns.s.depmen) );
 
-	fprintf( stdout, "%s: %s: %s:\t sacdata2inv_serial(): ista=%d %s.%s Z  min=%g max=%g mean=%g\n",
-		progname, __FILE__, __func__, ista, ev->stnm, ev->net, ev->z.s.depmin,
+	fprintf( stdout, "%s:\t sacdata2inv_serial(): ista=%d %s.%s Z  min=%g max=%g mean=%g\n",
+		progname, ista, ev->stnm, ev->net, ev->z.s.depmin,
 		ev->z.s.depmax,  ev->z.s.depmen );
 
-	fprintf( stdout, "%s: %s: %s:\t sacdata2inv_serial(): ista=%d %s.%s NS min=%g max=%g mean=%g\n",
-		progname, __FILE__, __func__, ista, ev->stnm, ev->net, ev->ns.s.depmin,
+	fprintf( stdout, "%s:\t sacdata2inv_serial(): ista=%d %s.%s NS min=%g max=%g mean=%g\n",
+		progname, ista, ev->stnm, ev->net, ev->ns.s.depmin,
 		ev->ns.s.depmax, ev->ns.s.depmen );
 
-	fprintf( stdout, "%s: %s: %s:\t sacdata2inv_serial(): ista=%d %s.%s EW min=%g max=%g mean=%g\n",
-		progname, __FILE__, __func__, ista, ev->stnm, ev->net, ev->ew.s.depmin,
+	fprintf( stdout, "%s:\t sacdata2inv_serial(): ista=%d %s.%s EW min=%g max=%g mean=%g\n",
+		progname, ista, ev->stnm, ev->net, ev->ew.s.depmin,
 		ev->ew.s.depmax, ev->ew.s.depmen );
-	fflush(stdout);
 
 /****************************************************************************************/
 /*** write out individual SAC binary formated the files for inspection                ***/
@@ -813,10 +725,8 @@ void sacdata2inv_serial(
 /*** write a *.data file for inversion                                                ***/
 /****************************************************************************************/
 
-	fprintf( stdout, "%s: %s: %s: writting file %s\n",
-		progname,  __FILE__, __func__, ev->data_filename );
-	fflush( stdout );
-
+	fprintf( stdout, "%s: sacdata2inv_serial(): writting file %s\n",
+		progname, ev->data_filename );
 	fpout = fopen( ev->data_filename, "w" );
 	fwrite( ev, sizeof(EventInfo), 1, fpout );
 	fwrite( &(ev->ew.data[0]), ev->ew.s.npts * sizeof(float), 1, fpout );
@@ -839,10 +749,7 @@ void sacdata2inv_serial(
 */
 	if(verbose)
 	{
-	  fprintf( stdout, "%s: %s: %s: done with ista=%d\n\n\n", 
-		progname, __FILE__, __func__, ista );
-	  fflush(stdout);
+	  fprintf( stdout, "%s: STDOUT sacdata2inv_serial(): done with ista=%d\n\n\n", progname, ista );
 	}
 	fprintf( stdout, "\n\n\n" );
-	fflush(stdout);
 }

@@ -454,8 +454,7 @@ void plot_dc_clvd_mech( float xc, float yc, float rad, Solution *sol, EventInfo 
 
 	if(verbose)
 	{
-	  fprintf( stdout, "%s: %s: %s: freeing memory\n", 
-		progname, __FILE__, __func__ );
+	  fprintf( stdout, "%s: psmech.c: plot_dc_clvd_mech((): freeing memory\n", progname );
 	  fflush(stdout);
 	}
 

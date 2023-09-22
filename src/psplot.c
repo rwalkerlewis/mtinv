@@ -78,7 +78,7 @@ int psplot(
 	Color line_col;
 	float line_width, x0_shift, y0_shift;
 	int ltype;
-	char filename[256], xlabel[128], ylabel[128], label[256], grd_mo_type[5];
+	char filename[256], xlabel[128], ylabel[128], label[128], grd_mo_type[5];
 	float xaxsize, yaxsize;
 	float cm2mm = 10.;
 	float cm2microns = 10000.;
@@ -133,13 +133,6 @@ int psplot(
 /************************************/
 /*** loop over pages and stations ***/
 /************************************/
-	if(verbose)
-	{
-		fprintf( stdout, "%s: %s: %s: nsta=%d filenbase=%s units=%d verbose=%d forward=%d PltXcorLabel=%d PS_Output_Screen=%d\n",
-			progname, __FILE__, __func__,
-			nsta, filenbase, units, verbose, forward, PltXcorLabel, PS_Output_Screen );
-		fflush(stdout);
-	}
 
 	for( ista=0; ista<=nsta; ista++ )
 	{
@@ -310,14 +303,14 @@ int psplot(
 				cg_text( 7, 10.5, 0, label );
 			}
 
-			snprintf( label, 256, "%s", ev[0].comment );
+			sprintf( label, "%s", ev[0].comment );
 			cg_text( 0, 12, 0, label );
 			
 			if( grn[0][iz].evla < 0 ) ns = 'S'; else ns='N';
 			if( grn[0][iz].evlo < 0 ) ew = 'W'; else ew='E';
 	
 		/*** origin time and comment label ***/		
-			snprintf( label, 256, "%4d/%02d/%02d/%02d:%02d:%04.1f %.3f%c %.3f%c %.1f km\n",
+			sprintf( label, "%4d/%02d/%02d/%02d:%02d:%04.1f %.3f%c %.3f%c %.1f km\n",
 				ev[0].ot.year, ev[0].ot.month, ev[0].ot.mday,
 				ev[0].ot.hour, ev[0].ot.min, sol[iz].ot,
 				grn[0][iz].evla, ns, grn[0][iz].evlo, ew, grn[0][iz].evdp );
@@ -718,8 +711,7 @@ W -> w3  t ew
 
 	if(verbose)
 	{
-	  fprintf( stdout, "%s: %s: %s: done loop\n", 
-		progname, __FILE__, __func__ );
+	  fprintf( stdout, "%s: psplot.c: done loop\n", progname );
 	  fflush(stdout);
 	}
 
@@ -727,9 +719,7 @@ W -> w3  t ew
 
 	if(verbose)
 	{
-		fprintf( stdout, "%s: %s: %s: done with psplot().\n", 
-			progname, __FILE__, __func__ );
-		fflush(stdout);
+		fprintf( stdout, "%s: psplot.c: psplot(): done with psplot().\n", progname );
 	}
 
 	return ipage;
