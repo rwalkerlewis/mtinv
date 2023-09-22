@@ -634,7 +634,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 	  }
 		
 	/*** attempt to make the directory if it doesn't exist already ***/
-          sprintf( outDirectory, "%s", ev[ista].stnm );
+          snprintf( outDirectory, 8, "%s", ev[ista].stnm );
 	  mkdirp2( outDirectory, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
 
 /*****************************************/
@@ -682,13 +682,14 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 /*
         if( grn->redv > 0 )
         {
-         sprintf( sp.kt1, "%gkm/s", grn->redv );
+         snprintf( sp.kt1, 8, "%gkm/s", grn->redv );
          sp.t1 = grn->rdistkm/grn->redv;
         }
 */
 	set_sac_minmax( &sp, txx );
         strcpy( sp.kcmpnm, "TXX" );
-        sprintf( sacfile, "%s/%s.txx.grn", sp.kstnm, ev[ista].glib_filename );
+			/*  8 1 256 8 */
+        snprintf( sacfile, 273, "%s/%s.txx.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
 		progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
 		sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -700,7 +701,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, txy );
         strcpy( sp.kcmpnm, "TXY" );
-        sprintf( sacfile, "%s/%s.txy.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273, "%s/%s.txy.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -712,7 +713,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, txz );
         strcpy( sp.kcmpnm, "TXZ" );
-        sprintf( sacfile, "%s/%s.txz.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273, "%s/%s.txz.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -724,7 +725,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, tyy );
         strcpy( sp.kcmpnm, "TYY" );
-        sprintf( sacfile, "%s/%s.tyy.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273, "%s/%s.tyy.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -736,7 +737,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, tyz );
         strcpy( sp.kcmpnm, "TYZ" );
-        sprintf( sacfile, "%s/%s.tyz.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273, "%s/%s.tyz.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -748,7 +749,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, rxx );
         strcpy( sp.kcmpnm, "RXX" );
-        sprintf( sacfile, "%s/%s.rxx.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273, "%s/%s.rxx.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -760,7 +761,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, rxy );
         strcpy( sp.kcmpnm, "RXY" );
-        sprintf( sacfile, "%s/%s.rxy.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273, "%s/%s.rxy.grn", sp.kstnm, ev[ista].glib_filename );
         fp = fopen(sacfile,"w");
         fwrite( &sp, sizeof(Sac_Header), 1, fp );
         fwrite( &rxy[0], sp.npts*sizeof(float), 1, fp );
@@ -768,7 +769,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, rxz );
         strcpy( sp.kcmpnm, "RXZ" );
-        sprintf( sacfile, "%s/%s.rxz.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273, "%s/%s.rxz.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -780,7 +781,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, ryy );
         strcpy( sp.kcmpnm, "RYY" );
-        sprintf( sacfile, "%s/%s.ryy.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273, "%s/%s.ryy.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -792,7 +793,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, ryz );
         strcpy( sp.kcmpnm, "RYZ" );
-        sprintf( sacfile, "%s/%s.ryz.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273, "%s/%s.ryz.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -804,7 +805,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, rzz );
         strcpy( sp.kcmpnm, "RZZ" );
-        sprintf( sacfile, "%s/%s.rzz.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273, "%s/%s.rzz.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -816,7 +817,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, zxx );
         strcpy( sp.kcmpnm, "ZXX" );
-        sprintf( sacfile, "%s/%s.zxx.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273, "%s/%s.zxx.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -828,7 +829,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, zxy );
         strcpy( sp.kcmpnm, "ZXY" );
-        sprintf( sacfile, "%s/%s.zxy.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273, "%s/%s.zxy.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -840,7 +841,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, zxz );
         strcpy( sp.kcmpnm, "ZXZ" );
-        sprintf( sacfile, "%s/%s.zxz.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273, "%s/%s.zxz.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -852,7 +853,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, zyy );
         strcpy( sp.kcmpnm, "ZYY" );
-        sprintf( sacfile, "%s/%s.zyy.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273, "%s/%s.zyy.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -864,7 +865,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, zyz );
         strcpy( sp.kcmpnm, "ZYZ" );
-        sprintf( sacfile, "%s/%s.zyz.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273, "%s/%s.zyz.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -876,7 +877,7 @@ void write_Mxy_grns( EventInfo *ev, int nsta, int verbose )
 
         set_sac_minmax( &sp, zzz );
         strcpy( sp.kcmpnm, "ZZZ" );
-        sprintf( sacfile, "%s/%s.zzz.grn", sp.kstnm, ev[ista].glib_filename );
+        snprintf( sacfile, 273,  "%s/%s.zzz.grn", sp.kstnm, ev[ista].glib_filename );
 	fprintf(stdout, "%s: %s: %s: ista=%d sacfile=%s glib_filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, ista, sacfile, ev[ista].glib_filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,

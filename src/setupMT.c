@@ -597,10 +597,10 @@ int main( int ac, char **av )
 
 
 typedef struct {
-	char net[16];
-	char sta[16];
-	char loc[16];
-	char ref_chan[16];
+	char net[8];
+	char sta[8];
+	char loc[8];
+	char ref_chan[8];
 	int nchan;
 	int nseg; /*** multiple files typically indicates segmentation, need to check to ensure signal is in right segement or join into single file ***/
 	char chans[256];
@@ -646,7 +646,7 @@ void make_glib_parfile(
 	int icount_def = 1;
 	int icount_grn = 1;
 	int ista = 0, def = 0;
-	char loc[8];
+	char loc[18];
 
 /*** sort by distance ***/
 	int *indx;
@@ -802,7 +802,7 @@ void make_glib_parfile(
 	{
 		i = indx[j+1]-1;
 
-		sprintf( loc, "\"%s\"", cl[i].loc );
+		snprintf( loc, 10, "\"%s\"", cl[i].loc );
 
 		if(verbose)
                 {
@@ -1494,7 +1494,7 @@ Chanlist *remove_duplicate_chans( int nsta, Sac_Header *s, float *arrin, int *in
 
 					cl[k].dist = s[i].dist;
 					cl[k].az   = s[i].az;
-					sprintf( cl[k].nslc_string, "%s.%s.%s", cl[k].net, cl[k].sta, cl[k].loc );
+					snprintf( cl[k].nslc_string, 32, "%s.%s.%s", cl[k].net, cl[k].sta, cl[k].loc );
 
 					k++;
 					break;

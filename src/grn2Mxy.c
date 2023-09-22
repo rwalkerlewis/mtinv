@@ -144,7 +144,7 @@ int main( int ac, char **av )
 void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 {
 	Sac_Header sp;
-	char sacfile[256];
+	char sacfile[264]; /* 256 + 8 */
 	FILE *fp;
 	int it;
 
@@ -374,7 +374,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, txx );
 	strcpy( sp.kcmpnm, "TXX" );
-	sprintf( sacfile, "%s.txx.grn", grn->filename );
+	snprintf( sacfile, 264, "%s.txx.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -386,7 +386,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, txy );
 	strcpy( sp.kcmpnm, "TXY" );
-        sprintf( sacfile, "%s.txy.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.txy.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -398,7 +398,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, txz );
 	strcpy( sp.kcmpnm, "TXZ" );
-        sprintf( sacfile, "%s.txz.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.txz.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -410,7 +410,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, tyy );
 	strcpy( sp.kcmpnm, "TYY" );
-        sprintf( sacfile, "%s.tyy.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.tyy.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -422,7 +422,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, tyz );
 	strcpy( sp.kcmpnm, "TYZ" );
-        sprintf( sacfile, "%s.tyz.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.tyz.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -434,7 +434,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, rxx );
 	strcpy( sp.kcmpnm, "RXX" );
-        sprintf( sacfile, "%s.rxx.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.rxx.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -446,7 +446,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, rxy );
 	strcpy( sp.kcmpnm, "RXY" );
-        sprintf( sacfile, "%s.rxy.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.rxy.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -458,7 +458,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, rxz );
 	strcpy( sp.kcmpnm, "RXZ" );
-        sprintf( sacfile, "%s.rxz.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.rxz.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -470,7 +470,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, ryy );
 	strcpy( sp.kcmpnm, "RYY" );
-        sprintf( sacfile, "%s.ryy.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.ryy.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -482,7 +482,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, ryz );
 	strcpy( sp.kcmpnm, "RYZ" );
-        sprintf( sacfile, "%s.ryz.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.ryz.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -494,7 +494,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, rzz );
 	strcpy( sp.kcmpnm, "RZZ" );
-        sprintf( sacfile, "%s.rzz.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.rzz.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -506,7 +506,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, zxx );
 	strcpy( sp.kcmpnm, "ZXX" );
-        sprintf( sacfile, "%s.zxx.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.zxx.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -518,7 +518,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, zxy );
 	strcpy( sp.kcmpnm, "ZXY" );
-        sprintf( sacfile, "%s.zxy.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.zxy.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -530,7 +530,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, zxz );
 	strcpy( sp.kcmpnm, "ZXZ" );
-        sprintf( sacfile, "%s.zxz.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.zxz.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -542,7 +542,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, zyy );
 	strcpy( sp.kcmpnm, "ZYY" );
-        sprintf( sacfile, "%s.zyy.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.zyy.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -554,7 +554,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, zyz );
 	strcpy( sp.kcmpnm, "ZYZ" );
-        sprintf( sacfile, "%s.zyz.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.zyz.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,
@@ -566,7 +566,7 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 
 	set_sac_minmax( &sp, zzz );
 	strcpy( sp.kcmpnm, "ZZZ" );
-        sprintf( sacfile, "%s.zzz.grn", grn->filename );
+        snprintf( sacfile, 264, "%s.zzz.grn", grn->filename );
 	fprintf(stdout, "%s: %s: %s: sacfile=%s filename=%s sta.net.chan=%s.%s.%s evla=%g evlo=%g evdp=%g stla=%g stlo=%g\n",
                 progname, __FILE__, __func__, sacfile, grn->filename,
                 sp.kstnm, sp.knetwk, sp.kcmpnm,

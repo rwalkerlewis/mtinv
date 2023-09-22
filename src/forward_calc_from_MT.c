@@ -21,7 +21,6 @@ void create_Amatrix( Greens **grn,
                         int mtdegfree,
                         int Distance_Normalize,
                         float DistNormR0,
-                        FixISOZ myfixisoz,
                         int verbose )
 {
 	int i, j;
@@ -36,8 +35,7 @@ void create_Amatrix( Greens **grn,
                 float *b_vector,
                 int mtdegfree,
                 int Distance_Normalize,
-                float DistNormR0,
-                FixISOZ myfixisoz );
+                float DistNormR0 );
 
 /*******************************************************/
 /*** begin subroutine: initialize matrix and vectors ***/
@@ -49,7 +47,7 @@ void create_Amatrix( Greens **grn,
 	}
 
 	make_amatrix( ev, grn, nsta, FixMyiz, a_matrix, b_vector, 
-		mtdegfree, Distance_Normalize, DistNormR0, myfixisoz );
+		mtdegfree, Distance_Normalize, DistNormR0 );
 
 } /*** end of subroutine create_Amatrix() ***/
 

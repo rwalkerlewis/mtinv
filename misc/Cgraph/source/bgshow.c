@@ -30,6 +30,7 @@
 int cg_showpage(void) 
 {
 char strbuf[128];
+int retv;
 
 	fprintf(cgstream,"\n\n%% All drawing done.  Commit to imaging device.\n");
 	fprintf(cgstream,"showpage\n");
@@ -41,7 +42,7 @@ char strbuf[128];
 	/* ##### Modify these two lines to launch Ghostscript/GhostView on other systems */
 	if(!useStandardOutput && launchPreview) {
 	    sprintf(strbuf, DISPLAYER, filnam);
-	    system(strbuf);
+	    retv = system(strbuf);
 	}
 	return(0);
 }

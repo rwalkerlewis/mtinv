@@ -40,7 +40,6 @@ void compute_Peak_to_Peak(
 	float tvmin, tvmax;
 	float duration, tmpp2p, maxp2p, tmptimemax, tmptimemin, tmpampmax, tmpampmin;
 	float sign(float x );
-
 	int debug = 0;
 
 	nt   = header->npts;
@@ -49,16 +48,11 @@ void compute_Peak_to_Peak(
 	ot   = header->o;
 	dist = header->dist;
 
-/*** override verbose ***/
-	verbose = 0;
-
-/*** turn off for now ***/
-	/* verbose = 0; */
-
 	if(verbose)
 	{
-	  fprintf( stderr, "%s: %s: %s: period=%g vmin=%g vmax=%g nt=%d dt=%g dist=%g ot=%g beg=%g SignalWindowFlag=%d\n",
+	  fprintf( stdout, "%s: %s: %s: period=%g vmin=%g vmax=%g nt=%d dt=%g dist=%g ot=%g beg=%g SignalWindowFlag=%d\n",
 		progname, __FILE__, __func__, period, vmin, vmax, nt, dt, dist, ot, beg, SignalWindowFlag );
+	  fflush( stdout );
 	}
 
 /***************************************************************************/
@@ -85,9 +79,10 @@ void compute_Peak_to_Peak(
 
 	if(verbose)
 	{
-	  fprintf( stderr, "%s: %s: %s: ivmax=%d ivmin=%d WindowLength=%d\n",
+	  fprintf( stdout, "%s: %s: %s: ivmax=%d ivmin=%d WindowLength=%d\n",
 		progname, __FILE__, __func__, 
-		 ivmax, ivmin, WindowLength );
+		 ivmax, ivmin, WindowLength );	
+	  fflush(stdout);
 	}
 
 /***************************************************************************/
@@ -106,12 +101,13 @@ void compute_Peak_to_Peak(
 	tmptimemin = 0;
 	tmptimemax = 0;
 
-	/*** debug ***/
-	if(debug)
-	fprintf( stdout, "%s: %s: %s: SignalWindow=%d ivmax=%d ivmin=%d WindowLength=%d nt=%d dt*nt=%g \n", 
+	if(verbose)
+	{
+	  fprintf( stdout, "%s: %s: %s: SignalWindow=%d ivmax=%d ivmin=%d WindowLength=%d nt=%d dt*nt=%g \n", 
 		progname, __FILE__, __func__, 
 		SignalWindowFlag, ivmax, ivmin, WindowLength, nt, dt*nt );
-
+	  fflush(stdout);
+	}
 	for( it = ivmax; it <= ivmin - WindowLength; it++ )
 	{
 		tmpampmax = +1.0E-19;
@@ -142,13 +138,13 @@ void compute_Peak_to_Peak(
 		duration = fabs( fabs( tmptimemax ) - fabs( tmptimemin ) );
 		tmpp2p = fabs( tmpampmax ) + fabs( tmpampmin );
 
-		/*** debug ***/
 		if(debug)
 		{
-		fprintf( stdout, 
-	"%s: %s: %s: it=%d SignalWindow=%d maxp2p=%g tmpp2p=%g 2*duration=%g, period=%g ampmax=%g ampmin=%g tmpampmax=%g tmpampmin=%g tmptimemin=%g tmptimemax=%g \n",
+		  fprintf( stdout, 
+"%s: %s: %s: it=%d SignalWindow=%d maxp2p=%g tmpp2p=%g 2*duration=%g, period=%g ampmax=%g ampmin=%g tmpampmax=%g tmpampmin=%g tmptimemin=%g tmptimemax=%g \n",
 			progname, __FILE__, __func__, 
 			it, SignalWindowFlag, maxp2p, tmpp2p, 2*duration, period, ampmax, ampmin, tmpampmax, tmpampmin, tmptimemin, tmptimemax );
+	 	  fflush( stdout );
 		}
 
 		if( ((2*duration ) <= period ) && ( tmpp2p > maxp2p ) )
@@ -175,6 +171,7 @@ void compute_Peak_to_Peak(
 		    "%s: %s: %s: Error timemax=%g timemin=%g Searching Group Velocity Window\n", 
 			progname, __FILE__, __func__, 
 			timemax, timemin );
+		  fflush( stdout );
 		}
 
 		tmpampmax = 0;
@@ -204,8 +201,19 @@ void compute_Peak_to_Peak(
 		timemin = tmptimemin;
 		timemax = tmptimemax;
 		maxp2p = tmpp2p;
+	
+	  if( verbose )
+	  {
+	    fprintf( stdout, "%s: %s: %s: ampmin=%g ampmax=%g timemin=%g timemax=%g maxp2p=%g\n",
+		progname, __FILE__, __func__,
+		ampmin,
+		ampmax,
+		timemin,
+		timemax,
+		maxp2p );
+	    fflush( stdout );
+	  }
 	}
-
 
 /*****************************************/
 /*** write the p2p times to SAC header ***/
@@ -240,12 +248,23 @@ void compute_Peak_to_Peak(
 /***************************************************************************/
 
 	if( fabs( ampmax ) > fabs( ampmin ) ) 
+	{
 		*p2ptime = timemax;
+	}
 	else
+	{
 		*p2ptime = timemin;
+	}
 
 	*p2pamp  = fabs(ampmax) + fabs(ampmin);
+
 	*p2p_duration  = fabs( timemax - timemin );
+
+	if(verbose)
+	{
+	  fprintf( stdout, "%s: %s: %s: bye-bye\n", progname, __FILE__, __func__ );
+	  fflush( stdout );
+	}
 
 	return;
 }

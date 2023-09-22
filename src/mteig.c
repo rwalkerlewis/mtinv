@@ -80,7 +80,6 @@ int main( int ac, char **av )
 	float FixMyZ;
 	int Distance_Normalize = 0;
 	float DistNormR0 = 1; /*** default is R0 = 1 km  in R/R0 ****/
-	FixISOZ myfixisoz;
 
 /************************/
 /*** local variables ***/
@@ -222,6 +221,7 @@ int main( int ac, char **av )
                         int verbose );
 
 /*** create a gmt plot of the results ***/
+	int igmt5 = 1; /*** default yes, use GMT v5+ ***/
 
 	void gmtplot( 
 		Results *rbest,
@@ -232,7 +232,8 @@ int main( int ac, char **av )
 		int Add_user_Eig,
 		int Add_user_MT,
 		int Add_DC_iso,
-		int do_norm_gmt_plot );
+		int do_norm_gmt_plot,
+		int igmt5 );
 
 	int doplt = 1; /*** default system call run C-shell GMT script and display using open jpg MacOSX ***/
 	int do_norm_gmt_plot = 0;
@@ -270,7 +271,6 @@ int main( int ac, char **av )
                         int mtdegfree,
                         int Distance_Normalize,
                         float DistNormR0,
-                        FixISOZ myfixisoz,
                         int verbose );
 
 /******************************/
@@ -288,9 +288,6 @@ int main( int ac, char **av )
 
 /*** check_depths.c ***/
         void check_depth( float FixMyZ, int *FixMyiz, float *z, int nz, int verbose );
-
-/*** check_depths.c ***/
-        void check_iso_depth( FixISOZ *myfixisoz, float *z, int nz, int verbose );
 
 /*** shorten_path.c ***/
 	char *shorten_path( char *pathname, char *filename );
@@ -336,6 +333,7 @@ int main( int ac, char **av )
 	setpar(ac,av);
 
 	getpar( "gmt_only", "b", &REDO_GMT_PLOT_ONLY );
+	getpar( "gmt5",     "b", &igmt5 );
 
 	getpar( "verbose",  "b", &verbose);
 	getpar( "parallel", "b", &parallel );
@@ -364,9 +362,6 @@ int main( int ac, char **av )
 
 	strcpy( title_text, "Title Goes Here" );
 	getpar( "title", "s", title_text );
-
-	myfixisoz.z = 0;
-	myfixisoz.iswitch = 0;
 
 	getpar( "norm", "b", &Distance_Normalize );
         if( Distance_Normalize )
@@ -409,7 +404,7 @@ int main( int ac, char **av )
 
                 gmtplot(rbest, nsim_eig, color_or_gray,
 			doplt, title_text, Add_user_Eig,
-			Add_user_MT, Add_DC_iso, do_norm_gmt_plot );
+			Add_user_MT, Add_DC_iso, do_norm_gmt_plot, igmt5 );
 
                 exit(0);
         }
@@ -467,14 +462,6 @@ int main( int ac, char **av )
 
 	grn = (Greens **)malloc( nsta*sizeof(Greens *) );
 	z = (float *)load_greens( ev, grn, nsta, &nz, verbose );
-
-/*************************************/
-/*** FixISOZ check depth set index ***/
-/*************************************/
-	if( myfixisoz.iswitch )
-        {
-                check_iso_depth( &myfixisoz, z, nz, verbose );
-        }
 
 /**************************************/
 /*** check if fixing solution depth ***/
@@ -561,7 +548,7 @@ int main( int ac, char **av )
 	b_vector  = vector( 0, rows+1 );
 
 	create_Amatrix( grn, ev, nsta, FixMyiz, a_matrix, b_vector, rows, cols, mtdegfree, 
-			Distance_Normalize, DistNormR0, myfixisoz, verbose );
+			Distance_Normalize, DistNormR0, verbose );
 
 /***********************************************************************************/
 /*** creat eigenvalues first and save lon,lat,k,T,e1,e2,e3 in results structure ****/
@@ -736,7 +723,7 @@ int main( int ac, char **av )
 
 	gmtplot( rbest, nsim_eig, color_or_gray,
 		doplt, title_text, Add_user_Eig,
-		Add_user_MT, Add_DC_iso, do_norm_gmt_plot );
+		Add_user_MT, Add_DC_iso, do_norm_gmt_plot, igmt5 );
 
 /****************************/
 /*** free allocated memory ***/
@@ -769,7 +756,8 @@ void gmtplot(
 	int Add_user_Eig,
 	int Add_user_MT,
 	int Add_DC_iso,
-	int do_norm_gmt_plot )
+	int do_norm_gmt_plot,
+	int igmt5 )
 {
 
 /*** local variables ***/
@@ -783,9 +771,14 @@ void gmtplot(
 
 	void print_result_row_pretty_screen( Results *r, FILE *fp, char *label );
 
-	void mteig_gmt_plot( char *input_filename, char *gmt_script_filename, char *title_text, 
+	
+	void mteig_gmt5_plot( char *input_filename, char *gmt_script_filename, char *title_text, 
 		Results *rbest, int ifullmt, int idevmt, int idcmt, int iuser, 
 		int ipiso, int iniso, int Add_user_Eig, int Add_user_MT, int color_or_gray, int doplt );
+
+	void mteig_gmt4_plot( char *input_filename, char *gmt_script_filename, char *title_text,
+                Results *rbest, int ifullmt, int idevmt, int idcmt, int iuser,
+                int ipiso, int iniso, int Add_user_Eig, int Add_user_MT, int color_or_gray, int doplt );
 
 	void mteig_gmt_plot_lune_norm( char *input_filename, char *gmt_script_filename, char *title_text,
                 Results *rbest, int ifullmt, int idevmt, int idcmt, int iuser,
@@ -842,8 +835,10 @@ void gmtplot(
 /** Network Sensitivity Solution on Eigvalue Lune Plot ***/
 /** this version plots percent variance reduction on lune lat/lon ***/
 /****************************/
-
-	mteig_gmt_plot(
+	
+	if(igmt5)
+	{
+	  mteig_gmt5_plot(
 		"best.all.out",  /*** input_filename ***/
 		"plot_lune2.csh",   /*** gmt_script_filename ***/
 		title_text,
@@ -858,10 +853,30 @@ void gmtplot(
 		Add_user_MT,
 		color_or_gray,
 		doplt );
+	}
+	else
+	{
+	  mteig_gmt4_plot(
+                "best.all.out",  /*** input_filename ***/
+                "plot_lune2.csh",   /*** gmt_script_filename ***/
+                title_text,
+                rbest,
+                ifullmt,
+                idevmt,
+                idcmt,
+                iuser,
+                ipiso,
+                iniso,
+                Add_user_Eig,
+                Add_user_MT,
+                color_or_gray,
+                doplt ); 
+	}
 
 /** this version plots  normalized  variance reduction on lune lat/lon ***/
 
 	if(do_norm_gmt_plot)
+	{
 	  mteig_gmt_plot_lune_norm(
 		"best.all.out",  /*** input_filename ***/
 		"plot_lune3.csh",   /*** gmt_script_filename ***/
@@ -877,6 +892,7 @@ void gmtplot(
                 Add_user_MT,
                 color_or_gray,
                 doplt );
+	}
 
 } /*** end of subroutine gmtplot() ***/
 
@@ -892,7 +908,7 @@ void Usage_Print( void )
 	fprintf( stderr, "\n" );
 	fprintf( stderr, "USAGE:\n" );
 	fprintf( stderr, "\t time %s par=mtinv.par nthreads=(integer) nsim_eig=2000 nsim_evec=4000 eigvec_fac=17000 \\ \n", progname );
-	fprintf( stderr, "\t                    Mo=(float) fixz=14 color doplt seed=1 parallel title=\"put title here\" \\ \n" );
+	fprintf( stderr, "\t                    Mo=(float) fixz=14 color doplt seed=1 parallel [no]gmt5 title=\"put title here\" \\ \n" );
 	fprintf( stderr, "\t                    Add_user_Eig e0=+1.69846 e1=+0.17199 e2=-1.29013\n" );
 
 	fprintf( stderr, "\n" );
@@ -912,6 +928,7 @@ void Usage_Print( void )
 	fprintf( stderr, "\t nthreads=int [default 2] if parallel on then this is the number of pthreads used up to NUM_MAX_THREADS=16\n" );
 	fprintf( stderr, "\t [no]color    [boolean] GMT lune plot %%VR uses rainbow color pallette or gray scale [default off: grayscale] \n" );
 	fprintf( stderr, "\t [no]doplt    [boolean default yes] system call to execute GMT lune plot, otherwise just create the C-shell GMT script\n" );
+	fprintf( stderr, "\t [no]gmt5     [boolean default yes] use GMT version 5+ for lune plot, otherwise uses GMT version 4.5.x (not avail for normalized lune)\n" );
 	fprintf( stderr, "\t title=\"char *\"  text title in GMT Lune plot \n" );
 	fprintf( stderr, "\t [no]domech    [boolean default yes] add psmeca in GMT C-shell script to plot best fitting %%VR MT focal mech\n" );
 	fprintf( stderr, "\t [no]norm     [boolean] distance normalization default is off\n" );
