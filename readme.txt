@@ -1,13 +1,22 @@
 MTINV Version 4.0.1
 Tue Apr 18 17:25:56 PDT 2023
 
+Updated(see bottom)
+Tue Sep 19 00:10:53 PDT 2023
+
+Dependencies:
 Requires: GCC and GFortran compilers
-Optional: sqlite3, GMT
-Tested Systems: MacOSX and Linux
+Optional: sqlite3, GMT version +4.5.x, GMT +5.x.x, GMT -6.3.x
+
+Tested Systems: 
+	1. MacOS Ventura intel x86_64  gcc 11.2   20211101
+	2. MacOS Ventura Apple-m2      gcc 13.0.1 20230202 (experimental)
+	3. Redhat Linux intel x86_64   gcc 4.8.5  20150623 (Red Hat 4.8.5-44)
+	4. Linux Mint                  gcc 11.4.0
+
 Instructions: Type make clean; make all
 
 Executables
-
 FlinnEngdahl:                Mach-O 64-bit executable arm64
 area_sphere:                 Mach-O 64-bit executable arm64
 clean_exec_in_directory.csh: C shell script text executable, ASCII text, with very long lines (316)
@@ -54,5 +63,13 @@ yoffset:                     Mach-O 64-bit executable arm64
 Do not forget to set ./mtinv.4.x.x/bin directory to your executable PATH 
 shell variables.  See file environmental_variables.csh for additional 
 required and optional environmental variables.
+
+Bugfixes
+Tue Sep 19 00:12:47 PDT 2023
+1. sacdata2inv - memory leak fix with linux mint gcc compilers
+2. sacdata2inv - renamed fmul() to scale_data(), wierd problem where linux mint gcc compiler failed to reconize the subroutine
+3. added GMT version 4.5.x support to mteig plotting
+4. upgraded  GMT version 4.5.x support to mtinv plotting waveform plot
+5. various sprintf and strcpy issues when compiling with linux mint gcc compilers
 
 -- Gene Ichinose

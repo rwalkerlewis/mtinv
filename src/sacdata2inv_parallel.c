@@ -156,8 +156,8 @@ void *sacdata2inv_staproc_thread( void *ptr )
 
 /**** function prototype ******/
 
-	/*** misc_tools/fmul.c ***/
-	void  fmul( float *x, int n, float a );
+	/*** misc_tools/scale_data.c ***/
+	void  scale_data( float *x, int n, float a );
 
 	/*** rmean.c ***/
 	void remove_mean( float *x, int n );
@@ -337,9 +337,9 @@ void *sacdata2inv_staproc_thread( void *ptr )
 	  fflush( stdout );
 	}
 
-	fmul( &(ev[ista].ew.data[0]), ev[ista].ew.s.npts, METERS2CM );
-	fmul( &(ev[ista].ns.data[0]), ev[ista].ns.s.npts, METERS2CM );
-	fmul( &(ev[ista].z.data[0]),  ev[ista].z.s.npts,  METERS2CM );
+	scale_data( &(ev[ista].ew.data[0]), ev[ista].ew.s.npts, METERS2CM );
+	scale_data( &(ev[ista].ns.data[0]), ev[ista].ns.s.npts, METERS2CM );
+	scale_data( &(ev[ista].z.data[0]),  ev[ista].z.s.npts,  METERS2CM );
 
 /*************************************************/
 /*** scale amplitudes my multiplication factor ***/
@@ -357,9 +357,9 @@ void *sacdata2inv_staproc_thread( void *ptr )
 		fflush( stdout );
 	  }
 
-	  fmul( &(ev[ista].ew.data[0]), ev[ista].ew.s.npts, ev[ista].mul_factor );
-	  fmul( &(ev[ista].ns.data[0]), ev[ista].ns.s.npts, ev[ista].mul_factor );
-	  fmul( &(ev[ista].z.data[0]),  ev[ista].z.s.npts,  ev[ista].mul_factor );
+	  scale_data( &(ev[ista].ew.data[0]), ev[ista].ew.s.npts, ev[ista].mul_factor );
+	  scale_data( &(ev[ista].ns.data[0]), ev[ista].ns.s.npts, ev[ista].mul_factor );
+	  scale_data( &(ev[ista].z.data[0]),  ev[ista].z.s.npts,  ev[ista].mul_factor );
 	}
 
 /**************************************/

@@ -31,7 +31,7 @@ float *load_special_grns( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, in
         int ncmp = 17;
         int icmp = 0;        /* 0      1      2      3       4     5      6      7      8      9     10     11     12     13     14     15     16 ***/
         const char *cmp[] = { "rxx", "rxy", "rxz", "ryy", "ryz", "rzz", "txx", "txy", "txz", "tyy", "tyz", "zxx", "zxy", "zxz", "zyy", "zyz", "zzz" };
-        char sacfilename[128];
+        char sacfilename[400];
 
         float *readsac( Sac_Header *s, char *filename, int verbose );
         void duplicate_vector( float *x, float *y, int n );
@@ -44,9 +44,13 @@ float *load_special_grns( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, in
         for( ista = 0; ista < nsta; ista++ )
         {
                 for( icmp = 0; icmp < ncmp; icmp++ )
-                {
-                        sprintf( sacfilename, "%s/%s.%s.grn",
-                                ev[ista].stnm, ev[ista].glib_filename, cmp[icmp] );
+		{
+                                /* 128    +      8 + 1 + 256 + 3 + 4 */
+                        snprintf( sacfilename, 400, "%s/%s.%s.grn",
+                                ev[ista].stnm, 
+				ev[ista].glib_filename, 
+				cmp[icmp] );
+
                         if(verbose)
                         {
                                 fprintf( stdout, "%s: %s: %s: reading file %s ista=%d icmp=%d cmp=%s\n",

@@ -275,13 +275,6 @@ typedef struct {
 	MTdec Min;
 } Solution;
 
-/*** fix depth of the isotropic greens functions ***/
-typedef struct {
-	int iswitch; /*** this is set 0 if z=0(OFF) else z>0 set to 1(on) ***/
-	int indexz;  /*** this is z[indexz] in the array ***/
-	float z;     /*** input the depth in km to check against Green's func lib ***/
-} FixISOZ;
-
 /****************************************************/
 /*** Dziewonski et al., 1983                      ***/
 /*** Moment tensor components R=rho T=theta F=phi ***/

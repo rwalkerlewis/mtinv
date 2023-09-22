@@ -444,8 +444,13 @@ void getparameters( int ac, char **av, Greens *g,
 /*** changes 2019/Dec G. Ichinose includes loc ***/
 /*** net.sta.loc.model                         ***/
 /*************************************************/
-
-	sprintf( g->filename, "%s.%s.%s.%s.glib", g->net, g->stnm, g->loc, g->v.modfile );
+			/* 256 -> 8 + 1 + 8 + 1 + 8 + 256 */ 
+	snprintf( g->filename, 285,
+		"%s.%s.%s.%s.glib",
+		g->net,
+		g->stnm,
+		g->loc,
+		g->v.modfile );
 
        	fprintf( stdout, "%s: %s: %s: Writing glib file to %s\n", 
 		progname, __FILE__, __func__, g->filename );

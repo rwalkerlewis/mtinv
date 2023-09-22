@@ -191,11 +191,12 @@ void getGeoregionFromLatLon( float lat, float lon, int *grn, char *grname )
 void get_sectors( Quadrant *q )
 {
 	extern int verbose;
-	char sector_file[256];
+	char sector_file[267];
 	FILE *fp;
 	int i, count=0;
 
-	sprintf(sector_file, "%s/%ssect.asc", ASC_DIR_PATH, q->quad );
+	snprintf(sector_file, 267, "%s/%ssect.asc", ASC_DIR_PATH, q->quad );
+
 	if(verbose)fprintf(stdout, "file=%s\n", sector_file );
 	fp = fopen(sector_file,"r");
 	i=0;
@@ -214,9 +215,10 @@ void get_quadsidx( Quadrant *q )
 	int i, jj, total, iquad;
 	int my_quad_index, begin, end;
 	extern int verbose;
-	char quad_file[256];
+	char quad_file[269];
 
-	sprintf(quad_file, "%s/quadsidx.asc", ASC_DIR_PATH );
+	snprintf(quad_file, 269, "%s/quadsidx.asc", ASC_DIR_PATH );
+
 	fp = fopen( quad_file, "r" );
 	total = 0;
 	jj = 1;
@@ -280,9 +282,10 @@ void get_names( int Ngregions, FE_Regions *fers )
 	FILE *fp;
 	int i,j;
 	extern int verbose;
-	char names_file[256];
+	char names_file[266];
 	
-	sprintf(names_file, "%s/names.asc", ASC_DIR_PATH );
+	snprintf(names_file, 266, "%s/names.asc", ASC_DIR_PATH );
+
 	fp = fopen( names_file, "r" );
 	for( i=0; i<Ngregions; i++ )
 	{

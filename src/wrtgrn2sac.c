@@ -12,7 +12,7 @@ void wrtgrn2sac( Greens *g, int ista, char *wavetype )
 	int ngreen = 22;
         Sac_Header sp;
         FILE *fp;
-        char filename[256];
+        char filename[292];
 
 	void sac_minmax( float *x, int n, float *max, float *min, float *mean );
 
@@ -86,7 +86,10 @@ void wrtgrn2sac( Greens *g, int ista, char *wavetype )
         for( i=0; i<ngreen; i++ )
         {
 
-                sprintf( filename, "%s.%03d.%s.%g.grns", g->filename, ista, cmp[i], g->evdp );
+			/*** 256 -> 256 1 3 1 3 1 */
+                snprintf( filename, 292, 
+			"%s.%03d.%s.%g.grns", 	
+			g->filename, ista, cmp[i], g->evdp );
 
                 sp              = sac_null;
                 sp.b            = g->t0;

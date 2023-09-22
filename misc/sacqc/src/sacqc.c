@@ -807,7 +807,7 @@ void create_GMT5x_script( )
 	fprintf( fp, "\n" );
 
 	fprintf( fp, "#cleanup\n" );
-	fprintf( fp, "# /bin/rm -f sacqc.out sacqc_insert.sql create.sacqc.sql %{PS} %{JPG}\n" );
+	fprintf( fp, "# /bin/rm -f sacqc.out sacqc_insert.sql create.sacqc.sql ${PS} ${JPG}\n" );
 	fprintf( fp, "\n" );
 
 	fprintf( fp, "set SACFILES=(`/bin/ls -1 *.SAC`)\n" );

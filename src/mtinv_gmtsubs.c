@@ -120,15 +120,15 @@ void plot_z_vs_fit_gmt5( int iz, float *z, Solution *sol, EventInfo *ev )
 
 	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
 	{
-		fprintf( fp, " gmt psmeca -R ${PRJ} -Sm0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K -Vq >> plotz.ps\n\n" );
+		fprintf( fp, " gmt psmeca -R ${PRJ} -Sm0.45i/10/0.1 -L -W1p,black -Gred -N -O -K -Vq >> plotz.ps\n\n" );
 	}
 	else if( sol[iz].mt_type == DEVIATORIC ) 
 	{
-        	fprintf( fp, " gmt psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K -Vq >> plotz.ps\n\n" );
+        	fprintf( fp, " gmt psmeca -R ${PRJ} -Sz0.45i/10/0.1 -L -W1p,black -Gred -N -O -K -Vq >> plotz.ps\n\n" );
 	}
 	else
 	{
-		fprintf( fp, " gmt psmeca -R ${PRJ} -Sm0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K -Vq >> plotz.ps\n" );
+		fprintf( fp, " gmt psmeca -R ${PRJ} -Sm0.45i/10/0.1 -L -W1p,black -Gred -N -O -K -Vq >> plotz.ps\n" );
 	}
 
         fprintf( fp, "###\n" );
@@ -265,11 +265,11 @@ void plot_z_vs_fit_gmt4( int iz, float *z, Solution *sol, EventInfo *ev )
 
 	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
 	{
-        	fprintf( fp, " psmeca -R ${PRJ} -Sm0.45i/10/0.1 -N -L -W1p/0 -G255/0/0 -N -O -K -Vq >> plotz.ps\n" );
+        	fprintf( fp, " psmeca -R ${PRJ} -Sm0.45i/10/0.1 -L -W1p/0 -G255/0/0 -N -O -K -Vq >> plotz.ps\n" );
 	}
 	else
 	{
-		fprintf( fp, " psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p/0 -G255/0/0 -N -O -K -Vq >> plotz.ps\n" );
+		fprintf( fp, " psmeca -R ${PRJ} -Sz0.45i/10/0.1 -L -W1p/0 -G255/0/0 -N -O -K -Vq >> plotz.ps\n" );
 	}
 	
 
@@ -357,11 +357,11 @@ void plotmech_gmt5( int iz, Solution *sol, EventInfo *ev, float mechanism_size )
 
 	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
 	{
-          fprintf( fp, "    gmt psmeca -R -JX -Sm%gi/8/0.1 -N -L -W1p,black -Gred -N -O -Vq >> plotmech.ps\n", mechanism_size );
+          fprintf( fp, "    gmt psmeca -R -JX -Sm%gi/8/0.1 -L -W1p,black -Gred -N -O -Vq >> plotmech.ps\n", mechanism_size );
 	}
 	else
 	{
-	  fprintf( fp, "   gmt psmeca -R -JX -Sz%gi/8/0.1 -N -L -W1p,black -Gred -N -O -Vq >> plotmech.ps\n", mechanism_size );
+	  fprintf( fp, "   gmt psmeca -R -JX -Sz%gi/8/0.1 -L -W1p,black -Gred -N -O -Vq >> plotmech.ps\n", mechanism_size );
 	}
 
         fprintf( fp, "\n");
@@ -428,9 +428,9 @@ void plotmech_gmt4( int iz, Solution *sol, EventInfo *ev, float mechanism_size )
         fprintf( fp, "plotmech.txt|\\\n");
 
 	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
-       	  fprintf( fp, "    psmeca -R -JX -Sm%gi/8/0.1 -N -L -W1p/0 -G255/0/0 -N -O -Vq >> plotmech.ps\n", mechanism_size );
+       	  fprintf( fp, "    psmeca -R -JX -Sm%gi/8/0.1 -L -W1p/0 -G255/0/0 -N -O -Vq >> plotmech.ps\n", mechanism_size );
 	else
-	  fprintf( fp, "    psmeca -R -JX -Sz%gi/8/0.1 -N -L -W1p/0 -G255/0/0 -N -O -Vq >> plotmech.ps\n", mechanism_size );
+	  fprintf( fp, "    psmeca -R -JX -Sz%gi/8/0.1 -L -W1p/0 -G255/0/0 -N -O -Vq >> plotmech.ps\n", mechanism_size );
 
         fprintf( fp, "\n");
 
@@ -446,13 +446,20 @@ void plotmech_gmt4( int iz, Solution *sol, EventInfo *ev, float mechanism_size )
 /*** make_map_gmt5()   GMT Version 5.x.x                                           ***/
 /*************************************************************************************/
 
-void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
+void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g, int verbose )
 {
         FILE *fp;
         char filename[256];
-        char *gmt_grd_filename, *gmt_int_filename, *gmt_cpt_filename;
+/*
+        char gmt_grd_filename[256];
+	char gmt_int_filename[256];
+	char gmt_cpt_filename[256];
+*/
+	char *gmt_grd_filename = NULL;
+	char *gmt_int_filename = NULL;
+	char *gmt_cpt_filename = NULL;
+
         int dogrd=1;
-        int verbose=0;
         float xmin,xmax,ymin,ymax;
         float x_axis_anot_interval, y_axis_anot_interval;
         float xy_axis_frame_interval;
@@ -462,35 +469,90 @@ void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
         evla = g[0][iz].evla;
         evlo = g[0][iz].evlo;
 
-        if( (gmt_grd_filename = getenv( "MTINV_GMT_GRID_FILE" )) == NULL )
+	if(verbose)
+	{
+	  fprintf( stdout, "%s: %s: %s: iz=%d nsta=%d\n",
+		progname, __FILE__, __func__, iz, nsta );
+	  fflush(stdout);
+	}
+
+	gmt_grd_filename = calloc( 512, sizeof(char) );
+	gmt_int_filename = calloc( 512, sizeof(char) );
+	gmt_cpt_filename = calloc( 512, sizeof(char) );
+
+	fprintf( stdout, "%s: %s: %s: getenv(MTINV_GMT_GRID_FILE)=%s\n",
+		progname, __FILE__, __func__, getenv( "MTINV_GMT_GRID_FILE" ) );
+	fflush(stdout);
+
+	snprintf( gmt_grd_filename, 512, "%s", getenv( "MTINV_GMT_GRID_FILE" ) );
+
+	fprintf( stdout, "%s: %s: %s: gmt_grd_filename = %s\n", 
+                progname, __FILE__, __func__, gmt_grd_filename );
+        fflush(stdout);
+
+        if( gmt_grd_filename == NULL )
         {
                 dogrd = 0;
                 if(verbose)
+		{
                   fprintf( stdout,
-                        "%s: no GMT grd file found in getenv MTINV_GMT_GRID_FILE\n", progname );
+                     "%s: %s: %s: no GMT grd file found in getenv MTINV_GMT_GRID_FILE\n", 
+			progname, __FILE__, __func__ );
+		  fflush(stdout);
+		}
         }
         else
         {
-                gmt_int_filename = getenv( "MTINV_GMT_INT_FILE" );
-                gmt_cpt_filename = getenv( "MTINV_GMT_CPT_FILE" );
+                snprintf( gmt_int_filename, 512, "%s", getenv( "MTINV_GMT_INT_FILE" ) );
+                snprintf( gmt_cpt_filename, 512, "%s", getenv( "MTINV_GMT_CPT_FILE" ) );
+	
+		if( verbose )
+                {
+                  fprintf( stdout, "%s: %s: %s: including GMT grd file=%s\n", progname, __FILE__, __func__, gmt_grd_filename );
+                  fprintf( stdout, "%s: %s: %s: including GMT cpt file=%s\n", progname, __FILE__, __func__, gmt_cpt_filename );
+                  fprintf( stdout, "%s: %s: %s: including GMT int file=%s\n", progname, __FILE__, __func__, gmt_int_filename );
+                  fflush(stdout);
+                }
 
 		if( (fp = fopen( gmt_grd_filename, "r")) != NULL )
 		{
                 	dogrd = 1;
-			
+			fclose(fp);
 		}
 		else
 		{
 			dogrd = 0;
+			fprintf( stdout, "%s: %s: %s: Cannot open file %s, GMT map will not have topo - dogrd=%d\n",
+				progname, __FILE__, __func__, gmt_grd_filename, dogrd );
+			fflush(stdout);
 		}
-		fclose(fp);
 
-                if( verbose )
+		if( (fp = fopen( gmt_int_filename, "r")) != NULL )
                 {
-                        fprintf( stdout, "%s: including GMT grd file=%s\n", progname, gmt_grd_filename );
-                        fprintf( stdout, "%s: including GMT cpt file=%s\n", progname, gmt_cpt_filename );
-                        fprintf( stdout, "%s: including GMT int file=%s\n", progname, gmt_int_filename );
+                        dogrd = 1;
+                        fclose(fp);
                 }
+                else
+                {
+                        dogrd = 0;
+                        fprintf( stdout, "%s: %s: %s: Cannot open file %s, GMT map will not have topo - dogrd=%d\n",
+                                progname, __FILE__, __func__, gmt_int_filename, dogrd );
+                        fflush(stdout);
+                }
+
+		if( (fp = fopen( gmt_cpt_filename, "r")) != NULL )
+                {
+                        dogrd = 1;
+                        fclose(fp);
+                }
+                else
+                {
+                        dogrd = 0;
+                        fprintf( stdout, "%s: %s: %s: Cannot open file %s, GMT map will not have topo - dogrd=%d\n",
+                                progname, __FILE__, __func__, gmt_cpt_filename, dogrd );
+                        fflush(stdout);
+                }
+
         }
 
         sprintf( filename, "./gmtmap.csh" );
@@ -779,13 +841,12 @@ void make_map_gmt5( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
 /*** BEGIN SUBROUTINE : make_map_gmt4()  GMT Version +4.5.x                        ***/
 /*************************************************************************************/
 
-void make_map_gmt4( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g )
+void make_map_gmt4( int iz, int nsta, EventInfo *ev, Solution *sol, Greens **g, int verbose )
 {
         FILE *fp;
         char filename[256];
         char *gmt_grd_filename, *gmt_int_filename, *gmt_cpt_filename;
         int dogrd=1;
-        int verbose=0;
         float xmin,xmax,ymin,ymax;
         float x_axis_anot_interval, y_axis_anot_interval;
         float xy_axis_frame_interval;
@@ -1183,9 +1244,9 @@ void plot_results_gmt5( int iz, Solution *sol, EventInfo *ev )
         }
 
 	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
-	  fprintf( fp, "gmt psmeca -R ${PRJ} -Sm0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K -Vq >> ${OUTPUT_PS} \n" );
+	  fprintf( fp, "gmt psmeca -R ${PRJ} -Sm0.45i/10/0.1 -L -W1p,black -Gred -N -O -K -Vq >> ${OUTPUT_PS} \n" );
 	else
-	  fprintf( fp, "gmt psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K -Vq >> ${OUTPUT_PS} \n" );
+	  fprintf( fp, "gmt psmeca -R ${PRJ} -Sz0.45i/10/0.1 -L -W1p,black -Gred -N -O -K -Vq >> ${OUTPUT_PS} \n" );
 
         fprintf( fp, "\n" );
 
@@ -1221,9 +1282,9 @@ void plot_results_gmt5( int iz, Solution *sol, EventInfo *ev )
         }
 
 	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
-          fprintf( fp, "gmt psmeca -R ${PRJ} -Sm0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K -Vq >> ${OUTPUT_PS}\n" );
+          fprintf( fp, "gmt psmeca -R ${PRJ} -Sm0.45i/10/0.1 -L -W1p,black -Gred -N -O -K -Vq >> ${OUTPUT_PS}\n" );
 	else
-	  fprintf( fp, "gmt psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p,black -Gred -N -O -K -Vq >> ${OUTPUT_PS}\n" );
+	  fprintf( fp, "gmt psmeca -R ${PRJ} -Sz0.45i/10/0.1 -L -W1p,black -Gred -N -O -K -Vq >> ${OUTPUT_PS}\n" );
 
         fprintf( fp, "\n" );
 
@@ -1259,9 +1320,9 @@ void plot_results_gmt5( int iz, Solution *sol, EventInfo *ev )
         }
 
 	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
-          fprintf( fp, "gmt psmeca -R ${PRJ} -Sm0.45i/10/0 -N -L -W1p,black -Gred -N -O -Vq >> ${OUTPUT_PS} \n" );
+          fprintf( fp, "gmt psmeca -R ${PRJ} -Sm0.45i/10/0 -L -W1p,black -Gred -N -O -Vq >> ${OUTPUT_PS} \n" );
 	else
-	  fprintf( fp, "gmt psmeca -R ${PRJ} -Sz0.45i/10/0 -N -L -W1p,black -Gred -N -O -Vq >> ${OUTPUT_PS} \n" );
+	  fprintf( fp, "gmt psmeca -R ${PRJ} -Sz0.45i/10/0 -L -W1p,black -Gred -N -O -Vq >> ${OUTPUT_PS} \n" );
 
         fprintf( fp, "\n" );
 
@@ -1391,9 +1452,9 @@ void plot_results_gmt4( int iz, Solution *sol, EventInfo *ev )
         }
 
 	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
-          fprintf( fp, "psmeca -R ${PRJ} -Sm0.45i/10/0.1 -N -L -W1p/0 -G255/0/0 -N -O -K -Vq >> ${OUTPUT_PS} \n" );
+          fprintf( fp, "psmeca -R ${PRJ} -Sm0.45i/10/0.1 -L -W1p/0 -G255/0/0 -N -O -K -Vq >> ${OUTPUT_PS} \n" );
 	else
-	  fprintf( fp, "psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p/0 -G255/0/0 -N -O -K -Vq >> ${OUTPUT_PS} \n" );
+	  fprintf( fp, "psmeca -R ${PRJ} -Sz0.45i/10/0.1 -L -W1p/0 -G255/0/0 -N -O -K -Vq >> ${OUTPUT_PS} \n" );
 
         fprintf( fp, "\n" );
 
@@ -1426,9 +1487,9 @@ void plot_results_gmt4( int iz, Solution *sol, EventInfo *ev )
         }
 
 	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
-          fprintf( fp, "psmeca -R ${PRJ} -Sm0.45i/10/0.1 -N -L -W1p/0 -G255/0/0 -N -O -K -Vq >> ${OUTPUT_PS}\n" );
+          fprintf( fp, "psmeca -R ${PRJ} -Sm0.45i/10/0.1 -L -W1p/0 -G255/0/0 -N -O -K -Vq >> ${OUTPUT_PS}\n" );
 	else
-	  fprintf( fp, "psmeca -R ${PRJ} -Sz0.45i/10/0.1 -N -L -W1p/0 -G255/0/0 -N -O -K -Vq >> ${OUTPUT_PS}\n" );
+	  fprintf( fp, "psmeca -R ${PRJ} -Sz0.45i/10/0.1 -L -W1p/0 -G255/0/0 -N -O -K -Vq >> ${OUTPUT_PS}\n" );
 
         fprintf( fp, "\n" );
 
@@ -1462,9 +1523,9 @@ void plot_results_gmt4( int iz, Solution *sol, EventInfo *ev )
         }
 
 	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
-	  fprintf( fp, "psmeca -R ${PRJ} -Sm0.45i/10/0 -N -L -W1p/0 -G255/0/0 -N -O -Vq >> ${OUTPUT_PS} \n" );
+	  fprintf( fp, "psmeca -R ${PRJ} -Sm0.45i/10/0 -L -W1p/0 -G255/0/0 -N -O -Vq >> ${OUTPUT_PS} \n" );
 	else
-	  fprintf( fp, "psmeca -R ${PRJ} -Sz0.45i/10/0 -N -L -W1p/0 -G255/0/0 -N -O -Vq >> ${OUTPUT_PS} \n" );
+	  fprintf( fp, "psmeca -R ${PRJ} -Sz0.45i/10/0 -L -W1p/0 -G255/0/0 -N -O -Vq >> ${OUTPUT_PS} \n" );
 
         fprintf( fp, "\n" );
 
@@ -1475,6 +1536,561 @@ void plot_results_gmt4( int iz, Solution *sol, EventInfo *ev )
         fclose(fp);
 
 } /*** END OF SUBROUTINE plot_results_gmt4() ***/
+
+
+/*****************************************************************************/
+/*** BEGIN SUBROUTINE : wfplot2_gmt4()                                    ****/
+/*** - GMT 4.5.x script to make pretty publication quality figures!       ***/
+/*** this version does each station as rows of 3-component rather than cols ***/
+/*****************************************************************************/
+
+void wfplot2_gmt4( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int verbose, char *sort_by_value, int print_gmtwf_mt_info )
+{
+	FILE *fp;
+        char grd_mo_type[6];
+        char filename[256], synt_filename[256], data_filename[256];
+        float cm2mm = 10.;
+        float cm2microns = 10000.;
+        float cm2nanometers = 10000000.;
+        float scale;
+        float peak_amplitude = 0;
+
+        float Mo_newton_meters_abcassa;
+        int Mo_newton_meters_exponent;
+
+/* see include/mt.h Mo = math.pow( 10.0, 1.5*(Mw+10.73) ) = 1.2445146117713818e+16; Reference Mw = 0.0 */
+
+        int first = 1, ista, ii, it, npts, ipage = 0;
+        float dt, beg;
+        float *x, *syn_z, *syn_r, *syn_t, *dat_z, *dat_r, *dat_t;
+        float new_page;
+        float xmin, xmax, ymin, ymax, ytmp;
+
+        char syn_linecolor[24], dat_linecolor[24];
+        char limits[128];
+        char project[64];
+        char myloc[8];
+
+        char    axes_top[128];
+        char axes_middle[128];
+        char axes_bottom[128];
+
+        char label[256];
+        char page_xy_offset[64];
+        char PS_outputfilename[256];
+        char JPG_outputfilename[256];
+        char yunits[24];
+
+        int panel_count  = 0;
+        int total_sta_per_page = 8;
+	float xinc = +1.5, yinc = +1.25;
+        float xsize = +1.5, ysize = +0.75;
+
+        void sac_minmax( float *x, int nt, float *min, float *max, float *mean );
+
+        int *indx;
+        void station_sorter( int *indx, EventInfo *ev, int nsta, char *sort_type, int verbose ); 
+                /* sort_type == "none" or "dist" or "azi" or "baz" */
+
+/*** add pass option to plot grayscale or color waveforms ***/
+/*** add option to plot waveforms ordered by azimuth instead of distance ***/
+
+	fp = fopen( "gmtwf.csh", "w" );
+        fprintf( fp, "#!/bin/csh\n" );
+        fprintf( fp, "### \n" );
+        fprintf( fp, "### gmtwf.csh - GMT 4.5.x script to make pretty publication quality figures!\n" );
+        fprintf( fp, "### \n" );
+        fprintf( fp, "gmtset PAGE_ORIENTATION          portrait  \n" );
+        fprintf( fp, "gmtset ANNOT_OFFSET_PRIMARY      2p        \n" );
+        fprintf( fp, "gmtset ANNOT_OFFSET_SECONDARY    2p        \n" );
+        fprintf( fp, "gmtset LABEL_OFFSET              0p        \n" );
+        fprintf( fp, "gmtset PAPER_MEDIA               letter    \n" );
+        fprintf( fp, "gmtset ANNOT_FONT_SIZE_PRIMARY   9p        \n" );
+	fprintf( fp, "gmtset ANNOT_FONT_PRIMARY        Helvetica \n" );
+        fprintf( fp, "gmtset ANNOT_FONT_SIZE_SECONDARY 9p        \n" );
+	fprintf( fp, "gmtset ANNOT_FONT_SECONDARY      Helvetica   \n" );
+        fprintf( fp, "gmtset LABEL_FONT                Times-Roman \n" );
+	fprintf( fp, "gmtset LABEL_FONT_SIZE           9p          \n" );
+        fprintf( fp, "gmtset HEADER_FONT               Times-Roman \n" );
+	fprintf( fp, "gmtset HEADER_FONT_SIZE          12p         \n" );
+        fprintf( fp, "\n" );
+
+	scale = cm2nanometers;
+	
+/*** sort by distance or azimuth ***/
+
+	indx = (int *) calloc( nsta+1, sizeof(int) );
+	station_sorter( indx, ev, nsta, sort_by_value,  verbose );
+	panel_count = 0;
+
+	for( ii=0; ii<nsta; ii++ )
+	{
+		ista=indx[ii+1]-1;
+
+/*** set variables and allocate mem ***/
+
+                npts = ev[ista].ew.s.npts;
+                dt   = ev[ista].ew.s.delta;
+                beg  = ev[ista].ew.s.b;
+                syn_z = (float *) malloc( npts * sizeof(float) );
+                syn_r = (float *) malloc( npts * sizeof(float) );
+                syn_t = (float *) malloc( npts * sizeof(float) );
+                dat_z = (float *) malloc( npts * sizeof(float) );
+                dat_r = (float *) malloc( npts * sizeof(float) );
+                dat_t = (float *) malloc( npts * sizeof(float) );
+                x     = (float *) malloc( npts * sizeof(float) );
+
+        /*** convert amplitudes ***/
+
+                for( it=0; it<npts; it++ )
+                {
+                        dat_t[it] = ev[ista].ew.data[it]    * scale;
+                        dat_r[it] = ev[ista].ns.data[it]    * scale;
+                        dat_z[it] = ev[ista].z.data[it]     * scale;
+                        syn_t[it] = ev[ista].syn_t.data[it] * scale;
+                        syn_r[it] = ev[ista].syn_r.data[it] * scale;
+                        syn_z[it] = ev[ista].syn_z.data[it] * scale;
+                        x[it] = beg + (float)it * dt;
+                }
+        
+        /*** reset the data and syn min max after rescaling  ***/
+
+                sac_minmax( dat_t, npts, &(ev[ista].ew.s.depmax), &(ev[ista].ew.s.depmin), &(ev[ista].ew.s.depmen) );
+                sac_minmax( dat_r, npts, &(ev[ista].ns.s.depmax), &(ev[ista].ns.s.depmin), &(ev[ista].ns.s.depmen) );
+                sac_minmax( dat_z, npts, &(ev[ista].z.s.depmax), &(ev[ista].z.s.depmin), &(ev[ista].z.s.depmen) );
+                sac_minmax( syn_t, npts, &(ev[ista].syn_t.s.depmax), &(ev[ista].syn_t.s.depmin), &(ev[ista].syn_t.s.depmen) );
+                sac_minmax( syn_r, npts, &(ev[ista].syn_r.s.depmax), &(ev[ista].syn_r.s.depmin), &(ev[ista].syn_r.s.depmen) );
+                sac_minmax( syn_z, npts, &(ev[ista].syn_z.s.depmax), &(ev[ista].syn_z.s.depmin), &(ev[ista].syn_z.s.depmen) );
+
+        /*** determine the component (ymin,ymax) for this station 
+                data or syn and scale whole row y-axis by this value ***/
+
+                ymin = +1.0E+29;
+                if( ev[ista].ew.s.depmin    < ymin ) ymin = ev[ista].ew.s.depmin;
+                if( ev[ista].ns.s.depmin    < ymin ) ymin = ev[ista].ns.s.depmin;
+                if( ev[ista].z.s.depmin     < ymin ) ymin = ev[ista].z.s.depmin;
+                if( ev[ista].syn_t.s.depmin < ymin ) ymin = ev[ista].syn_t.s.depmin;
+                if( ev[ista].syn_r.s.depmin < ymin ) ymin = ev[ista].syn_r.s.depmin;
+                if( ev[ista].syn_z.s.depmin < ymin ) ymin = ev[ista].syn_z.s.depmin;
+
+                ymax = -1.0E+29;
+                if( ev[ista].ew.s.depmax    > ymax ) ymax = ev[ista].ew.s.depmax;
+                if( ev[ista].ns.s.depmax    > ymax ) ymax = ev[ista].ns.s.depmax;
+                if( ev[ista].z.s.depmax     > ymax ) ymax = ev[ista].z.s.depmax;
+                if( ev[ista].syn_t.s.depmax > ymax ) ymax = ev[ista].syn_t.s.depmax;
+                if( ev[ista].syn_r.s.depmax > ymax ) ymax = ev[ista].syn_r.s.depmax;
+                if( ev[ista].syn_z.s.depmax > ymax ) ymax = ev[ista].syn_z.s.depmax;
+                peak_amplitude = fabs(ymin) + fabs(ymax);
+
+        /*** pad the y-axes by 5% additional scale ***/
+
+                ytmp = ymin - ( fabs(ymin) * 0.05 );
+                ymin = roundf( ytmp );
+                ytmp = ymax + ( fabs(ymax) * 0.05 );
+                ymax = roundf( ytmp );
+
+        /*** scale x-axis (xmin,xmax) ***/
+
+                if( beg < 10 ) 
+                        xmin=0;
+                else
+                        xmin = beg;
+                xmax = beg + (float)npts*dt;
+
+                ytmp = xmax + ( fabs(xmax) * 0.05 );
+                xmax = roundf( ytmp );
+
+        /*** orientation == PORTRAIT 24 rows per page  ***/
+
+                new_page = panel_count % total_sta_per_page;
+
+                sprintf( limits, "-R%g/%g/%g/%g", xmin, xmax, ymin, ymax );
+
+                sprintf( project, "-JX%gi/%gi", xsize, ysize );
+
+                if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+                {
+                 if( ev[ista].grd_mo_type == VELOCITY )
+                 {
+                        sprintf( grd_mo_type, "V" );
+                        sprintf( yunits, "nm/sec" );
+                 }
+                 else
+                 {
+                        sprintf( grd_mo_type, "D" );
+                        sprintf( yunits, "nm" );
+                 }
+                }
+                else if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+                {
+                  if( ev[ista].grd_mo_type == VELOCITY )
+                  {
+                        sprintf( grd_mo_type, "V" );
+                        sprintf( yunits, "nrad/sec" );
+                  }
+                  else
+                  {
+                        sprintf( grd_mo_type, "D" );
+                        sprintf( yunits, "nrad" );
+                  }
+                }
+
+                        /*** changed so no y-axes, moved peak amplitude to under station text ***/
+                                                        /*** changed -BsW to -Bs ***/
+                sprintf( axes_top, "-Bf%ga%g:\"sec\":/f%ga%g:\"%s\":s ",
+                        roundf(xmax/4.0), roundf(xmax),
+                        roundf(ymax/4.0), roundf(ymax),
+                        yunits );
+
+                                                        /*** changed -BSW to -BS ***/
+                sprintf( axes_middle, "-Bf%ga%g/f%ga%g:\"%s\":S ",
+                        roundf(xmax/4.0), roundf(xmax),
+                        roundf(ymax/4.0), roundf(ymax), yunits );
+
+                                                        /**** changed -BSW to -BS ***/
+                sprintf( axes_bottom, "-Bf%ga%g:\"sec\":/f%ga%g:\"%s\":S ",
+                        roundf(xmax/4.0), roundf(xmax), 
+                        roundf(ymax/4.0), roundf(ymax),
+                        yunits );
+
+        /*** if new_page true or first page, first row ***/
+
+                if( new_page == 0 || first )
+                {
+                        /*** if new_page true and not first 
+                                close the previous plot ****/
+
+                        if ( new_page == 0 && !first )
+                        {
+                                fprintf( fp, "### close the previous plot\n" );
+                                fprintf( fp, "echo 0 0 . | pstext -R -JX -O >> %s\n", PS_outputfilename );
+                                fprintf( fp, "# gs %s\n", PS_outputfilename );
+                                fprintf( fp, "ps2pdf %s\n", PS_outputfilename );
+                                fprintf( fp, "ps2raster -Tj -E600 -A %s\n", PS_outputfilename );
+                                fprintf( fp, "open %s\n", JPG_outputfilename );
+                        }
+
+		/*** ok now start new plot page ***/
+
+                        sprintf( PS_outputfilename, "gmtwf.%03d.ps", ipage );
+                        sprintf( JPG_outputfilename, "gmtwf.%03d.jpg", ipage );
+
+                        fprintf( fp, "\n" );
+                        fprintf( fp, "#########################################################\n" );
+                        fprintf( fp, "################## NEW PAGE %3d ########################\n", ipage );
+                        fprintf( fp, "#########################################################\n" );
+                        fprintf( fp, "\n" );
+
+                        fprintf( fp, "###\n" );
+                        fprintf( fp, "################## %s ista = %d ########################\n", grn[ista][iz].stnm, ista+1 );
+                        fprintf( fp, "###\n" );
+
+                        fprintf( fp, "psbasemap %s %s %s -P -K >! %s\n", limits, project, axes_bottom, PS_outputfilename );
+                        first = 0;
+                        ipage++;
+                } 
+                else /** next row up ***/
+                {
+                        fprintf( fp, "###\n" );
+                        fprintf( fp, "################## %s ista = %d ########################\n", grn[ista][iz].stnm, ista+1 );
+                        fprintf( fp, "###\n" );
+
+                        fprintf( fp, "psbasemap %s %s %s -Y%gi -X-%gi -O -K >> %s\n", 
+                                limits, project, axes_middle, yinc, (2.0*xinc), PS_outputfilename );
+                }
+
+                sprintf( dat_linecolor, "-W1p/black " );
+
+/*** color only ***/
+
+                if( ev[ista].iused == 1 )
+                  sprintf( syn_linecolor, "-W1p/redt10_2:0p " );
+                else if( ev[ista].iused == 0 )
+                  sprintf( syn_linecolor, "-W1p/bluet10_2:0p " );
+                else 
+                  sprintf( syn_linecolor, "-W1p/yellowt10_2:0p " );
+
+/*** gray scale ***/
+/*
+                if( ev[ista].iused == 1 )
+                  sprintf( syn_linecolor, "-W1p/darkgrayt10_2:0p" );
+                else if( ev[ista].iused == 0 )
+                  sprintf( syn_linecolor, "-W1p/grayt10_2:0p" );
+                else
+                  sprintf( syn_linecolor, "-W1p/yellowt10_2:0p" );
+*/
+
+	/*** vertical ***/
+
+		sprintf( data_filename, "%s.%s.%s.%03d.z.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
+                sprintf( synt_filename, "%s.%s.%s.%03d.z.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
+
+                fprintf( fp, "\n### vertical data and synthetics\n" );
+                fprintf( fp, "psxy -m -R -JX %s -O -K         %s >> %s\n", dat_linecolor, data_filename, PS_outputfilename );
+                fprintf( fp, "psxy -m -R -JX %s -O -K         %s >> %s\n", syn_linecolor, synt_filename, PS_outputfilename );
+
+                if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+                {
+                        fprintf( fp, "echo \"0 %g 14 0 1 a 0@~w@~@-x@-\" | pstext -R -JX -D0.1i/0.1i -N -O -K >> %s\n",
+                                ymax, PS_outputfilename );
+                }
+                else if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+                {
+                        fprintf( fp, "echo \"0 %g 14 0 1 0 Z\" | pstext -R -JX -D0.1i/0.0i -N -O -K  >> %s\n", 
+                                ymax, PS_outputfilename );
+                }
+
+        /*** radial ***/
+
+                sprintf( data_filename, "%s.%s.%s.%03d.r.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
+                sprintf( synt_filename, "%s.%s.%s.%03d.r.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
+
+                fprintf( fp, "\n### radial data and synthetics\n" );
+                fprintf( fp, "psxy -m -R -JX %s -O -K  -X%gi   %s >> %s\n", dat_linecolor, xinc, data_filename, PS_outputfilename );
+                fprintf( fp, "psxy -m -R -JX %s -O -K          %s >> %s\n", syn_linecolor, synt_filename, PS_outputfilename );
+
+                if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+                {
+                 fprintf( fp, "echo \"0 %g 14 0 1 0 @~w@~@-y@-\" | pstext -R -JX -D0.1i/0.1i -N -O -K  >> %s\n", 
+                        ymax, PS_outputfilename );
+                }
+                else if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+                {
+                 fprintf( fp, "echo \"0 %g 14 0 1 0 R\" | pstext -R -JX -D0.1i/0.0i -N -O -K  >> %s\n", 
+                        ymax, PS_outputfilename );
+                }
+
+        /*** transverse ***/
+
+                sprintf( data_filename, "%s.%s.%s.%03d.t.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
+                sprintf( synt_filename, "%s.%s.%s.%03d.t.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
+
+                fprintf( fp, "\n### transverse data and synthetics\n" );
+                fprintf( fp, "psxy -m -R -JX %s -O -K  -X%gi   %s >> %s\n", dat_linecolor, xinc, data_filename, PS_outputfilename );
+                fprintf( fp, "psxy -m -R -JX %s -O -K          %s >> %s\n", syn_linecolor, synt_filename, PS_outputfilename );
+
+                if( strcmp( ev[ista].wavetype, "Rotational" ) == 0 )
+                {
+                 fprintf( fp, "echo \"0 %g 14 0 1 0 @~w@~@-z@-\" | pstext -R -JX -D0.1i/0.1i -N -O -K  >> %s\n", 
+                        ymax, PS_outputfilename );
+                }
+                else if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
+                {
+                 fprintf( fp, "echo \"0 %g 14 0 1 0 T\" | pstext -R -JX -D0.1i/0.0i -N -O -K  >> %s\n", 
+                        ymax, PS_outputfilename );
+                }
+
+	/*** station label blk ***/
+
+		if(  strcmp( grn[ista][iz].loc, "" ) == 0 )
+                        strcpy( myloc, "--" );
+                else
+                        strcpy( myloc, grn[ista][iz].loc );
+
+                fprintf( fp, "\n### net.sta label tag\n" );
+
+		fprintf( fp, "pstext -R0/1/0/1 -JX1i/1i -D0i/0i -N -O -K  >> %s << EOF\n", PS_outputfilename );
+                fprintf( fp, "1.5 0.8 11 0 1 0  %s.%s.%s\n",                   grn[ista][iz].net, grn[ista][iz].stnm, myloc );
+                fprintf( fp, "1.5 0.6 11 0 1 0  @~D@~=%.0f @%%7%% km @%%%%\n", grn[ista][iz].rdist );
+                fprintf( fp, "1.5 0.4 11 0 1 0  @~f@~=%.0f@+o@+\n",            grn[ista][iz].az );
+                fprintf( fp, "EOF\n" );
+
+	/*** peak-to-peak ***/
+
+		if( print_gmtwf_mt_info )
+		{
+		 fprintf( fp, "pstext -R0/1/0/1 -JX1i/1i -D0i/0i -N -O -K  >> %s << EOF\n", PS_outputfilename );
+                 fprintf( fp, "1.5 0.2 9 0 1 0 %5.2e @%%7%%%s@%%%%\n", peak_amplitude, yunits );
+                 fprintf( fp, "EOF\n" );
+                 fprintf( fp, "\n" );
+		}
+
+	/*** invert / prediction / freq band ***/
+
+		if( print_gmtwf_mt_info )
+                {
+                 fprintf( fp, "pstext -R0/1/0/1 -JX1i/1i -D0i/0i -N -O -K  >> %s << EOF\n", PS_outputfilename );
+                 if( ev[ista].iused == 1 )
+                  fprintf( fp, "1.5 0.05 8 0 1 0 Invert %4.2f_%04.2fHz\n", ev[ista].lf, ev[ista].hf );
+                 else if( ev[ista].iused == 0 )
+                  fprintf( fp, "1.5 0.05 8 0 1 0 Predict %4.2f_%04.2fHz\n", ev[ista].lf, ev[ista].hf );
+                 fprintf( fp, "EOF\n" );
+                 fprintf( fp, "\n" );
+                }
+
+		free(x);
+                free(syn_z);
+                free(syn_r);
+                free(syn_t);
+                free(dat_z);
+                free(dat_r);
+                free(dat_t);
+
+                panel_count++;
+
+        } /*** loop over ista - stations ***/
+
+/**************************************************************************************************************************/
+/*** plot a focal mechanism ***/
+/**************************************************************************************************************************/
+
+        fprintf( fp, "####\n" );
+        fprintf( fp, "################## mechanism ########################\n" );
+        fprintf( fp, "####\n" );
+
+                                /*** x-offset change from 2.0 inches to 2.25inches -X+2i -> -X+2.25i ***/
+                                /*** change red to gray ***/
+
+        if( sol[iz].mt_type == EXPLOSION || sol[iz].mt_type == FULL_MT )
+        {
+          fprintf( fp, "psmeca -R0/10/0/10 -JX1.5i/1.5i -Sm1i/0p -T0/1p/0/0/0 -W1p/0/0/0 -G180/180/180 -N -X+2.15i -O -K  >> %s << EOF\n",
+                PS_outputfilename );
+        }
+        else  /*** zero trace MT ***/
+        {
+          fprintf( fp, "psmeca -R0/10/0/10 -JX1.5i/1.5i -Sz1i/0p -T0/1p/0/0/0 -W1p/0/0/0 -G180/180/180 -N -X+2.15i -O -K  >> %s << EOF\n",
+                PS_outputfilename );
+        }
+
+	/*** this is for psmeca not pstext ***/
+        fprintf( fp, "5 5 %g %g %g %g %g %g %g %d x y \n",
+                grn[0][iz].evdp,
+                sol[iz].mrr, sol[iz].mtt, sol[iz].mff,
+                sol[iz].mrt, sol[iz].mrf, sol[iz].mtf,
+                sol[iz].exponent );
+	
+	/****  %4d/%02d/%02dT%02d:%02d:%05.2f %s
+                ev[0].ot.year, ev[0].ot.month, ev[0].ot.mday,
+                ev[0].ot.hour, ev[0].ot.min, sol[iz].ot,
+                ev[0].comment
+         ****/
+
+        fprintf( fp, "EOF\n");
+        fprintf( fp, "\n");
+
+/**************************************************************************************************************************/
+/*** plot the information block, close the plot ***/
+/**************************************************************************************************************************/
+        fprintf( stderr, "%s: %s: %s: print_gmtwf_mt_info = %d \n", progname, __FILE__, __func__, print_gmtwf_mt_info );
+        fflush( stderr );
+
+        fprintf( fp, "###\n" );
+        fprintf( fp, "### MOMENT TENSOR/FOCAL MECHANISM INFORMATION LABEL \n" );
+        fprintf( fp, "###\n" );
+
+        fprintf( fp, "pstext -R0/10/0/10 -JX1.5i/1.8i -D0i/0i -N -O  -X-1i -Y-1.5i >> %s << EOF\n", 
+                PS_outputfilename );
+        fprintf( fp, "9 9 10 0 1 0 %s\n", ev[0].comment );
+        fprintf( fp, "9 8 10 0 1 0 %4d/%02d/%02dT%02d:%02d:%05.2f\n",
+                ev[0].ot.year, ev[0].ot.month, ev[0].ot.mday, ev[0].ot.hour, ev[0].ot.min, sol[iz].ot );
+
+        if( print_gmtwf_mt_info )
+        {
+          fprintf( fp, "9 7 10 0 1 0 Depth = %5.1f @%%7%%km@%%%%\n", grn[0][iz].evdp );
+          fprintf( fp, "9 6 10 0 1 0 M@-w@- = %5.2f\n", sol[iz].mw );
+
+          if( sol[iz].abcassa < 1 )
+	  {
+		sol[iz].abcassa *= 10;
+		sol[iz].exponent -= 1;
+	  }
+          /*** use Newton meters (N m) instead of dyne cm (dyne x cm) ***/
+          Mo_newton_meters_abcassa = sol[iz].abcassa;
+          Mo_newton_meters_exponent = sol[iz].exponent - 7;
+
+        /***fprintf( fp, "9 5 10 0 1 0 Mo = %5.2f@%%12%%\\264@%%%%10@+%2d@+ dyne@%%12%%\\264@%%%%cm\n", 
+		sol[iz].abcassa, sol[iz].exponent ); ***/
+
+          fprintf( fp, "9 5 10 0 1 0 M@-0@- = %5.2f@%%12%%\\264@%%%%10@+%2d@+ N@%%12%%\\264@%%%%m\n",
+                Mo_newton_meters_abcassa, Mo_newton_meters_exponent );
+
+        } /**end print_gmtwf_mt_info **/
+
+	if( print_gmtwf_mt_info )
+        {
+                if( sol[iz].mt_type == EXPLOSION  )
+			fprintf( fp, "9 4 10 0 1 0 ISO=%.0f%%\n", sol[iz].PISO );
+
+                if( sol[iz].mt_type == DEVIATORIC )
+			fprintf( fp, "9 4 10 0 1 0 DC=%.0f%% CLVD=%.0f%%\n", sol[iz].PDC, sol[iz].PCLVD );
+
+                if( sol[iz].mt_type == FULL_MT    )
+			fprintf( fp, "9 4 10 0 1 0 DC=%.0f%% CLVD=%.0f%% ISO=%.0f%%\n",
+                                        sol[iz].PDC, sol[iz].PCLVD, sol[iz].PISO );
+
+                fprintf( fp, "9 3 10 0 1 0 VR= %5.1f%%\n", sol[iz].var_red );
+
+                fprintf( fp, "9 2 10 0 1 0 M@-xx@-=%+.2f M@-xy@-=%+.2f\n",
+                        sol[iz].moment_tensor[1][1]/pow(10,sol[iz].exponent),
+                        sol[iz].moment_tensor[1][2]/pow(10,sol[iz].exponent) );
+
+                fprintf( fp, "9 1 10 0 1 0 M@-xz@-=%+.2f M@-yy@-=%+.2f\n",
+                        sol[iz].moment_tensor[1][3]/pow(10,sol[iz].exponent),
+                        sol[iz].moment_tensor[2][2]/pow(10,sol[iz].exponent) );
+
+                fprintf( fp, "9 0 10 0 1 0 M@-yz@-=%+.2f M@-zz@-=%+.2f\n",
+                        sol[iz].moment_tensor[2][3]/pow(10,sol[iz].exponent),
+                        sol[iz].moment_tensor[3][3]/pow(10,sol[iz].exponent) );
+
+                if( sol[iz].mt_type == FULL_MT    )
+                {
+                  fprintf( fp, "9 -1 10 0 1 0 Lune @%%12%%d@%%%%=%.2f @%%12%%g@%%%%=%.2f\n", 
+			sol[iz].lune_lat, sol[iz].lune_lon );
+                }
+
+                if( sol[iz].mt_type == DEVIATORIC ) 
+                {
+                  fprintf( fp, "9 -1 10 0 1 0 P1(S/D/R): %g/%g/%g\n", 
+			roundf(sol[iz].Maj.P1.s), roundf(sol[iz].Maj.P1.d), roundf(sol[iz].Maj.P1.r) );
+                  fprintf( fp, "9 -2 10 0 1 0 P2(S/D/R): %g/%g/%g\n", 
+			roundf(sol[iz].Maj.P2.s), roundf(sol[iz].Maj.P2.d), roundf(sol[iz].Maj.P2.r) );
+                }
+        }
+        else
+	{
+/*** reduce clutter, dont print strike-dip-rake  ***/
+/*** reduce clutter, dont print moment tensor elements ***/
+        /*
+                fprintf( fp, "9 4 10 0 1 0 M@-xx@-=%+.2f M@-xy@-=%+.2f\n",
+                        sol[iz].moment_tensor[1][1]/pow(10,sol[iz].exponent),
+                        sol[iz].moment_tensor[1][2]/pow(10,sol[iz].exponent) );
+
+                fprintf( fp, "9 3 10 0 1 0 M@-xz@-=%+.2f M@-yy@-=%+.2f\n",
+                        sol[iz].moment_tensor[1][3]/pow(10,sol[iz].exponent),
+                        sol[iz].moment_tensor[2][2]/pow(10,sol[iz].exponent) );
+
+                fprintf( fp, "9 2 10 0 1 0 M@-yz@-=%+.2f M@-zz@-=%+.2f\n",
+                        sol[iz].moment_tensor[2][3]/pow(10,sol[iz].exponent),
+                        sol[iz].moment_tensor[3][3]/pow(10,sol[iz].exponent) );
+        */
+
+        } /*** if print_gmtwf_mt_info true ***/
+
+        fprintf( fp, "EOF\n" );
+
+        fprintf( fp, "\n" );
+
+/*** show the plot ***/
+
+        fprintf( fp, "# gs %s\n", PS_outputfilename );
+        fprintf( fp, "ps2pdf %s\n", PS_outputfilename );
+        fprintf( fp, "ps2raster -Tj -E600 -A  %s\n", PS_outputfilename );
+
+	fprintf( fp, "#echo use xdg-open, pix, eog, xv to view jpg\n" );
+        fprintf( fp, "open %s\n", JPG_outputfilename );
+	
+        fclose(fp);
+
+        chmod( "gmtwf.csh", S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH );
+
+} /**** END SUBROUTINE : wfplot2_gmt4() ***/
+
+
+
+
+
+
+
 
 
 /*****************************************************************************/
@@ -2013,748 +2629,9 @@ void wfplot2_gmt5( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz,
 } /**** END SUBROUTINE : wfplot2_gmt5() ***/
 
 
-
-/*****************************************************************************/
-/*** BEGIN SUBROUTINE : gmt5wfplot()  *****************************************/
-/*** - GMT 5.x.x script to make pretty publication quality figures!   ***/
-/*****************************************************************************/
-
-
-void gmt5wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int iorientation, int verbose )
-{
-/* see include/mt.h Mo = math.pow( 10.0, 1.5*(Mw+10.73) ) = 1.2445146117713818e+16; Reference Mw = 0.0 */
-
-        FILE *fp;
-        char filename[256], synt_filename[256], data_filename[256];
-        char grd_mo_type[5];
-        float cm2mm = 10.;
-        float cm2microns = 10000.;
-        float *x, *syn_z, *syn_r, *syn_t, *dat_z, *dat_r, *dat_t;
-        int ista, it, npts;
-        float dt, beg;
-        int first = 1;
-        float  xmin, xmax, ymin, ymax, xsize, ysize;
-        float new_col, new_page;
-        char limits[128], project[64], axes[128];
-	char label[128];
-        char outputfilename[256];
-        int ipage;
-        char linecolor[24];
-        char page_xy_offset[64];
-
-        void sac_minmax( float *, int, float *, float *, float * );
-
-        ipage = 0;
-
-        fp = fopen( "gmtwf.csh", "w" );
-
-        fprintf( fp, "#!/bin/csh\n" );
-        fprintf( fp, "### \n" );
-        fprintf( fp, "### gmtwf.csh - GMT 5.x.x script to make pretty publication quality figures!\n" );
-        fprintf( fp, "### \n" );
-
-        if( iorientation == PORTRAIT )  fprintf( fp, "gmt set PS_PAGE_ORIENTATION portrait\n" );
-        if( iorientation == LANDSCAPE ) fprintf( fp, "gmt set PS_PAGE_ORIENTATION landscape\n" );
-
-        fprintf( fp, "gmt set MAP_ANNOT_OFFSET_PRIMARY 2p\n" );
-        fprintf( fp, "gmt set MAP_ANNOT_OFFSET_SECONDARY 2p\n" );
-        fprintf( fp, "gmt set MAP_LABEL_OFFSET 2p\n" );
-
-        fprintf( fp, "gmt set PS_MEDIA letter\n" );
-
-        fprintf( fp, "\n" );
-
-        for( ista=0; ista<nsta; ista++ )
-        {
-                fprintf( fp, "\n" );
-
-        /*** set variables and allocate mem ***/
-
-                npts = ev[ista].ew.s.npts;
-                dt   = ev[ista].ew.s.delta;
-                beg  = ev[ista].ew.s.b;
-                syn_z = (float *) malloc( npts * sizeof(float) );
-                syn_r = (float *) malloc( npts * sizeof(float) );
-                syn_t = (float *) malloc( npts * sizeof(float) );
-                dat_z = (float *) malloc( npts * sizeof(float) );
-                dat_r = (float *) malloc( npts * sizeof(float) );
-                dat_t = (float *) malloc( npts * sizeof(float) );
-                x     = (float *) malloc( npts * sizeof(float) );
-
-                sprintf( grd_mo_type, "D" );
-                if( ev[ista].grd_mo_type == VELOCITY ) sprintf( grd_mo_type, "V" );
-
-        /*** convert amplitudes ***/
-
-                for( it=0; it<npts; it++ )
-                {
-                        dat_t[it] = ev[ista].ew.data[it]    * cm2microns;
-                        dat_r[it] = ev[ista].ns.data[it]    * cm2microns;
-                        dat_z[it] = ev[ista].z.data[it]     * cm2microns;
-                        syn_t[it] = ev[ista].syn_t.data[it] * cm2microns;
-                        syn_r[it] = ev[ista].syn_r.data[it] * cm2microns;
-                        syn_z[it] = ev[ista].syn_z.data[it] * cm2microns;
-                        x[it] = beg + (float)it * dt;
-                }
-
-        /*** set the syn minmax seperate in the SAC header ***/
-
-                sac_minmax( dat_t, npts, &(ev[ista].ew.s.depmax), &(ev[ista].ew.s.depmin), &(ev[ista].ew.s.depmen) );
-                sac_minmax( dat_r, npts, &(ev[ista].ns.s.depmax), &(ev[ista].ns.s.depmin), &(ev[ista].ns.s.depmen) );
-                sac_minmax( dat_z, npts, &(ev[ista].z.s.depmax), &(ev[ista].z.s.depmin), &(ev[ista].z.s.depmen) );
-                sac_minmax( syn_t, npts, &(ev[ista].syn_t.s.depmax), &(ev[ista].syn_t.s.depmin), &(ev[ista].syn_t.s.depmen) );
-                sac_minmax( syn_r, npts, &(ev[ista].syn_r.s.depmax), &(ev[ista].syn_r.s.depmin), &(ev[ista].syn_r.s.depmen) );
-                sac_minmax( syn_z, npts, &(ev[ista].syn_z.s.depmax), &(ev[ista].syn_z.s.depmin), &(ev[ista].syn_z.s.depmen) );
-
-                ymin = ev[ista].ew.s.depmin;
-                if( ev[ista].ns.s.depmin < ymin ) ymin = ev[ista].ns.s.depmin;
-                if( ev[ista].z.s.depmin  < ymin ) ymin = ev[ista].z.s.depmin;
-                if( ev[ista].syn_t.s.depmin < ymin ) ymin = ev[ista].syn_t.s.depmin;
-                if( ev[ista].syn_r.s.depmin < ymin ) ymin = ev[ista].syn_r.s.depmin;
-                if( ev[ista].syn_z.s.depmin < ymin ) ymin = ev[ista].syn_z.s.depmin;
-
-                xmin = beg;
-                xmax = beg+npts*dt;
-                xmax = roundf( xmax + xmax * 0.1 );
-
-                ymax =  ( fabs( ev[ista].ew.s.depmin ) + fabs( ev[ista].ew.s.depmax ) ) +
-                        ( fabs( ev[ista].ns.s.depmin ) + fabs( ev[ista].ns.s.depmax ) ) +
-                        ( fabs( ev[ista].z.s.depmin ) + fabs( ev[ista].z.s.depmax ) );
-                ymax = roundf( ymax + ymax * 0.1 );
-
-
-                if( iorientation == PORTRAIT )
-                {
-                        new_col = ista % 4;
-                        new_page = ista % 12;
-                }
-                else if( iorientation == LANDSCAPE )
-                {
-                        new_col = ista % 3;
-                        new_page = ista % 12;
-                }
-                else
-                {
-                        new_col = ista % 2;
-                        new_page = ista % 4;
-                }
-
-                if( xmin < 1.99 )
-                  sprintf( limits, "-R0/%g/%g/%g", xmax, ymin, ymax );
-                else
-                  sprintf( limits, "-R%g/%g/%g/%g", xmin, xmax, ymin, ymax );
-
-                sprintf( project, "-JX1.75i/2i" );
-
-                sprintf( axes, "-Bxf%ga%g+l\"sec\" -Byf%ga%g+l\"microns\" -BSW",
-                        roundf(xmax/4.0), roundf(xmax),
-                        roundf(ymax/4.0), roundf(ymax) );
-
-                if( new_page == 0 || first )
-                {
-
-                       /*** close the previous plot ****/
-                        if ( new_page == 0 && !first )
-                        {
-                                fprintf( fp, "echo 0 0 .  | gmt pstext -R -JX -O -Vq >> %s\n", outputfilename );
-                                fprintf( fp, "\n" );
-                                fprintf( fp, "gs %s\n", outputfilename );
-                                fprintf( fp, "\n" );
-                        }
-
-                        fprintf( fp, "\n" );
-                        fprintf( fp, "#########################################################\n" );
-                        fprintf( fp, "################## NEW PAGE %3d ########################\n", ipage );
-                        fprintf( fp, "#########################################################\n" );
-                        fprintf( fp, "\n" );
-
-                        sprintf( outputfilename, "gmtwf.%03d.ps", ipage );
-
-                        fprintf( fp, "################## ista = %d ########################\n", ista+1 );
-                        if( iorientation == PORTRAIT ) fprintf( fp, "gmt psbasemap %s %s %s -P -K -Vq >! %s\n",
-                                limits, project, axes, outputfilename );
-                        else if( iorientation == LANDSCAPE ) fprintf( fp, "gmt psbasemap %s %s %s -K -Vq >! %s\n",
-                                limits, project, axes, outputfilename );
-                        else
-                                fprintf( fp, "gmt psbasemap %s %s %s -P -K -Vq >! %s\n",
-                                limits, project, axes, outputfilename );
-
-                        first = 0;
-                        ipage++;
-                }
-                else
-                {
-                  if( new_col == 0 )
-                  {
-                        fprintf( fp, "################## NEW col ########################\n" );
-                        fprintf( fp, "################## ista = %d ########################\n", ista+1 );
-                        if( iorientation == PORTRAIT )
-                        {
-                          fprintf( fp, "gmt psbasemap %s %s %s -Y-8.5i -X2.5i -O -K -Vq >> %s\n",
-                                limits, project, axes, outputfilename );
-                        }
-                        else if( iorientation == LANDSCAPE )
-                        {
-                          fprintf( fp, "gmt psbasemap %s %s %s -Y-6i -X2.5i -O -K -Vq >> %s\n",
-                                limits, project, axes, outputfilename );
-                        }
-                        else
-                        {
-			  fprintf( fp, "gmt psbasemap %s %s %s -Y-3.5 -X2.5i -O -K -Vq >> %s\n",
-                                limits, project, axes, outputfilename );
-                        }
-                  }
-                  else
-                  {
-                        fprintf( fp, "################## ista = %d ########################\n", ista+1 );
-                    fprintf( fp, "gmt psbasemap %s %s %s -Y1.5i -O -K -Vq >> %s\n",
-                        limits, project, axes, outputfilename );
-                  }
-                }
-
-                sprintf( label, "%s.%s %s @~D@~=%.0f km @~f@~=%.0f",
-                        grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type,
-                        grn[ista][iz].rdist, grn[ista][iz].az );
-
-                fprintf( fp, "gmt pstext -R -JX -D+1.1i/-0.05i -N -O -K -Vq >> %s << EOF\n", outputfilename );
-                fprintf( fp, "0 %g %s\n", roundf(ymax), label );
-                fprintf( fp, "EOF\n" );
-
-                if( ev[ista].iused == 1 )
-                  sprintf( linecolor, "red" );
-                else if( ev[ista].iused == 0 )
-                  sprintf( linecolor, "blue" );
-		else
-		  sprintf( linecolor, "yellow" );
-
-/*** transverse ***/
-                sprintf( data_filename, "%s.%s.%s.%03d.t.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
-                sprintf( synt_filename, "%s.%s.%s.%03d.t.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
-
-                fprintf( fp, "gmt psxy -R -JX -W2p,gray        -O -K -Vq %s >> %s\n", data_filename, outputfilename );
-                fprintf( fp, "gmt psxy -R -JX -W1.2p,%s,10_1:0p -O -K -Vq %s >> %s\n", linecolor, synt_filename, outputfilename );
-                fprintf( fp, "echo \"%g %g T\" | gmt pstext -R -JX -D0.2i/0i -N  -O -K -Vq >> %s\n", x[npts-1], dat_t[npts-1], outputfilename );
-
-/*** radial ***/
-                sprintf( data_filename, "%s.%s.%s.%03d.r.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
-                sprintf( synt_filename, "%s.%s.%s.%03d.r.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
-
-                fprintf( fp, "gmt psxy -R -JX -W2p,gray        -O -K -Vq -Y0.5i %s >> %s\n", data_filename, outputfilename );
-                fprintf( fp, "gmt psxy -R -JX -W1.2p,%s,10_1:0p -O -K -Vq        %s >> %s\n", linecolor, synt_filename, outputfilename );
-                fprintf( fp, "echo \"%g %g R\" | gmt pstext -R -JX -D0.2i/0i -N  -O -K -Vq >> %s\n", x[npts-1], dat_r[npts-1], outputfilename );
-
-/*** vertical ***/
-                sprintf( data_filename, "%s.%s.%s.%03d.z.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
-                sprintf( synt_filename, "%s.%s.%s.%03d.z.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
-
-                fprintf( fp, "gmt psxy -R -JX -W2p,gray        -O -K -Vq -Y0.5i %s >> %s\n", data_filename, outputfilename );
-                fprintf( fp, "gmt psxy -R -JX -W1.2p,%s,10_1:0p -O -K -Vq        %s >> %s\n", linecolor, synt_filename, outputfilename );
-                fprintf( fp, "echo \"%g %g Z\" | gmt pstext -R -JX -D0.2i/0i -N  -O -K -Vq >> %s\n", x[npts-1], dat_z[npts-1], outputfilename );
-
-                free(x);
-                free(syn_z);
-                free(syn_r);
-                free(syn_t);
-                free(dat_z);
-                free(dat_r);
-                free(dat_t);
-
-        } /*** loop over stations ***/
-
-/*** plot a focal mechanism ***/
-
-        if( iorientation == PORTRAIT )
-        {
-                new_col = ista % 4;
-                new_page = ista % 12;
-        }
-        else if( iorientation == LANDSCAPE )
-        {
-                new_col = ista % 3;
-                new_page = ista % 12;
-        }
-        else
-        {
-                new_col = ista % 2;
-                new_page = ista % 4;
-        }
-
-        if( new_page == 0 )
-        {
-               /*** close the previous plot ****/
-                if ( new_page == 0 && !first )
-                {
-                        fprintf( fp, "echo 0 0 8 0 0 0 .  | gmt pstext -R -JX -O -Vq >> %s\n", outputfilename );
-                        fprintf( fp, "\n" );
-                        fprintf( fp, "gs %s\n", outputfilename );
-                        fprintf( fp, "\n" );
-                }
-
-
-                fprintf( fp, "\n" );
-                fprintf( fp, "#########################################################\n" );
-                fprintf( fp, "################## NEW PAGE %3d ########################\n", ipage );
-                fprintf( fp, "#########################################################\n" );
-                fprintf( fp, "\n" );
-
-
-                sprintf( outputfilename, "gmtwf.%03d.ps", ipage );
-
-
-                fprintf( fp, "################## mechanism ########################\n" );
-
-                if( iorientation == PORTRAIT )
-                        sprintf( page_xy_offset, " -P -K -Vq >! " );
-                else if( iorientation == LANDSCAPE )
-                        sprintf( page_xy_offset, "    -K -Vq >! " );
-                else
-                        sprintf( page_xy_offset, " -P -K -Vq >! " );
-                ipage++;
-        }
-        else
-        {
-          if( new_col == 0 )
-          {
-                fprintf( fp, "################## NEW col ########################\n" );
-                fprintf( fp, "################## mechanism ########################\n" );
-
-                if( iorientation == PORTRAIT )
-                        sprintf( page_xy_offset, " -Y+8.5i -X+2.5i -O -Vq -K -Vq >> " );
-                else if( iorientation == LANDSCAPE )
-                        sprintf( page_xy_offset, " -Y-6.0i -X+2.5i -O -Vq -K -Vq >> " );
-                else
-                        sprintf( page_xy_offset, " -Y-3.5i -X+2.5i -O -Vq -K -Vq >> " );
-          }
-          else
-          {
-            fprintf( fp, "################## mechanism ########################\n" );
-            sprintf( page_xy_offset, " -Y+1.5i -O -Vq -K -Vq >> " );
-          }
-
-        } /*** end if new page ***/
-
-        fprintf( fp, "###\n" );
-        fprintf( fp, "### GMT PSMECA  -S<format><scale>[/<fontsize>[/<justify>/<offset>/<angle>/<form>]]  \n");
-        fprintf( fp, "###\n" );
-
-	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
-	{
-          fprintf( fp, "gmt psmeca -R0/10/0/10 %s -Sm1i/0 -T0/1p,black -W1p,black -Gred -Ewhite -N %s %s << EOF\n",
-                project,
-                page_xy_offset,
-                outputfilename );
-	}
-	else
-	{
-	  fprintf( fp, "gmt psmeca -R0/10/0/10 %s -Sz1i/0 -T0/1p,black -W1p,black -Gred -Ewhite -N %s %s << EOF\n",
-                project,
-                page_xy_offset,
-                outputfilename );
-	}
-
-        fprintf( fp, "5 5 %g %g %g %g %g %g %g %d x y %4d/%02d/%02dT%02d:%02d:%05.2f %s\n",
-                grn[0][iz].evdp,
-                sol[iz].mrr, sol[iz].mtt, sol[iz].mff,
-                sol[iz].mrt, sol[iz].mrf, sol[iz].mtf,
-                sol[iz].exponent,
-                ev[0].ot.year, ev[0].ot.month, ev[0].ot.mday,
-                ev[0].ot.hour, ev[0].ot.min, sol[iz].ot,
-                ev[0].comment
-         );
-
-        fprintf( fp, "EOF\n");
-        fprintf( fp, "\n");
-
-        fprintf( fp, "###\n" );
-        fprintf( fp, "### MOMENT TENSOR/FOCAL MECHANISM INFORMATION LABEL \n" );
-        fprintf( fp, "###\n" );
-        fprintf( fp, "gmt pstext -R0/10/0/10 %s -D0i/0i -F+jBL+f12p,Palatino-Roman,black -N -O -Vq >> %s << EOF\n",
-                project, outputfilename );
-
-        fprintf( fp, "9 9 %s\n", ev[0].comment );
-        fprintf( fp, "9 8 %4d/%02d/%02dT%02d:%02d:%05.2f\n",
-                ev[0].ot.year, ev[0].ot.month, ev[0].ot.mday, ev[0].ot.hour, ev[0].ot.min, sol[iz].ot );
-
-        fprintf( fp, "9 7 Depth = %5.1f(km)\n", grn[0][iz].evdp );
-        fprintf( fp, "9 6 Mw    = %5.2f\n",     sol[iz].mw );
-        fprintf( fp, "9 5 Mo    = %5.2f x 10 @+%2d@+ (dyne x cm)\n", sol[iz].abcassa, sol[iz].exponent );
-
-        if( sol[iz].mt_type == EXPLOSION  ) fprintf( fp, "9 4 %%ISO=%3.0f\n", sol[iz].PISO );
-
-        if( sol[iz].mt_type == DEVIATORIC ) fprintf( fp, "9 4 %%DC=%3.0f %%CLVD=%3.0f\n", sol[iz].PDC, sol[iz].PCLVD );
-
-        if( sol[iz].mt_type == FULL_MT    ) fprintf( fp, "9 4 %%DC=%3.0f %%CLVD=%3.0f %%ISO=%3.0f\n",
-                                                sol[iz].PDC, sol[iz].PCLVD, sol[iz].PISO );
-
-        fprintf( fp, "9 3 VR    = %6.2f %%\n", sol[iz].var_red );
-        fprintf( fp, "9 2 P1: %g/%g/%g (S/D/R)\n", roundf(sol[iz].Maj.P1.s), roundf(sol[iz].Maj.P1.d), roundf(sol[iz].Maj.P1.r) );
-        fprintf( fp, "9 1 P2: %g/%g/%g (S/D/R)\n", roundf(sol[iz].Maj.P2.s), roundf(sol[iz].Maj.P2.d), roundf(sol[iz].Maj.P2.r) );
-
-        fprintf( fp, "EOF\n" );
-
-        fprintf( fp, "\n" );
-
-        fprintf( fp, "# gs %s\n", outputfilename );
-        fprintf( fp, "ps2pdf %s\n", outputfilename );
-        fprintf( fp, "gmt psconvert -Tj -E300 -A -Vq %s\n", outputfilename );
-        fprintf( fp, "open %s\n", outputfilename );
-        fclose(fp);
-
-        chmod( "gmtwf.csh", S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH );
-}
-
-/***********************************************************************************************************/
-/*** WRITE A CRUDE GMT CSHELL SCRIPT ***/
-/***********************************************************************************************************/
-
-void gmt4wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int iorientation, int verbose )
-{
-        FILE *fp;
-        char filename[256], synt_filename[256], data_filename[256];
-        char grd_mo_type[5];
-        float cm2mm = 10.;
-        float cm2microns = 10000.;
-        float *x, *syn_z, *syn_r, *syn_t, *dat_z, *dat_r, *dat_t;
-/* see include/mt.h Mo = math.pow( 10.0, 1.5*(Mw+10.73) ) = 1.2445146117713818e+16; Reference Mw = 0.0 */
-
-        int ista, it, npts;
-        float dt, beg;
-        int first = 1;
-        float  xmin, xmax, ymin, ymax, xsize, ysize;
-        float new_col, new_page;
-        char limits[128], project[64], axes[128], label[256];
-        char outputfilename[256];
-        int ipage;
-        char linecolor[24];
-
-        void sac_minmax( float *, int, float *, float *, float * );
-
-        ipage = 0;
-
-        fp = fopen( "gmtwf.csh", "w" );
-
-        fprintf( fp, "#!/bin/csh\n" );
-        fprintf( fp, "gmtset HEADER_FONT_SIZE 12p \n" );
-        fprintf( fp, "gmtset HEADER_FONT Palatino-Roman\n" );
-        fprintf( fp, "gmtset LABEL_FONT_SIZE 12p\n" );
-        fprintf( fp, "gmtset LABEL_FONT Palatino-Roman\n" );
-        fprintf( fp, "gmtset ANNOT_FONT_SIZE_PRIMARY 12p \n" );
-        fprintf( fp, "gmtset ANNOT_FONT_SIZE_SECONDARY 12p \n" );
-        fprintf( fp, "gmtset ANNOT_FONT_PRIMARY Palatino-Roman \n" );
-        fprintf( fp, "gmtset ANNOT_FONT_SECONDARY Palatino-Roman \n" );
-        fprintf( fp, "gmtset BASEMAP_TYPE plain\n" );
-        fprintf( fp, "gmtset FRAME_PEN 1.75p\n" );
-        fprintf( fp, "gmtset ANNOT_OFFSET_PRIMARY 0.01i \n" );
-        fprintf( fp, "gmtset ANNOT_OFFSET_SECONDARY 0.01i \n" );
-        fprintf( fp, "gmtset HEADER_OFFSET 0.01i\n" );
-        fprintf( fp, "gmtset LABEL_OFFSET 0.01i\n" );
-        if( iorientation == PORTRAIT )  fprintf( fp, "gmtset PAGE_ORIENTATION portrait\n" );
-        if( iorientation == LANDSCAPE ) fprintf( fp, "gmtset PAGE_ORIENTATION landscape\n" );
-
-        fprintf( fp, "gmtset PAPER_MEDIA letter\n" );
-
-        fprintf( fp, "\n" );
-
-        for( ista=0; ista<nsta; ista++ )
-        {
-                fprintf( fp, "\n" );
-
-        /*** set variables and allocate mem ***/
-
-                npts = ev[ista].ew.s.npts;
-                dt   = ev[ista].ew.s.delta;
-                beg  = ev[ista].ew.s.b;
-                syn_z = (float *) malloc( npts * sizeof(float) );
-                syn_r = (float *) malloc( npts * sizeof(float) );
-                syn_t = (float *) malloc( npts * sizeof(float) );
-                dat_z = (float *) malloc( npts * sizeof(float) );
-                dat_r = (float *) malloc( npts * sizeof(float) );
-                dat_t = (float *) malloc( npts * sizeof(float) );
-                x     = (float *) malloc( npts * sizeof(float) );
-
-                sprintf( grd_mo_type, "D" );
-                if( ev[ista].grd_mo_type == VELOCITY ) sprintf( grd_mo_type, "V" );
-
-        /*** convert amplitudes ***/
-
-                for( it=0; it<npts; it++ )
-                {
-                        dat_t[it] = ev[ista].ew.data[it]    * cm2microns;
-                        dat_r[it] = ev[ista].ns.data[it]    * cm2microns;
-                        dat_z[it] = ev[ista].z.data[it]     * cm2microns;
-                        syn_t[it] = ev[ista].syn_t.data[it] * cm2microns;
-                        syn_r[it] = ev[ista].syn_r.data[it] * cm2microns;
-                        syn_z[it] = ev[ista].syn_z.data[it] * cm2microns;
-                        x[it] = beg + (float)it * dt;
-                }
-
-        /*** set the syn minmax seperate in the SAC header ***/
-
-                sac_minmax( dat_t, npts, &(ev[ista].ew.s.depmax), &(ev[ista].ew.s.depmin), &(ev[ista].ew.s.depmen) );
-                sac_minmax( dat_r, npts, &(ev[ista].ns.s.depmax), &(ev[ista].ns.s.depmin), &(ev[ista].ns.s.depmen) );
-                sac_minmax( dat_z, npts, &(ev[ista].z.s.depmax), &(ev[ista].z.s.depmin), &(ev[ista].z.s.depmen) );
-                sac_minmax( syn_t, npts, &(ev[ista].syn_t.s.depmax), &(ev[ista].syn_t.s.depmin), &(ev[ista].syn_t.s.depmen) );
-                sac_minmax( syn_r, npts, &(ev[ista].syn_r.s.depmax), &(ev[ista].syn_r.s.depmin), &(ev[ista].syn_r.s.depmen) );
-                sac_minmax( syn_z, npts, &(ev[ista].syn_z.s.depmax), &(ev[ista].syn_z.s.depmin), &(ev[ista].syn_z.s.depmen) );
-
-                ymin = ev[ista].ew.s.depmin;
-                if( ev[ista].ns.s.depmin < ymin ) ymin = ev[ista].ns.s.depmin;
-                if( ev[ista].z.s.depmin  < ymin ) ymin = ev[ista].z.s.depmin;
-                if( ev[ista].syn_t.s.depmin < ymin ) ymin = ev[ista].syn_t.s.depmin;
-                if( ev[ista].syn_r.s.depmin < ymin ) ymin = ev[ista].syn_r.s.depmin;
-                if( ev[ista].syn_z.s.depmin < ymin ) ymin = ev[ista].syn_z.s.depmin;
-
-                xmin = beg;
-                xmax = beg+npts*dt;
-                xmax = roundf( xmax + xmax * 0.1 );
-
-                ymax =  ( fabs( ev[ista].ew.s.depmin ) + fabs( ev[ista].ew.s.depmax ) ) +
-                        ( fabs( ev[ista].ns.s.depmin ) + fabs( ev[ista].ns.s.depmax ) ) +
-                        ( fabs( ev[ista].z.s.depmin ) + fabs( ev[ista].z.s.depmax ) );
-                ymax = roundf( ymax + ymax * 0.1 );
-
-
-                if( iorientation == PORTRAIT )
-                {
-                        new_col = ista % 4;
-                        new_page = ista % 12;
-                }
-                else if( iorientation == LANDSCAPE )
-                {
-                        new_col = ista % 3;
-                        new_page = ista % 12;
-                }
-                else
-                {
-                        new_col = ista % 2;
-                        new_page = ista % 4;
-                }
-
-                sprintf( limits, "-R%g/%g/%g/%g", xmin, xmax, ymin, ymax );
-                sprintf( project, "-JX1.75i/2i" );
-                sprintf( axes, "-Bf%ga%g:\"sec\":/f%ga%g:\"microns\":SW",
-                        roundf(xmax/4.0), roundf(xmax),
-                        roundf(ymax/4.0), roundf(ymax) );
-
-                if( new_page == 0 || first )
-                {
-
-                       /*** close the previous plot ****/
-                        if ( new_page == 0 && !first )
-                        {
-                                fprintf( fp, "echo 0 0 8 0 0 0 .  | pstext -R -JX -O -Vq >> %s\n", outputfilename );
-                                fprintf( fp, "\n" );
-                                fprintf( fp, "gs %s\n", outputfilename );
-                                fprintf( fp, "\n" );
-                        }
-
-                        fprintf( fp, "\n" );
-                        fprintf( fp, "#########################################################\n" );
-                        fprintf( fp, "################## NEW PAGE %3d ########################\n", ipage );
-                        fprintf( fp, "#########################################################\n" );
-                        fprintf( fp, "\n" );
-
-                        sprintf( outputfilename, "gmtwf.%03d.ps", ipage );
-
-                        fprintf( fp, "################## ista = %d ########################\n", ista+1 );
-                        if( iorientation == PORTRAIT ) fprintf( fp, "psbasemap %s %s %s -P -K -Vq >! %s\n",
-                                limits, project, axes, outputfilename );
-                        else if( iorientation == LANDSCAPE ) fprintf( fp, "psbasemap %s %s %s -K -Vq >! %s\n",
-                                limits, project, axes, outputfilename );
-                        else
-                                fprintf( fp, "psbasemap %s %s %s -P -K -Vq >! %s\n",
-                                limits, project, axes, outputfilename );
-
-                        first = 0;
-                        ipage++;
-                }
-                else
-                {
-                  if( new_col == 0 )
-                  {
-                        fprintf( fp, "################## NEW col ########################\n" );
-                        fprintf( fp, "################## ista = %d ########################\n", ista+1 );
-                        if( iorientation == PORTRAIT )
-                        {
-                          fprintf( fp, "psbasemap %s %s %s -Y-8.5i -X2.5i -O -Vq -K -Vq >> %s\n",
-                                limits, project, axes, outputfilename );
-                        }
-                        else if( iorientation == LANDSCAPE )
-                        {
-                          fprintf( fp, "psbasemap %s %s %s -Y-6i -X2.5i -O -Vq -K -Vq >> %s\n",
-                                limits, project, axes, outputfilename );
-                        }
-                        else
-                        {
-                          fprintf( fp, "psbasemap %s %s %s -Y-3.5 -X2.5i -O -Vq -K -Vq >> %s\n",
-                                limits, project, axes, outputfilename );
-                        }
-                  }
-                  else
-                  {
-                        fprintf( fp, "################## ista = %d ########################\n", ista+1 );
-                    fprintf( fp, "psbasemap %s %s %s -Y1.5i -O -Vq -K -Vq >> %s\n",
-                        limits, project, axes, outputfilename );
-                  }
-                }
-
-                sprintf( label, "%s.%s %s @~D@~=%.0f km @~f@~=%.0f",
-                        grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type,
-                        grn[ista][iz].rdist, grn[ista][iz].az );
-
-                fprintf( fp, "pstext -R -JX -D0.05i/-0.1i -N -O -Vq -K -Vq >> %s << EOF\n", outputfilename );
-                fprintf( fp, "0 %g 10 0 1 0 %s\n", roundf(ymax), label );
-                fprintf( fp, "EOF\n" );
-
-                if( ev[ista].iused == 1 )
-                  sprintf( linecolor, "red" );
-                else if( ev[ista].iused == 0 ) 
-                  sprintf( linecolor, "blue" );
-		else
-		  sprintf( linecolor, "yellow" );
-
-                sprintf( data_filename, "%s.%s.%s.%03d.t.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
-                sprintf( synt_filename, "%s.%s.%s.%03d.t.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
-                /* fprintf( fp, "psxy -R -JX -M -W2p/black/t10_5:0p -O -Vq -K -Vq     %s >> %s\n", data_filename, outputfilename ); */
-                fprintf( fp, "psxy -R -JX -M -W2p/120 -O -Vq -K -Vq     %s >> %s\n", data_filename, outputfilename );
-                fprintf( fp, "psxy -R -JX -M -W1.2p/%st10_1:0p       -O -Vq -K -Vq     %s >> %s\n", linecolor, synt_filename, outputfilename );
-                fprintf( fp, "echo \"%g %g 10 0 1 0 T\" | pstext -R -JX  -N  -O -Vq -K -Vq >> %s\n", x[npts-1], dat_t[npts-1], outputfilename );
-
-                sprintf( data_filename, "%s.%s.%s.%03d.r.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
-                sprintf( synt_filename, "%s.%s.%s.%03d.r.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
-                /* fprintf( fp, "psxy -R -JX -M -W2p/black/t10_5:0p -O -Vq -K -Vq -Y0.5i %s >> %s\n", data_filename, outputfilename ); */
-                fprintf( fp, "psxy -R -JX -M -W2p/120  -O -Vq -K -Vq -Y0.5i %s >> %s\n", data_filename, outputfilename );
-                fprintf( fp, "psxy -R -JX -M -W1.2p/%st10_1:0p      -O -Vq -K -Vq        %s >> %s\n", linecolor, synt_filename, outputfilename );
-                fprintf( fp, "echo \"%g %g 10 0 1 0 R\" | pstext -R -JX  -N  -O -Vq -K -Vq >> %s\n", x[npts-1], dat_r[npts-1], outputfilename );
-
-                sprintf( data_filename, "%s.%s.%s.%03d.z.dat.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
-                sprintf( synt_filename, "%s.%s.%s.%03d.z.syn.xy", grn[ista][iz].stnm, grn[ista][iz].net, grd_mo_type, ista );
-                /* fprintf( fp, "psxy -R -JX -M -W2p/black/t10_5:0p -O -Vq -K -Vq -Y0.5i %s >> %s\n", data_filename, outputfilename ); */
-                fprintf( fp, "psxy -R -JX -M -W2p/120 -O -Vq -K -Vq -Y0.5i %s >> %s\n", data_filename, outputfilename );
-                fprintf( fp, "psxy -R -JX -M -W1.2p/%st10_1:0p    -O -Vq -K -Vq        %s >> %s\n", linecolor, synt_filename, outputfilename );
-                fprintf( fp, "echo \"%g %g 10 0 1 0 Z\" | pstext -R -JX  -N  -O -Vq -K -Vq >> %s\n", x[npts-1], dat_z[npts-1], outputfilename );
-
-                free(x);
-                free(syn_z);
-                free(syn_r);
-                free(syn_t);
-                free(dat_z);
-                free(dat_r);
-                free(dat_t);
-
-        } /*** loop over stations ***/
-
-/*** plot a focal mechanism ***/
-
-        if( iorientation == PORTRAIT )
-        {
-                new_col = ista % 4;
-                new_page = ista % 12;
-        }
-        else if( iorientation == LANDSCAPE )
-        {
-                new_col = ista % 3;
-                new_page = ista % 12;
-        }
-        else
-        {
-                new_col = ista % 2;
-                new_page = ista % 4;
-        }
-
-        if( new_page == 0 )
-        {
-
-               /*** close the previous plot ****/
-                if ( new_page == 0 && !first )
-                {
-                        fprintf( fp, "echo 0 0 8 0 0 0 .  | pstext -R -JX -O -Vq >> %s\n", outputfilename );
-                        fprintf( fp, "\n" );
-                        fprintf( fp, "gs %s\n", outputfilename );
-                        fprintf( fp, "\n" );
-                }
-
-                fprintf( fp, "\n" );
-                fprintf( fp, "#########################################################\n" );
-                fprintf( fp, "################## NEW PAGE %3d ########################\n", ipage );
-                fprintf( fp, "#########################################################\n" );
-                fprintf( fp, "\n" );
-
-                sprintf( outputfilename, "gmtwf.%03d.ps", ipage );
-
-                fprintf( fp, "################## mechanism ########################\n" );
-
-                if( iorientation == PORTRAIT )
-                        fprintf( fp, "psbasemap -R0/10/0/10 %s -Bf20a20s -P -K -Vq >! %s\n", project, outputfilename );
-                else if( iorientation == LANDSCAPE )
-                        fprintf( fp, "psbasemap -R0/10/0/10 %s -Bf20a20s -K -Vq >! %s\n", project, outputfilename );
-                else
-                        fprintf( fp, "psbasemap -R0/10/0/10 %s -Bf20a20s -P -K -Vq >! %s\n", project, outputfilename );
-
-                ipage++;
-        }
-        else
-        {
-          if( new_col == 0 )
-          {
-                fprintf( fp, "################## NEW col ########################\n" );
-                fprintf( fp, "################## mechanism ########################\n" );
-
-                if( iorientation == PORTRAIT )
-                  fprintf( fp, "psbasemap -R0/10/0/10 %s -Bf20a20s -Y-8.5i -X2.5i -O -Vq -K -Vq >> %s\n", project, outputfilename );
-                else if( iorientation == LANDSCAPE )
-                  fprintf( fp, "psbasemap -R0/10/0/10 %s -Bf20a20s -Y-6i -X2.5i -O -Vq -K -Vq >> %s\n", project, outputfilename );
-                else
-                  fprintf( fp, "psbasemap -R0/10/0/10 %s -Bf20a20s -Y-3.5 -X2.5i -O -Vq -K -Vq >> %s\n", project, outputfilename );
-          }
-          else
-          {
-            fprintf( fp, "################## mechanism ########################\n" );
-            fprintf( fp, "psbasemap -R0/10/0/10 %s -Bf20a20s -Y1.5i -O -Vq -K -Vq >> %s\n", project, outputfilename );
-          }
-
-        } /*** end if new page ***/
-
-        fprintf( fp, "\n");
-
-	if( sol[iz].mt_type == FULL_MT || sol[iz].mt_type == EXPLOSION )
-          fprintf( fp, "psmeca -R -JX -Sm1i/12/0.2i -T0 -L -W1p/0 -G255/0/0 -N -O -Vq -K -Vq >> %s << EOF\n", outputfilename );
-	else
-	  fprintf( fp, "psmeca -R -JX -Sz1i/12/0.2i -T0 -L -W1p/0 -G255/0/0 -N -O -Vq -K -Vq >> %s << EOF\n", outputfilename );
-
-        fprintf( fp, "5 5 %g %g %g %g %g %g %g %d x y %4d/%02d/%02d %02d:%02d:%05.2f %s\n",
-                grn[0][iz].evdp,
-                sol[iz].mrr, sol[iz].mtt, sol[iz].mff, sol[iz].mrt, sol[iz].mrf, sol[iz].mtf,
-                sol[iz].exponent,
-                ev[0].ot.year, ev[0].ot.month, ev[0].ot.mday,
-                ev[0].ot.hour, ev[0].ot.min, sol[iz].ot,
-                ev[0].comment
-         );
-
-        fprintf( fp, "EOF\n");
-        fprintf( fp, "\n");
-
-        fprintf(fp, "pstext -R -JX -N -O -Vq >> %s << EOF\n", outputfilename );
-
-        fprintf( fp, "9 7 12 0 0 0 Depth = %5.1f(km)\n", grn[0][iz].evdp );
-        fprintf( fp, "9 6 12 0 0 0 Mw    = %5.2f\n",     sol[iz].mw );
-        fprintf( fp, "9 5 12 0 0 0 Mo    = %5.2f x 10 @+%2d@+ (dyne x cm)\n", sol[iz].abcassa, sol[iz].exponent );
-        fprintf( fp, "9 4 12 0 0 0 DC    = %3.0f %%\n", sol[iz].PDC );
-        fprintf( fp, "9 3 12 0 0 0 VR    = %6.2f %%\n", sol[iz].var_red );
-        fprintf( fp, "9 2 12 0 0 0 P1: %g/%g/%g (S/D/R)\n", roundf(sol[iz].Maj.P1.s), roundf(sol[iz].Maj.P1.d), roundf(sol[iz].Maj.P1.r) );
-        fprintf( fp, "9 1 12 0 0 0 P2: %g/%g/%g (S/D/R)\n", roundf(sol[iz].Maj.P2.s), roundf(sol[iz].Maj.P2.d), roundf(sol[iz].Maj.P2.r) );
-
-        fprintf( fp, "EOF\n" );
-
-        fprintf( fp, "\n" );
-
-        fprintf( fp, "gs %s\n", outputfilename );
-        fclose(fp);
-
-        chmod( "gmtwf.csh", S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH );
-
-}  /*** end SUB : gmt4wfplot() ***/
-
+/****  2023 deprecated, see wfplot2_gmt5() ***/
+/* void gmt5wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int iorientation, int verbose ) */
+/* void gmt4wfplot( EventInfo *ev, Solution *sol, Greens **grn, int nsta, int iz, int iorientation, int verbose ) */
 
 /* sort_type == "dist" or "azi" or "baz" */
 
