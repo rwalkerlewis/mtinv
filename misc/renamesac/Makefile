@@ -1,4 +1,6 @@
-CC = gcc
+include ../../Makefile.inc
+
+#CC = gcc
 INCLUDE = -I../../include
 #CFLAGS = -m32 $(INCLUDE)
 CFLAGS  = $(INCLUDE)

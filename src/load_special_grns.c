@@ -71,6 +71,8 @@ float *load_special_grns( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, in
                                 s.evdp,
                                 s.depmin, s.depmax );
 
+		/*** see mt.h for EventInfo.rtzGxy[icmp][nt] memory storage for greens functions ***/
+
                         duplicate_vector( data, &(ev[ista].rtzGxy[icmp][0]), s.npts );
 
                 } /*** cmp loop ***/

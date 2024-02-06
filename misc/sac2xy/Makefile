@@ -1,4 +1,8 @@
-CC = gcc
+include ../../Makefile.inc
+
+#CC = clang
+#CC = gcc
+
 INCLUDE = ../../include
 CFLAGS = -I$(INCLUDE)
 LIBS = -L../../lib -lget -lm

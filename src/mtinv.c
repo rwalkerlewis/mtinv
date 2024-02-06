@@ -275,8 +275,8 @@ int main(int ac, char **av)
 /*** ../misc/getpar/ - libget.a(getarg.o) ***/
 
 	int setpar(int,char **);
-        int getpar();
-        int mstpar();
+	int mstpar( char *, char *, void * );
+        int getpar( char *, char *, void * );
         void endpar();
 
 /*** shorten_path.c ***/

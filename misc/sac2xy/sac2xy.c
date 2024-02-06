@@ -22,7 +22,7 @@ int main( int ac, char **av)
 	int norm = 0, xdeg = 0, xkm = 0;
 	float ymax, scale = 1.0, ydist = 0;
 	int setpar(int, char **);
-	int getpar();
+	int getpar( char *, char *, void * );
 	void endpar();
 	int verbose = 0;
 	int normfac = 0;

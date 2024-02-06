@@ -20,7 +20,9 @@ int main( int ac, char **av )
 	void plot_gmt_mod( VelMod *vm, int ioutput, int doP, int doS, char *pline, char *sline );
 	void print_mod0( VelMod *vm );
 
-	int setpar(),mstpar(),getpar();
+	int setpar( int, char ** );
+	int mstpar( char *, char *, void * );
+        int getpar( char *, char *, void * );
 	void endpar();
 
 /*** start main ***/

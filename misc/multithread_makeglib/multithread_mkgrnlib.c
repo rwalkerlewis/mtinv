@@ -35,7 +35,9 @@ int main( int ac, char *av[] )
 	
 	PARFILE *read_parfile( char *, PARFILE *, int * );
 
-	int setpar(int, char **), mstpar(), getpar();
+	int setpar( int, char ** );
+	int mstpar( char *, char *, void * );
+	int getpar( char *, char *, void * );
 	void endpar();
 	int verbose = 0;
 
@@ -48,17 +50,18 @@ int main( int ac, char *av[] )
 	if( ac <= 1 ) Print_Usage();
 
 	setpar(ac,av);
-	mstpar("parfile", "s", parfilename);
-	mstpar("executable_pathname", "s", executable_pathname );
-	getpar("verbose", "b", &verbose );
+	mstpar( "parfile", "s", parfilename);
+	mstpar( "executable_pathname", "s", executable_pathname );
+	getpar( "verbose", "b", &verbose );
 	endpar();
 
-	fprintf(stderr, "%s: STDERR: start: parfile=%s executable_pathname=%s\n",
-		progname, parfilename, executable_pathname );
+	fprintf(stderr, "%s: %s: %s: STDERR: start: parfile=%s executable_pathname=%s\n",
+		progname, __FILE__, __func__, parfilename, executable_pathname );
+
 	if(verbose)
 	{
-	  fprintf( stdout, "%s: STDOUT executable_pathname=%s parfilename=%s\n", 
-		progname, executable_pathname, parfilename );
+	  fprintf( stdout, "%s: %s: %s: STDOUT executable_pathname=%s parfilename=%s\n", 
+		progname, __FILE__, __func__, executable_pathname, parfilename );
 	  fflush(stdout);
 	}
 
@@ -69,19 +72,19 @@ int main( int ac, char *av[] )
 
 	if( access( executable_pathname, F_OK|X_OK ) != 0 ) 
 	{
-		fprintf( stderr, "%s: STDERR: cannot find executable_pathname=%s. Ensure it's set correctly\n",
-			 progname, executable_pathname );
-		fprintf( stdout, "%s: STDOUT: cannot find executable_pathname=%s. Ensure it's set correctly \n", 
-                         progname, executable_pathname );
+		fprintf( stderr, "%s: %s: %s: STDERR: cannot find executable_pathname=%s. Ensure it's set correctly\n",
+			 progname, __FILE__, __func__, executable_pathname );
+		fprintf( stdout, "%s: %s: %s: STDOUT: cannot find executable_pathname=%s. Ensure it's set correctly \n", 
+                         progname, __FILE__, __func__, executable_pathname );
 		exit(-1);
 	}
 
 	if( access( parfilename, F_OK ) != 0 ) 
 	{
-                fprintf( stderr, "%s: STDERR: cannot find parfile=%s. Ensure it's set correctly\n",
-                         progname, parfilename );
-                fprintf( stdout, "%s: STDOUT: cannot find parfile=%s. Ensure it's set correctly \n", 
-                         progname, parfilename );
+                fprintf( stderr, "%s: %s: %s: STDERR: cannot find parfile=%s. Ensure it's set correctly\n",
+                         progname, __FILE__, __func__, parfilename );
+                fprintf( stdout, "%s: %s: %s: STDOUT: cannot find parfile=%s. Ensure it's set correctly \n", 
+                         progname,  __FILE__, __func__, parfilename );
                 exit(-1);
         }
 
@@ -110,7 +113,7 @@ int main( int ac, char *av[] )
 	  for( i = 0; i < NumSta; i++ )
 	  {
 		strcpy(  args[0], executable_pathname );
-                snprintf( args[1], 68, "par=%s",  pf[i].modfilename );  /* 64 */
+                snprintf( args[1], 64, "par=%s",  pf[i].modfilename );  /* 64 */
                 snprintf( args[2], 13, "stnm=%s", pf[i].staname );     /* 8 */
                 snprintf( args[3], 12, "net=%s",  pf[i].network );     /* 8 */
 		snprintf( args[4], 12, "loc=%s",  pf[i].location );     /* 8 */
@@ -137,7 +140,7 @@ int main( int ac, char *av[] )
 		else if( pf[i].pid == 0 )
 		{
 			strcpy( args[0], executable_pathname );
-			snprintf( args[1], 68, "par=%s",  pf[i].modfilename );  /* 64 */
+			snprintf( args[1], 64, "par=%s",  pf[i].modfilename );  /* 64 */
                 	snprintf( args[2], 13, "stnm=%s", pf[i].staname );     /* 8 */
        	        	snprintf( args[3], 12, "net=%s",  pf[i].network );     /* 8 */
        	        	snprintf( args[4], 12, "loc=%s",  pf[i].location );     /* 8 */

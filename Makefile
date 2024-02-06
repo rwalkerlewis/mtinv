@@ -8,7 +8,6 @@ all :
 	for dir in misc/multithread_makeglib ; do cd $$dir ; make all ; cd ../../ ; done
 	for dir in misc/renamesac misc/sac2xy misc/sacmerge ; do cd $$dir ; make all ; cd ../../ ; done
 	for dir in misc/sac2gmtmap ; do cd $$dir ; make all ; cd ../../ ; done
-	for dir in misc/sacqc ; do cd $$dir ; make all ; cd ../../ ; done
 	for dir in misc/Flinn_Engdahl ; do cd $$dir ; make all ; cd ../../ ; done
 
 clean :
@@ -18,5 +17,4 @@ clean :
 	for dir in misc/multithread_makeglib ; do cd $$dir ; make clean ; cd ../../ ; done
 	for dir in misc/renamesac misc/sac2xy misc/sacmerge ; do cd $$dir ; make clean ; cd ../../ ; done
 	for dir in misc/sac2gmtmap ; do cd $$dir ; make clean ; cd ../../ ; done
-	for dir in misc/sacqc ; do cd $$dir ; make clean ; cd ../../ ; done
 	for dir in misc/Flinn_Engdahl ; do cd $$dir ; make clean ; cd ../../ ; done

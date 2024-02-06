@@ -73,7 +73,9 @@ int main( int ac, char **av )
 	void select_dt_and_nt( float dist, float vel, int grn_npts, float grn_dt, float *dat_dt, int *dat_nt, int local_setup );
 	void select_lf_and_hf( float dist, float dt, float lf, float hf, float *new_lf, float *new_hf, int local_setup );
 
-	int setpar(int,char**),getpar(),mstpar();
+	int setpar(int,char**);
+	int mstpar( char *, char *, void * );
+        int getpar( char *, char *, void * );
 	void endpar();
 
 	void Print_Usage(void);

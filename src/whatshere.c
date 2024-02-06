@@ -36,7 +36,9 @@ int main( int ac, char **av )
 	int verbose=0;
 	FILE *fp;
 
-	int setpar(int,char**),getpar(),mstpar();
+	int setpar(int,char**);
+	int mstpar( char *, char *, void * );
+        int getpar( char *, char *, void * );
 	void endpar();
 
 	int count;

@@ -1,5 +1,8 @@
-CC = gcc
+#CC = gcc
 #CC = clang
+
+include ../../../Makefile.inc
+
 #CFLAGS = -Wall -Wunused-function
 CFLAGS = 
 RM = /bin/rm

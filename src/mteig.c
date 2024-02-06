@@ -295,7 +295,9 @@ int main( int ac, char **av )
 /************************/
 /*** misc             ***/
 /************************/
-        int setpar(int,char **), mstpar(), getpar();
+        int setpar(int,char **);
+	int mstpar( char *, char *, void * );
+        int getpar( char *, char *, void * );
         void endpar();
 	void Usage_Print( void );	
 	char title_text[256];

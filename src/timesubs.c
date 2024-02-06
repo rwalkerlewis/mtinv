@@ -21,7 +21,7 @@ MyTime *mylocaltime( MyTime *t )
 	struct tm *my_local_time;
 	time_t local_time;
 	char now[128];
-	struct tm *localtime();
+	struct tm *localtime( const time_t *clock );
 	void complete( MyTime *t );
 	extern char *tzname[2];
 	extern time_t timezone, altzone;
@@ -60,7 +60,7 @@ MyTime *myGMTtime( MyTime *t )
 {
         struct tm *my_gmt_time;
         time_t local_time;
-        struct tm *gmtime();
+        struct tm *gmtime( const time_t *clock );
 
 	void complete( MyTime *t );
 
@@ -99,8 +99,8 @@ int setDST( MyTime *t )
 {
 	MyTime *start, *stop;
 	int sday, eday;
-	MyTime *setmytime( MyTime *t, int, int, int, int, int, int, int, int );
-	int day_of_month( int, int, int, int, int );
+	MyTime *setmytime2( MyTime *t, int year, int month, int day, int hour, int min, float sec, int offset );
+	int day_of_month( int dayofweek, int weekoffset, int ref, int month, int year );
 	void complete( MyTime *t );
 	int after( MyTime *, MyTime * );
 	int before( MyTime *, MyTime * );
@@ -109,8 +109,8 @@ int setDST( MyTime *t )
 	stop  = (MyTime *)calloc(1,sizeof(MyTime));
 	sday = day_of_month( SUNDAY, 1, BEGIN,   APRIL, t->year ); 
 	eday = day_of_month( SUNDAY, 1,   END, OCTOBER, t->year );
-	start = setmytime(start,t->year,4,sday,2,0,0,0,t->offset); 
-	stop  = setmytime(stop,t->year,10,eday,2,0,0,0,t->offset);
+	start = setmytime2( start, t->year,  4, sday, 2, 0, 0, 0. ); 
+	stop  = setmytime2( stop,  t->year, 10, eday, 2, 0, 0, 0. );
 	if( after( t, start ) && before( t, stop ) )
 		t->dst = 1;
 	else
@@ -181,9 +181,9 @@ int julday(int yr, int mo, int da)
 
 /*************************************************************************/
 /** sets time structure given inputs *************************************/
+/** use this for setDST()            *************************************/
 /*************************************************************************/
-MyTime *setmytime2(MyTime *t, int year, int month, int day, 
-	int hour, int min, float sec)
+MyTime *setmytime2(MyTime *t, int year, int month, int day, int hour, int min, float sec, int offset )
 {
         void complete( MyTime *t );
         void initialize_mytime( MyTime *t );
@@ -195,6 +195,7 @@ MyTime *setmytime2(MyTime *t, int year, int month, int day,
         t->hour  = hour;
         t->min   = min;
         t->fsec  = sec;
+	t->offset = offset;
         complete( t );
         return t;
 }
@@ -203,8 +204,7 @@ MyTime *setmytime2(MyTime *t, int year, int month, int day,
 	 constructs a mytime structure given date and time
 	     do not call setDST() from here
 ****************************************************************/
-MyTime *setmytime(MyTime *t, int year, int month, int day, 
-	int hour, int min, int sec, int msec, int offset)
+MyTime *setmytime(MyTime *t, int year, int month, int day, int hour, int min, int sec, int msec )
 {
 	void complete( MyTime *t );
 	void fix_my_time( MyTime *t );
@@ -219,7 +219,6 @@ MyTime *setmytime(MyTime *t, int year, int month, int day,
 	t->min   = min;
 	t->isec  = sec;
 	t->msec  = msec;
-	t->offset = offset;
 	if( isMyTimeValid(t) == FALSE ) {
 		fprintf(stderr, "ERROR: invalid date given\n");
 		exit(-1);
@@ -755,10 +754,10 @@ char *MyTime2ShortString( MyTime *t, char *str )
 
 void parsestring( MyTime *t, char *str )
 {
-        void complete( MyTime * );
-        void fix_my_time( MyTime * );
-        int isMyTimeValid( MyTime * );
-        void initialize_mytime();
+        void complete( MyTime *t );
+        void fix_my_time( MyTime *t );
+        int isMyTimeValid( MyTime *t );
+        void initialize_mytime( MyTime *t );
         char dummy;
         initialize_mytime(t);
 

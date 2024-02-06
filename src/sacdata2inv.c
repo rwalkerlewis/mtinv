@@ -67,7 +67,8 @@ int main( int ac, char **av )
 /*** misc ***/
 	void  Print_Usage(void);
 	int   setpar(int,char **);
-	int   mstpar(),getpar();
+	int mstpar( char *, char *, void * );
+        int getpar( char *, char *, void * );
 	void  endpar();
 	char exec_pathname[128];
 	char *shorten_path( char *pathname, char *filename );

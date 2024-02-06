@@ -133,7 +133,8 @@ int main( int ac, char **av )
 	int debug = 0;
 
 	int setpar(int ac, char **av);
-	int getpar();
+	int mstpar( char *, char *, void * );
+        int getpar( char *, char *, void * );
 	void endpar();
 
 /*** begin main(), open input file ***/

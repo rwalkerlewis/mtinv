@@ -357,13 +357,22 @@ EventInfo *glib2inv_get_input_parameters( char *filename,
 			ev[ista].net, ev[ista].stnm, ev[ista].loc, 
 			grd_mo_type, ista );
 
-						/* 8 1 8 1 8 1 256 5 */
-		snprintf( ev[ista].glib_filename, 288, "%s.%s.%s.%s.glib",
+/***
+clang -I../include -c glib2inv_subs.c -o glib2inv_subs.o
+glib2inv_subs.c:361:3: warning: 'snprintf' will always overflow; destination buffer has size 256, but size argument is 288 [-Wbuiltin-memcpy-chk-size]
+                snprintf( ev[ista].glib_filename, 288, "%s.%s.%s.%s.glib",
+***/
+						/* 8 1 8 1 8 1 256 5 = 288 */
+		snprintf( ev[ista].glib_filename, 256, "%s.%s.%s.%s.glib",
 			ev[ista].net, ev[ista].stnm, ev[ista].loc,
 			ev[ista].modfile );
 
-						/* 8 1 8 1 8 1 256 1 1 1 2 5 */
-		snprintf( ev[ista].ginv_filename, 293, "%s.%s.%s.%s.%c.%02d.ginv", 
+/***
+glib2inv_subs.c:366:3: warning: 'snprintf' will always overflow; destination buffer has size 256, but size argument is 293 [-Wbuiltin-memcpy-chk-size]
+                snprintf( ev[ista].ginv_filename, 293, "%s.%s.%s.%s.%c.%02d.ginv", 
+***/
+						/* 8 1 8 1 8 1 256 1 1 1 2 5 = 293 */
+		snprintf( ev[ista].ginv_filename, 256, "%s.%s.%s.%s.%c.%02d.ginv", 
 			ev[ista].net, ev[ista].stnm, ev[ista].loc,
 			ev[ista].modfile, grd_mo_type, ista );
 

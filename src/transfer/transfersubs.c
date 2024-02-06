@@ -191,7 +191,7 @@ int getid( char *rec )
 
 void polezero( int nfreq, double df, double *xre, double *xim, char *sacpzfile, int verbose )
 {
-	int i, iz, ip, nz=0, np=0, nitems, id, getid(), last_item;
+	int i, iz, ip, nz=0, np=0, nitems, id, getid( char *rec ), last_item;
 	Dcomplex *z;
 	Dcomplex *p;
 	char rec[128], dum[32];

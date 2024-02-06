@@ -1,6 +1,8 @@
-CC = gcc
-JC = javac
-FC = gfortran
+include ../../../Makefile.inc
+
+# CC = gcc
+# JC = javac
+# FC = gfortran
 
 INCLUDE = -I.
 CFLAGS = $(INCLUDE)

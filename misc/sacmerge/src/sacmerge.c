@@ -33,6 +33,8 @@ int main(int ac, char **av)
 
 /*** start program ***/
 
+	/* snprintf( progname, sizeof(progname), av[0] ); */
+	/* sprintf( progname, av[0] ); */
 	strcpy( progname, av[0] );
 
 	fprintf( stderr, "%s: %s: %s: Version      = %s\n", progname, __FILE__, __func__, Version_Label );
@@ -47,6 +49,8 @@ int main(int ac, char **av)
 	{
 		sf = realloc( sf, (i+1)*sizeof(SacFile) );
 		
+		/* snprintf( sf[i].filename, sizeof(sf[i].filename), av[i] ); */
+		/* sprintf( sf[i].filename, av[i] ); */
 		strcpy( sf[i].filename, av[i] );
 
 		if(verbose)	
@@ -151,14 +155,14 @@ int main(int ac, char **av)
 	if(verbose)fprintf(stderr, "%s: %s: %s: setting SAC minmax\n", progname, __FILE__, __func__ );
 	set_sac_minmax( &(sf[rank].s), &data[0] );
 
-	if( strncmp( sf[rank].s.knetwk, "-12345", 6 ) == 0 || strcmp( sf[rank].s.knetwk, " " ) == 0 ) strcpy( sf[rank].s.knetwk, "NETWK" );
-        if( strncmp( sf[rank].s.kstnm,  "-12345", 6 ) == 0 || strcmp( sf[rank].s.kstnm,  " " ) == 0 ) strcpy( sf[rank].s.kstnm,  "NOSTA" );
-        if( strncmp( sf[rank].s.khole,  "-12345", 6 ) == 0 || strcmp( sf[rank].s.khole,  " " ) == 0 ) strcpy( sf[rank].s.khole,  "" );
-        if( strncmp( sf[rank].s.kcmpnm, "-12345", 6 ) == 0 || strcmp( sf[rank].s.kcmpnm, " " ) == 0 ) strcpy( sf[rank].s.kcmpnm, "CHAN" );
+	if( strncmp( sf[rank].s.knetwk, "-12345", 6 ) == 0 || strcmp( sf[rank].s.knetwk, " " ) == 0 ) snprintf( sf[rank].s.knetwk, sizeof(sf[rank].s.knetwk), "NETWK" );
+        if( strncmp( sf[rank].s.kstnm,  "-12345", 6 ) == 0 || strcmp( sf[rank].s.kstnm,  " " ) == 0 ) snprintf( sf[rank].s.kstnm,  sizeof(sf[rank].s.kstnm), "NOSTA" );
+        if( strncmp( sf[rank].s.khole,  "-12345", 6 ) == 0 || strcmp( sf[rank].s.khole,  " " ) == 0 ) snprintf( sf[rank].s.khole,  sizeof(sf[rank].s.khole),  "" );
+        if( strncmp( sf[rank].s.kcmpnm, "-12345", 6 ) == 0 || strcmp( sf[rank].s.kcmpnm, " " ) == 0 ) snprintf( sf[rank].s.kcmpnm, sizeof(sf[rank].s.kcmpnm), "CHAN" );
 
 	if(verbose) fprintf( stderr, "%s: %s: %s: creating output filename\n", progname, __FILE__, __func__ );
 
-        sprintf( output_sac_filename, "%4d.%03d.%02d.%02d.%02d.%04d.%s.%s.%s.%s.D.SAC",
+        snprintf( output_sac_filename, sizeof(output_sac_filename), "%4d.%03d.%02d.%02d.%02d.%04d.%s.%s.%s.%s.D.SAC",
                 sf[rank].s.nzyear,
                 sf[rank].s.nzjday,
                 sf[rank].s.nzhour,
@@ -180,7 +184,7 @@ int main(int ac, char **av)
         {
                 fprintf( stderr, "%s: %s: %s: %s already exists, writting output to out.sac instead\n",
                         progname, __FILE__, __func__, output_sac_filename );
-                strcpy( output_sac_filename, "out.sac" );
+                snprintf( output_sac_filename, sizeof(output_sac_filename), "out.sac" );
         }
 
         fprintf( stderr, "%s: %s: %s: writting %s nt=%d dt=%g b=%g e=%g dur=%g min=%g max=%g mean=%g\n",

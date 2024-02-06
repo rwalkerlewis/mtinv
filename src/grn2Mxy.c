@@ -43,7 +43,9 @@ int main( int ac, char **av )
 	void clone_mytime(  MyTime *t2, MyTime *t1 );
 	void WriteMyTime2STDOUT( MyTime * );
 
-	int setpar(int ac, char **av), mstpar(), getpar();
+	int setpar(int ac, char **av);
+	int mstpar( char *, char *, void * );
+        int getpar( char *, char *, void * );
 	void endpar();
 
 	void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose );
@@ -181,6 +183,14 @@ void conv2mxy( Greens *grn, int mtdegfree, int iwrtdir, int verbose )
 	t0 = grn->t0;
 	/* twin = (float)nt * dt; */
 	e = t0 + (nt*dt);
+
+/*** 
+ mt.h:float EventInfo.rtzGxy[24][4096] 
+
+             int icmp  0      1      2      3       4     5      6      7      8      9     10     11     12     13     14     15     16 
+const char *cmp[] = { "rxx", "rxy", "rxz", "ryy", "ryz", "rzz", "txx", "txy", "txz", "tyy", "tyz", "zxx", "zxy", "zxz", "zyy", "zyz", "zzz" };
+***/
+
 
 /**************************************************************************************************/
 /*** allocate memory for green func ***/
@@ -619,10 +629,15 @@ void Usage(int ac)
 	fprintf( stderr, "\t SS,DS,DD+Isotropic format of Helmberger and Langston (H&L 1975) and outputs Gfs in Mij format.\n" );
 	fprintf( stderr, "\t Writes output to new directories: (e.g.), \"INCN/IU.INCN.00.mdj2.glib.rxx.grn\" where \n" );
 	fprintf( stderr, "\t extensions *.{cmp}(i}{j}.grn are Mij i={x,y,z} j={x,y,z}, and component cmp={z,r,t} \n" );
-	fprintf( stderr, "\t Use glib2inv test_special and mtinv special argument options " );
 
 	fprintf( stderr, "\n" );
-
+	fprintf( stderr, "\n" );
+	fprintf( stderr, "\t Use glib2inv test_special and mtinv special argument options: \n" );
+	fprintf( stderr, "\t The storage structure here is local but uses mt.h: float EventInfo.rtzGxy[24][4096] in glib2inv.c and mtinv.c \n" );
+	fprintf( stderr, "\t See glib2inv.c calls load_special_grns.c:load_special_grns() and glib2inv_serial.c:glib2inv_special() \n" );
+	fprintf( stderr, "\n" );
+	fprintf( stderr, "\t See mtinv.c calls load_special_grns.c:load_special_grns() and make_amatrix.c:void make_amatrix_special() \n" );
+	fprintf( stderr, "\n" );
 	fprintf( stderr, "\n" );
 
 	exit(0);
