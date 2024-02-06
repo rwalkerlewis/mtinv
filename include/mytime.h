@@ -94,40 +94,41 @@ static char FullMonthName[][12] = { "0", "January", "February", "March", "April"
 static char weekday[][12] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
 
 /********* get time from system **********/
-MyTime *mylocaltime();
-MyTime *myGMTtime();
+MyTime *mylocaltime( MyTime *t );
+MyTime *myGMTtime( MyTime *t );
 
 /********** get time from user **********/
-MyTime *setmytime();
+MyTime *setmytime(  MyTime *t, int year, int month, int day, int hour, int min, int sec, int msec );
+MyTime *setmytime2( MyTime *t, int year, int month, int day, int hour, int min, float sec, int offset );
 
 /***********************************************  
   checks for empty or invalid 
   time fields and returns a (true/false) 
 **********************************************/
-int isMyTimeValid();
+int isMyTimeValid( MyTime *t );
 
 /*************************************************** 
   complete - set fields 
   not set by user or system 
 ***************************************************/
-void complete();          
-void fix_my_time();       
-void jday_to_month();     
-void month_to_jday();     
-MyTime *epoch2time(); 
-double time2epoch();        
-int day_of_month();
-int setDST();
+void complete( MyTime *t );          
+void fix_my_time( MyTime *t );       
+void jday_to_month( MyTime *t );     
+void month_to_jday( MyTime *t );     
+MyTime *epoch2time( MyTime *t, double ); 
+double time2epoch( MyTime *t );        
+int day_of_month( int dayofweek, int weekoffset, int ref, int month, int year );
+int setDST( MyTime *t );
 
 /*** manipulate the time or reference other times ********/
-int before();              
-int after();              
-int IsTimeEq();
-void clone_mytime();        
-void mydifftime();   
-void myaddtime();
+int before( MyTime *, MyTime * );
+int after( MyTime *, MyTime * );              
+int IsTimeEq( MyTime *, MyTime * );
+void clone_mytime( MyTime *t, MyTime *a );        
+void mydifftime( MyTime *t1, MyTime *t2, MyTime *t3 );   
+void myaddtime( MyTime *t1, MyTime *t2, MyTime *t3 );
 
 /********** output or display time to user **********/
-void WriteMyTime2STDOUT();
-void WriteMyTime2STDERR();
-char *MyTime2String();
+void WriteMyTime2STDOUT( MyTime * );
+void WriteMyTime2STDERR( MyTime * );
+char *MyTime2String( MyTime *t, char *str );

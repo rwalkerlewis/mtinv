@@ -30,8 +30,7 @@ int main( int ac, char **av )
 	void greensf_( int * );
 
 	/*** modified in version 4.0, added string char *wavetype = "Surf/Pnl" or "Rotational" ***/
-	/* void wrtgrn2sac( Greens *, int ); */
-	void wrtgrn2sac( Greens *g, int ista, char *wavetype );
+	void wrtgrn2sac( Greens *g, int ista, char *wavetype, int make_output_dirs );
 
 	void getparameters( int, char **, Greens *, Depth_Info *, int *, int * );
 
@@ -244,7 +243,7 @@ int main( int ac, char **av )
 	/*** this code only computes translational GFs not RotGF ***/
 	/***********************************************************/
 		ista = 0;
-		if( idump ) wrtgrn2sac( &grn_, ista, "Surf/Pnl" );
+		if( idump ) wrtgrn2sac( &grn_, ista, "Surf/Pnl", 0 /* int make_output_dirs */ );
 
 	/**************************************************************/
 	/*** write out binary greens functions library for glib2inv ***/
@@ -270,7 +269,8 @@ void getparameters( int ac, char **av, Greens *g,
 
 	int distaz( double, double, double, double, double *, double *, double * );
 	int setpar( int, char ** );
-	int getpar(), mstpar();
+	int getpar( char *, char *, void * );
+	int mstpar( char *, char *, void * );
 	void endpar();
 	void create_mod( VelMod * );
 	void print_mod0( VelMod * );
@@ -444,8 +444,13 @@ void getparameters( int ac, char **av, Greens *g,
 /*** changes 2019/Dec G. Ichinose includes loc ***/
 /*** net.sta.loc.model                         ***/
 /*************************************************/
-			/* 256 -> 8 + 1 + 8 + 1 + 8 + 256 */ 
-	snprintf( g->filename, 285,
+			/* 256 -> 8 + 1 + 8 + 1 + 8 + 256 = 285 */ 
+/*** 
+clang -I../include -c mkgrnlib.c -o mkgrnlib.o
+mkgrnlib.c:449:2: warning: 'snprintf' will always overflow; destination buffer has size 256, but size argument is 285 [-Wbuiltin-memcpy-chk-size]
+        snprintf( g->filename, 285,
+***/
+	snprintf( g->filename, 256,
 		"%s.%s.%s.%s.glib",
 		g->net,
 		g->stnm,

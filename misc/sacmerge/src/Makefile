@@ -1,4 +1,9 @@
-CC = gcc
+
+include ../../../Makefile.inc
+
+#CC = clang
+#CC = gcc
+
 INCLUDE = -I../../../include
 CFLAGS = $(INCLUDE)
 LIBDIRS = -L../../../lib

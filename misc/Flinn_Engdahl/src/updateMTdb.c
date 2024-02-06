@@ -19,7 +19,9 @@ int main( int ac, char **av )
 	int imax = 1;  /*** true just do the last load, lookup the last orid from MT_ORIGIN_STAGE table ***/
 	int cleanup = 1; /** delete all query and tmp output files ***/
 
-	int setpar(int,char **),getpar(),mstpar();
+	int setpar(int,char **);
+	int mstpar( char *, char *, void * );
+	int getpar( char *, char *, void * );
 	void endpar();
 	int verbose = 1;
 

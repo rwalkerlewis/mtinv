@@ -1,4 +1,6 @@
-CC = gcc
+#CC = clang
+#CC = gcc
+include ../../Makefile.inc
 
 CFLAGS = 
 

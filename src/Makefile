@@ -1,11 +1,15 @@
-CC = gcc
-FC = gfortran
-#
+include ../Makefile.inc
+
+### set these in include file ../Makefile.inc
+# CC = gcc
+# CC = clang
+# FC = gfortran
+####
+
 INCLUDE = -I../include
 GRN_LIBS = -lm -L../lib -lglib -lget
 PLOT_LIBS = -L../lib -lcgraph
 INSTALL = ../bin
-#
 CFLAGS = $(INCLUDE)
 FFLAGS = 
 
@@ -15,7 +19,7 @@ FFLAGS =
 	$(FC) $(FFLAGS) -c $< -o $@
 
 EXEC = libglib mkgrnlib grnlib2sac glib2inv glib2inv_join sacdata2inv mtinv makepar \
-       setupMT pltmod mteig area_sphere whatshere mtbestfit grn2Mxy 
+       setupMT pltmod mteig area_sphere whatshere mtbestfit grn2Mxy hspec96_to_grnlib
 
 # removed for distribution: mt2lune lune2mt
 
@@ -56,13 +60,13 @@ libglib : $(OBJS0)
 
 OBJS1 = mkgrnlib.o wrtgrn2sac.o stasubs.o greensf.o besasy.o bessel.o cinv2.o fork.o \
 	genrefl.o timesubs.o modsubs.o misc_tools/distaz.o rayp/rayp_subs.o shorten_path.o \
-        misc_tools/ampshift.o sacio/sacio.o
+        misc_tools/ampshift.o sacio/sacio.o mkdirp2.o
 
 mkgrnlib : $(OBJS1)
 	$(FC) $(FFLAGS) -o $@ $(OBJS1) -lm -L../lib -lget
 	mv $@ $(INSTALL)
 
-OBJS2 = grnlib2sac.o wrtgrn2sac.o radiation_pattern_subs.o
+OBJS2 = grnlib2sac.o wrtgrn2sac.o radiation_pattern_subs.o mkdirp2.o
 grnlib2sac : $(OBJS2)
 	$(CC) $(CFLAGS) -o $@ $(OBJS2) -lm -L../lib -lglib -lget
 	mv $@ $(INSTALL)
@@ -88,14 +92,6 @@ glib2inv_join : $(GLIB_JOIN)
 	$(CC) $(CFLAGS) -pthread -o $@ $(GLIB_JOIN) -lm -L../lib -lglib -lget -lpthread
 	mv $@ $(INSTALL)
 
-MTGS_SUBS = mtgs.o glib2inv_subs.o svbksb.o svdcmp.o tred2.o tqli.o trans1.o tpdss.o \
-            mtinv_subs.o mtinv_gmtsubs.o ascii_mech.o psplot.o svdvar.o psmech.o make_amatrix.o indexx.o \
-            check_depths.o 
-
-mtgs : $(MTGS_SUBS)
-	$(CC) $(CFLAGS)  -o $@ $(MTGS_SUBS) $(GRN_LIBS) $(PLOT_LIBS)
-	mv $@ $(INSTALL)
-
 MTINV_SUBS= mtinv.o glib2inv_subs.o svbksb.o svdcmp.o tred2.o tqli.o trans1.o tpdss.o \
 	mtinv_subs.o mtinv_gmtsubs.o ascii_mech.o psplot.o svdvar.o psmech.o make_amatrix.o indexx.o \
         check_depths.o dbsubs.o eig2lune.o shorten_path.o find_best_shift.o realtime_subs.o dumpSAC.o
@@ -119,21 +115,8 @@ MTEIG_SUBS = mteig_subs.o simulate_MTeig2evec_serial.o simulate_MT_parallel.o si
 mteig : mteig.o $(MTEIG_SUBS) $(OBJS0)
 	$(CC) $(CFLAGS) -pthread -o $@ mteig.o $(MTEIG_SUBS) $(GRN_LIBS) $(PLOT_LIBS) -lpthread
 	mv $@ $(INSTALL)
-
-create_clvd : create_clvd.o $(MTEIG_SUBS)
-	$(CC) $(CFLAGS) -o $@ create_clvd.o $(MTEIG_SUBS) $(GRN_LIBS) $(PLOT_LIBS)
-	mv $@ $(INSTALL)
 	
-MTSIM_SUBS = mtsim.o mtsim_subs.o glib2inv_subs.o svbksb.o svdcmp.o tred2.o tqli.o trans1.o tpdss.o \
-        mtinv_subs.o mtinv_gmtsubs.o ascii_mech.o psplot.o svdvar.o psmech.o make_amatrix.o indexx.o \
-        check_depths.o dbsubs.o eig2lune.o shorten_path.o find_best_shift.o mtsim_invert_sim_parallel.o \
-        dumpSAC.o
-
-mtsim : $(MTSIM_SUBS) 
-	$(CC) $(CFLAGS) -pthread -o $@ $(MTSIM_SUBS) $(GRN_LIBS) $(PLOT_LIBS)
-	mv $@ $(INSTALL)
-
-SETUPMT_OBJS = setupMT.o indexx.o shorten_path.o sacio/sacio.o timesubs.o misc_tools/distaz.o 
+SETUPMT_OBJS = setupMT.o indexx.o shorten_path.o sacio/sacio.o timesubs.o misc_tools/distaz.o  mkdirp2.o modsubs.o
 setupMT : $(SETUPMT_OBJS)
 	$(CC) $(CFLAGS) -o $@ $(SETUPMT_OBJS) -lm -L../lib -lget -lm
 	mv $@ $(INSTALL)
@@ -146,16 +129,8 @@ pltmod : pltmod.o modsubs.o
 	$(CC) $(CFLAGS) -o $@ pltmod.o modsubs.o -lm -L../lib -lget -lm
 	mv $@ $(INSTALL)
 
-pea  : pea.o tred2.o tqli.o eigsrt.o hudson_subs.o
-	$(CC) $(CFLAGS) -o $@ pea.o tred2.o tqli.o eigsrt.o hudson_subs.o -L../lib -lget $(GRN_LIBS)
-	mv $@ $(INSTALL)
-
 whatshere : whatshere.o timesubs.o
 	$(CC) $(CFLAGS) -o $@ whatshere.o timesubs.o -lm -L../lib -lget 
-	mv $@ $(INSTALL)
-
-testc2 : testc2.o math/math.o
-	$(CC) $(CFLAGS) -o $@ testc2.o math/math.o -L../lib -lget -lm
 	mv $@ $(INSTALL)
 
 mtbestfit : mtbestfit.o timesubs.o 
@@ -171,7 +146,13 @@ mt2lune : mt2lune.o tqli.o tred2.o eig2lune.o floatsort.o math/math.o
 	mv $@ $(INSTALL)
 
 radiation_pattern : radiation_pattern.o radiation_pattern_subs.o 
-	cc -o radiation_pattern radiation_pattern.o radiation_pattern_subs.o -lm -lget -L../lib
+	$(CC) -o radiation_pattern radiation_pattern.o radiation_pattern_subs.o -lm -lget -L../lib
+	mv $@ $(INSTALL)
+
+OBJS_HSPEC96 = timesubs.o modsubs.o shorten_path.o sacio/sacio.o mkdirp2.o misc_tools/distaz.o stasubs.o
+
+hspec96_to_grnlib : hspec96_to_grnlib.o $(OBJS_HSPEC96)
+	$(CC) $(CFLAGS) -o $@ hspec96_to_grnlib.o $(OBJS_HSPEC96) -lm -L../lib -lget
 	mv $@ $(INSTALL)
 
 clean :

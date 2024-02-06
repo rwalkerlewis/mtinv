@@ -41,15 +41,18 @@ int main( int ac, char **av )
 	int mtdegfree=5;
 	int ifoundz=0;
 	int input_type;
+
 	int idumpgrn=0;
+	int gmt_plot_grn = 0;
+	int make_output_dirs = 0;
+	char wavetype_string[32]; /*** wavetype_string is populated with either "Surf/Pnl" or "Rotational" ***/
+
 	int inoise = 0;
 	int iseed = 1;
 	int dounits_cm2m = 1;
 	int dointerp = 0;
 	float noise_Mw = 3.8;
 	float my_src_to_rec_azimuth_override = -999;
-
-	char wavetype[32];
 
 /******************************************************************************/
 /*** radiation_pattern.o ***/
@@ -70,13 +73,18 @@ int main( int ac, char **av )
 /******************************************************************************/
 /*** function prototypes ***/
 /******************************************************************************/
-	void wrtgrn2sac( Greens *g, int verbose, char *wavetype );
+	void plotgrnlib_GMT5( Greens *g, int ista, char *wavetype, int make_output_dirs );
+
+	void wrtgrn2sac( Greens *g, int verbose, char *wavetype_string, int make_output_dirs );
+
 	void grn2disp2( Greens *grn, struct event ev, int verbose,
 		int mtdegfree, int inoise, float noise_Mw, int iseed,
 		int input_type, int dounits_cm2m, int dointerp,
 		float my_src_to_rec_azimuth_override, int fiber, float azi_fiber );
 
-	int setpar(int,char **), mstpar(), getpar();
+	int setpar( int ac, char **av );
+	int mstpar( char *, char *, void * );
+	int getpar( char *, char *, void * );
 	void endpar();
 	void Usage_Print();
 
@@ -93,7 +101,14 @@ int main( int ac, char **av )
 	mstpar("glib",	  "s", filename );
 	mstpar("z",	  "f", &my_z );
 	getpar("verbose", "b", &verbose );
+
 	getpar("dumpgrn", "b", &idumpgrn );
+	if( idumpgrn == 1 )
+	{
+		getpar( "plotgrn", "b", &gmt_plot_grn );
+		getpar( "wavetype", "s", wavetype_string );
+		getpar( "mkdir", "b", &make_output_dirs );
+	}
 
 	strcpy( dateid, "2008/01/01,00:00:00\0" );
 	getpar( "date", "s", dateid );
@@ -326,16 +341,43 @@ int main( int ac, char **av )
 		if( iz == ifoundz )
 		{
 		  ista = 0;
+
+		
 		  if( idumpgrn == 1 ) 
 		  {
+			if(verbose) 
+			{
+				fprintf( stdout, "%s: %s: %s: idumpgrn=%d calling wrtgrn2sac: wavetype=%s\n",
+					progname, __FILE__, __func__, idumpgrn, wavetype_string );
+			}
 
-			strcpy(wavetype,"Rotational");
-			if(verbose)
-			  fprintf( stdout, "%s: %s: %s: calling wrtgrn2sac: wavetype=%s\n",
-				progname, __FILE__, __func__, wavetype );
+			if( strcmp( wavetype_string, "Rotational" ) == 0 )
+			{
+				wrtgrn2sac( &grn, ista, wavetype_string, make_output_dirs );
 
-			wrtgrn2sac( &grn, ista, wavetype );
+				/*** has to be run afterwards ***/
+				if(gmt_plot_grn)
+					plotgrnlib_GMT5( &grn, ista, "Rotational", make_output_dirs );
+
+			}
+			else if( strcmp( wavetype_string, "Surf/Pnl" ) == 0 )
+			{
+				wrtgrn2sac( &grn, ista, wavetype_string, make_output_dirs );
+
+				/*** has to be run afterwards ***/
+				if(gmt_plot_grn)
+					plotgrnlib_GMT5( &grn, ista, "Surf/Pnl", make_output_dirs );
+			}
+			else
+			{
+				fprintf( stdout, 
+				  "%s: %s: %s: ERROR! idumpgrn=%d unknown wavetype = %s (only \"Surf/Pnl\" or \"Rotational\" allowed)\n",
+					progname, __FILE__, __func__, idumpgrn, wavetype_string );
+				exit(-1);
+			}
 		  }
+
+
 		  if( idumpgrn == 0 ) 
 		  {
 		    if(verbose)
@@ -394,13 +436,16 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 	float fact = 1, facl = 1; /* for fiber */
 	float fac = 1; /* for noise */
 
-	float noise_moment, peak;
+	float noise_moment;
 	float gasdev( int *iseed );
 	void source_time_function( float *, int, float, float, float );
 	void  rotate( float *, int, float *, float, float *, int, float *, float, float, int );
 	void interpolate_wiggins( float *, int, float, float, float *, int, float );
 	void duplicate_vector( float *x, float *y, int n );
 	void write_SACPZ_file( char *, char *, char *,  int, int, int, int );
+
+	float peak, tmp;
+	float find_abspeak_value_from_float_array( float *x, int nt );
 
 	void HelmbergerCoef( float str, float dip, float rak,
 		float *aa1, float *aa2, float *aa3, float *aa4, float *aa5 );
@@ -452,19 +497,16 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 /**************************************************************************************************/
 
 	peak = 1E-29;
-	for( it = 0; it < nt; it++ )
-	{
-          if(fabs(rss[it]) > peak) peak=fabs(rss[it]);
-          if(fabs(rds[it]) > peak) peak=fabs(rds[it]);
-          if(fabs(rdd[it]) > peak) peak=fabs(rdd[it]);
-          if(fabs(rep[it]) > peak) peak=fabs(rep[it]);
-          if(fabs(zss[it]) > peak) peak=fabs(zss[it]);
-          if(fabs(zds[it]) > peak) peak=fabs(zds[it]);
-          if(fabs(zdd[it]) > peak) peak=fabs(zdd[it]);
-          if(fabs(zep[it]) > peak) peak=fabs(zep[it]);
-          if(fabs(tss[it]) > peak) peak=fabs(tss[it]);
-          if(fabs(tds[it]) > peak) peak=fabs(tds[it]);
-	}
+	if( (tmp = find_abspeak_value_from_float_array( rss, nt )) > peak ) peak = tmp;
+	if( (tmp = find_abspeak_value_from_float_array( rds, nt )) > peak ) peak = tmp;
+	if( (tmp = find_abspeak_value_from_float_array( rdd, nt )) > peak ) peak = tmp;
+	if( (tmp = find_abspeak_value_from_float_array( rep, nt )) > peak ) peak = tmp;
+	if( (tmp = find_abspeak_value_from_float_array( zss, nt )) > peak ) peak = tmp;
+	if( (tmp = find_abspeak_value_from_float_array( zds, nt )) > peak ) peak = tmp;
+	if( (tmp = find_abspeak_value_from_float_array( zdd, nt )) > peak ) peak = tmp;
+	if( (tmp = find_abspeak_value_from_float_array( zep, nt )) > peak ) peak = tmp;
+	if( (tmp = find_abspeak_value_from_float_array( tss, nt )) > peak ) peak = tmp;
+	if( (tmp = find_abspeak_value_from_float_array( tds, nt )) > peak ) peak = tmp;
 
 /**************************************************************************************************/
 /*** convolve source time funciton ***/
@@ -1039,8 +1081,8 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 void Usage_Print()
 {
 	fprintf(stderr, "\n");
-	fprintf(stderr, "USAGE: %s: glib= z= [no]verbose [no]dumpgrn tr=[0] tt=[0]", 
-		progname );
+	fprintf(stderr, "USAGE: %s: glib= z= [no]verbose ( [no]dumpgrn wavetype= [no]plotgrn ) tr=[0] tt=[0]", progname );
+
 	fprintf(stderr, "  type=[no default see below for additional options]\n\n" );
 
 	fprintf(stderr, "\t REQUIRED ARGUMENTS:\n");
@@ -1050,6 +1092,9 @@ void Usage_Print()
 
 	fprintf(stderr, "\t OPTIONAL PARAMETERS:\n");
 	fprintf(stderr, "\t\t [no]dumpgrn  write out only Green's functions [boolean default off]\n");
+	fprintf(stderr, "\t\t\t if dumpgrn then wavetype is required with either wavetype=\"Surf/Pnl\" or wavetype=\"Rotational\" no default\n" );
+	fprintf(stderr, "\t\t\t if dumpgrn then plotgrn is optional, makes GMT plot of Greens functions default off\n" );
+
 	fprintf(stderr, "\t\t [no]verbose  verbosy output for diagnosis [boolean default off]\n");
 	fprintf(stderr, "\t\t date         origin-time format: YYYY/MM/DD,HH24:mm:ss.ss [string default \"2008/01/01:00:00:00.00\"]\n");
 	fprintf(stderr, "\t\t dounits_cm2m multiply ground motion output by 0.01 to convert cm to meters boolean [boolean default off]\n" );

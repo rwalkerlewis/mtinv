@@ -48,7 +48,6 @@ int main( int ac, char **av )
 	int debug = 0;
 	int verbose = 0;
 	int idumpgrn = 0;
-	int idumpsac = 0;
 	int test_special = 0;
 	int DIFFoperator = 3;
 	char pathname[128];
@@ -57,15 +56,11 @@ int main( int ac, char **av )
 /*** function prototypes ***/
 /***************************/
 
-	/*** glib2inv_serial.c ***/
-	void glib2inv_serial( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int idumpsac, int idumpgrn, int verbose );
+/*** glib2inv_serial.c ***/
+	void glib2inv_serial( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int idumpgrn, int verbose );
 
-	/*** glib2inv_parallel.c ***/
-	void glib2inv_parallel( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int idumpsac, int idumpgrn, int verbose );
-
-	/*** wrtgrn2sac.c ***/
-	/* void wrtgrn2sac( Greens *g, int ista ); */
-	void wrtgrn2sac( Greens *g, int ista, char *wavetype );
+/*** glib2inv_parallel.c ***/
+	void glib2inv_parallel( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int idumpgrn, int verbose );
 
 	/*** shorten_path.c ***/
 	char *shorten_path( char *pathname, char *filename );
@@ -73,11 +68,12 @@ int main( int ac, char **av )
 	/*** load_special_grns.c ***/
 	float *load_special_grns( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, int verbose );
 
-	/*** glib2inv_serial.c ***/
-	void glib2inv_special( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int idumpsac, int idumpgrn, int verbose );
+/*** glib2inv_serial.c ***/
+	void glib2inv_special( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int idumpgrn, int verbose );
 
 	int setpar(int ac, char **av);
-	int mstpar(), getpar();
+	int mstpar( char *, char *, void * );
+        int getpar( char *, char *, void * );
 	void endpar(void);
 	void Usage_Print();
 
@@ -109,7 +105,6 @@ int main( int ac, char **av )
 	mstpar( "par",      "s", &evinfo_filename );
 	getpar( "verbose",  "b", &verbose );
 	getpar( "dumpgrn",  "b", &idumpgrn );
-	getpar( "dumpsac",  "b", &idumpsac );
 	getpar( "parallel", "b", &iparallel );
 	getpar( "test_special", "b", &test_special );
 	endpar();
@@ -178,7 +173,7 @@ int main( int ac, char **av )
 		/**************************************/
 		/*** process the GFs                ***/
 		/**************************************/
-		glib2inv_special( grn, ev, z, nsta, idumpsac, idumpgrn, verbose );
+		glib2inv_special( grn, ev, z, nsta, idumpgrn, verbose );
 
 	} /*** end test_special option true ***/
 
@@ -318,11 +313,11 @@ int main( int ac, char **av )
 
 	  if( iparallel )
 	  {
-		glib2inv_parallel( grn, ev, z, nsta, idumpsac, idumpgrn, verbose );
+		glib2inv_parallel( grn, ev, z, nsta, idumpgrn, verbose );
 	  }
 	  else
 	  {
-		glib2inv_serial( grn, ev, z, nsta, idumpsac, idumpgrn, verbose );
+		glib2inv_serial( grn, ev, z, nsta, idumpgrn, verbose );
 	  }
 
 	  fprintf( stdout, "%s: %s: %s: STDOUT: freeing memory\n", progname, __FILE__, __func__ );
@@ -344,7 +339,7 @@ int main( int ac, char **av )
 void Usage_Print()
 {
         fprintf(stderr,
-          "\n USAGE: %s par=mtinv.par [no]verbose [no]dumpsac [no]dumpgrn [no]parallel [no]test_special\n",
+          "\n USAGE: %s par=mtinv.par [no]verbose [no]dumpgrn [no]parallel [no]test_special\n",
           progname );
 
         fprintf(stderr, "\n" );
@@ -354,13 +349,14 @@ void Usage_Print()
 
         fprintf(stderr, "\t OPTIONAL PARAMETERS: \n" );
         fprintf(stderr, "\t [no]verbose           be verbosy [boolean DEFAULT off]\n" );
-        fprintf(stderr, "\t [no]dumpsac           compute 3-C synthetics from Green functions using str/dip/rak,Mo,depth \n" );
-        fprintf(stderr, "\t                       from par file [boolean DEFAULT off]\n" );
         fprintf(stderr, "\t [no]dumpgrn           write out the Green functions as SAC formatted files [boolean DEFAULT off]\n" );
+
         fprintf(stderr, "\t [no]parallel          process Greens functions using pThreads/multithreading [boolean DEFAULT on] \n" );
+
         fprintf(stderr, "\t [no]test_special      read in Greens functions from SAC files in Mij(r,t,z) format [boolean DEFAULT off]\n" );
         fprintf(stderr, "\t                       test_special option requires serial option (noparallel) automatically unset\n" );
         fprintf(stderr, "\n" );
+
 	fprintf(stderr, "\t DESCRIPTION:\n");
 	fprintf(stderr, "\t Reads station, filters, models, from PAR file mtinv.par and processes Green's function libraries.\n" );         
 	fprintf(stderr, "\t Outputs processed Green's function libraries for input into mtinv. For processing data see sacdata2inv.\n" );

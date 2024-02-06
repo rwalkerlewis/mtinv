@@ -23,7 +23,9 @@ int distaz( double olat, double olon, double tlat, double tlon,
         double clat,clon,clar,clor,stho,ctho,ctlat,ctlon;
         double ctlar,ctlor,sth,cth,dph,sdph,cdph,delr;
         double azr,bazr;
-        double acos(),sin(),cos(),atan2();
+
+/*** these are defined in math.h ***/
+        /* double acos(),sin(),cos(),atan2(); */
 
 	pi = acos(-1.0);
 	twopi = 2.*pi;

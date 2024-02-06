@@ -24,13 +24,12 @@ typedef struct thread_data
 	DepthVector *z;
 	int ista;
 	int nsta;
-	int idumpsac;
 	int idumpgrn;
 	int verbose;
 	int wvtyp;   /* wvtyp == 0 : Surf/Pnl wvtyp == 1 Rotational */
 } ThreadData;
 
-void glib2inv_parallel( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int idumpsac, int idumpgrn, int verbose )
+void glib2inv_parallel( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int idumpgrn, int verbose )
 {
 
 /**********************/
@@ -51,8 +50,8 @@ void glib2inv_parallel( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, i
 	if(verbose)
 	{
 	  fprintf( stdout,
-	    "%s: glib2inv_parallel.c: glib2inv_parallel(): nsta=%d idumpsac=%d idumpgrn=%d verbose=%d\n",
-		progname, nsta, idumpsac, idumpgrn, verbose );
+	    "%s: glib2inv_parallel.c: glib2inv_parallel(): nsta=%d idumpgrn=%d verbose=%d\n",
+		progname, nsta, idumpgrn, verbose );
 	}
 
 	thread = (pthread_t *)malloc( nsta * sizeof(pthread_t) );
@@ -66,9 +65,11 @@ void glib2inv_parallel( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, i
 		td[ista].z            = &z[ista];
 		td[ista].ista         = ista;
 		td[ista].nsta         = nsta;
-		td[ista].idumpsac     = idumpsac;
 		td[ista].idumpgrn     = idumpgrn;
 		td[ista].verbose      = verbose;
+
+	/*** this assumes that the mtinv.par files is used and the column with 
+                 wavetype is populated with either "Surf/Pnl" or "Rotational" ***/
 
 		td[ista].wvtyp        = 0;
 		if( strcmp( ev[ista].wavetype, "Surf/Pnl" ) == 0 )
@@ -197,7 +198,7 @@ void *glib2inv_staproc_pthread( void *ptr )
                                 float b, int new_nt, float new_dt, int verbose );
                                                                                                                                                                
 /*** wrtgrn2sac.c ***/
-	void wrtgrn2sac( Greens *g, int ista, char *wavetype );
+	void wrtgrn2sac( Greens *g, int ista, char *wavetype, int make_output_dirs );
 
 /*** glib2inv_subs.c ***/
         void split2grn( Greens *g, float **garray );
@@ -227,7 +228,6 @@ void *glib2inv_staproc_pthread( void *ptr )
 	int verbose;
 	int iz;
 	int ista;
-	int idumpsac;
 	int idumpgrn;
 	int wvtyp;
 
@@ -240,7 +240,6 @@ void *glib2inv_staproc_pthread( void *ptr )
 	grn   = (Greens *)    td->grn;
 	ev    = (EventInfo *) td->ev;
 	z     = (DepthVector *) td->z;
-	idumpsac = td->idumpsac;
 	idumpgrn = td->idumpgrn;
 	wvtyp = td->wvtyp;
 
@@ -409,40 +408,11 @@ void *glib2inv_staproc_pthread( void *ptr )
 		for( iz = 0; iz < z->nz; iz++ )
 		{
 			if( wvtyp == 1 )
-			  wrtgrn2sac( &grn[iz], ista, "Rotational" );
+			  wrtgrn2sac( &grn[iz], ista, "Rotational", 0 /* int make_output_dirs */ );
 			else if( wvtyp == 0 )
-			  wrtgrn2sac( &grn[iz], ista, "Surf/Pnl" );
+			  wrtgrn2sac( &grn[iz], ista, "Surf/Pnl", 0 /* int make_output_dirs */ );
 			else
-			  wrtgrn2sac( &grn[iz], ista, "Surf/Pnl" );
-		}
-	}
-
-/****************************************************/
-/*** if event tag present in input PAR file then  ***/
-/*** compute displacement synthetics              ***/
-/****************************************************/
-
-	if( idumpsac )
-	{
-	 	for( iz = 0; iz < z->nz; iz++ )
-		{
-			if(     ( ev[ista].my_z == z->z[iz] ) &&
-				( ev[ista].str  != -999  ) &&
-				( ev[ista].dip  != -999  ) &&
-				( ev[ista].rak  != -999  ) &&
-				( ev[ista].Mw   != -999  )  )
-			{
-			/**** no longer use this, removed from structure ***/
-			/****
-				grn[iz].ver = calloc( grn[iz].nt, sizeof(float) );
-                        	grn[iz].rad = calloc( grn[iz].nt, sizeof(float) );
-                        	grn[iz].tra = calloc( grn[iz].nt, sizeof(float) );
-                        	grn2disp( &(grn[iz]), &ev[ista], verbose, mtdegfree );
-			***/
-
-                        /*** write out the synthetics here ***/
-
-			}
+			  wrtgrn2sac( &grn[iz], ista, "Surf/Pnl", 0 /* int make_output_dirs */ );
 		}
 	}
 

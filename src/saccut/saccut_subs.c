@@ -630,8 +630,9 @@ void time2sac( MyTime *t, Sac_Header *s )
 
 void sac2time( MyTime *t, Sac_Header *s )
 {
-	void complete();
-	void initialize_mytime();
+	void complete( MyTime *t );
+	void initialize_mytime( MyTime *t );
+/*** start subroutine ***/
 	initialize_mytime( t );
 	t->year = s->nzyear;
 	t->jday = s->nzjday;

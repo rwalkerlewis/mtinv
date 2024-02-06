@@ -1,4 +1,6 @@
-CC = gcc 
+#CC = gcc 
+include ../../../Makefile.inc
+
 INCLUDE = ../../../include
 CFLAGS = -I$(INCLUDE) 
 LIBDIRS = -L../../../lib

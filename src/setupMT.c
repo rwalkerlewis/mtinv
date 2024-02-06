@@ -9,6 +9,13 @@ Mon Aug  3 15:40:26 PDT 2020 ichinose
 
   added check for multiple segments for user to check 
 
+
+Sat Jan 13 14:51:40 PST 2024
+	add support to compute HSPEC96 greens functions from R. Herrmann's Computer Programs in Seismology 
+### autogenerate this using setupMT -hspec96
+### https://www.eas.slu.edu/eqc/eqccps.html
+###  https://www.eas.slu.edu/eqc/eqc_cps/CPS/CPS330/cps330o.pdf
+
 ***/
 
 #include <stdio.h>
@@ -20,8 +27,9 @@ Mon Aug  3 15:40:26 PDT 2020 ichinose
 #include <sys/stat.h>
 #include <errno.h>
 
-#include "../include/sacfile.h"
-#include "../include/mt_version.h" /*** get the version label ***/
+/*** for VelMod structure ***/
+/*** also for mt_version.h and sac.h ***/
+#include "../include/mt.h"
 
 char progname[128];
 
@@ -41,9 +49,12 @@ int main( int ac, char **av )
 	int igmt4;
 	int i = 1, nsta = 0;
 	int irt;
-	char model_name[128];
 	char *mtinv_path = NULL;
-	char model_file_full_path[256];
+
+	char model_name[128];   /*** wus ***/
+	char model_file_path[256]; /*** /Users/ichinose1/Work/mtinv/data/modeldb ***/
+	char model_file_full_path[256];  /*** /Users/ichinose1/Work/mtinv/data/modeldb/wus.mod ***/
+
 	char cmdline[512];
 	float lf, hf;
 	long evid;
@@ -136,7 +147,16 @@ int main( int ac, char **av )
 
         char *shorten_path( char *pathname, char *filename );
 	char pathname[128];
-	
+
+/*** add new feature to compute hspec96.f greens functions ***/
+
+	int ihspec96 = 0;
+	void create_hspec96_script( float depth, int nsta, Sac_Header *s, 
+		char *model_name, char *model_file_path, 
+		char exclude_station_list[256][16], int nsta_exclude_list, 
+		float evla, float evlo, int verbose );
+
+/*** misc ***/
 	void create_cleanup_script();
 
 /*** get commandline args ***/
@@ -194,6 +214,15 @@ int main( int ac, char **av )
 	{
 		strcpy( arg, av[i] );
 
+	/*** this is new, for setting up bob Herrmann's hspec96 GFs run ***/
+
+		if( strcmp( arg, "-hspec96" ) == 0 )
+		{
+			i++;
+			ihspec96 = 1;
+			continue;
+		}
+
 		if( strcmp( arg, "-evid" ) == 0 )
 		{
 			i++;
@@ -227,8 +256,11 @@ int main( int ac, char **av )
 		
 			if( ( mtinv_path = getenv( "MTINV_PATH" )) != NULL )
 			{
+				sprintf( model_file_path, "%s/data/modeldb", mtinv_path );
+
 				sprintf( model_file_full_path, "%s/data/modeldb/%s.mod",
 					mtinv_path, model_name );
+
 				if( access( model_file_full_path, F_OK ) == 0 )
 				{
 					fprintf( stderr, "%s: %s: %s velocity model file %s ok\n",
@@ -253,6 +285,8 @@ int main( int ac, char **av )
                         continue;
 		}
 
+	/*** interactive mode adds (uncomments) active display of images in shell scripts, in automatic mode, user would not want 1000's of images to pop up on screen ***/
+
 		if( strcmp( arg, "-interactive" ) == 0 || strcmp( arg, "-int" ) == 0 )
 		{
 			fprintf( stderr, "%s: -interactive or -int generates scripts allows user interactivly view plots\n", progname );
@@ -262,6 +296,8 @@ int main( int ac, char **av )
 			continue;
 			
 		} 
+
+	/*** load station exclude list, for pesty stations with problems, dont include in makegrnlib, best for automatic processing ***/
 
 		if( strcmp( arg, "-exclude_sta" ) == 0 || strcmp( arg, "-Xsta" ) == 0 ) 
 		{
@@ -291,6 +327,8 @@ int main( int ac, char **av )
 			continue;
 		}
 
+	/*** event lat log ***/
+
 		if( strcmp( arg, "-ev" ) == 0 || strcmp( arg, "-event" ) == 0 )
 		{
 			i++;
@@ -316,6 +354,7 @@ int main( int ac, char **av )
 			continue;
 		}
 
+	/*** filter bands ***/
 		if( strcmp( arg, "-fil" ) == 0 || strcmp( arg, "-filter" ) == 0  )
 		{
 			i++;
@@ -342,6 +381,7 @@ int main( int ac, char **av )
                         continue;
 		}
 
+	/*** source depth ***/
 		if( strcmp( arg, "-z" ) == 0 || strcmp( arg, "-depth" ) == 0  )
 		{
 			i++;
@@ -350,6 +390,8 @@ int main( int ac, char **av )
 			i++;
 			continue;
 		}
+
+	/*** comment, this is displayed in most plots  ***/
 
 		if( strcmp( arg, "-com" ) == 0 || strcmp( arg, "-comment" ) == 0  )
 		{
@@ -486,9 +528,14 @@ int main( int ac, char **av )
 			}
                 	i++;
 		}
-        }
+        } /*** end loop over command line arguments ***/
 
+	fprintf( stderr, "%s: %s: %s: TOTAL loaded SAC nsta=%d\n",
+                progname, __FILE__, __func__, nsta );
+
+/****************************************************************/
 /*** check required cmdline input variables for valid values ***/
+/****************************************************************/
 	
 	if( depth == -999 || evla == -999 || evlo == -999 || ot == NULL )
 	{
@@ -500,6 +547,8 @@ int main( int ac, char **av )
 			progname, __FILE__, __func__, depth, evla, evlo );
 		WriteMyTime2STDERR( ot );
 	}
+
+/*** check the model name and exists file ***/
 
 	if( strcmp( model_name, "\0" ) == 0 ) 
 	{
@@ -531,6 +580,8 @@ int main( int ac, char **av )
 		exit(0);
 	}
 
+/*** compute the source receiver geometry ****/
+
 	if( evla != -999 && evlo != -999 )
 	{
 		for( i = 0; i < nsta; i++ )
@@ -542,6 +593,19 @@ int main( int ac, char **av )
 			s[i].dist = (float)drdistkm;
 			s[i].az   = (float)daz;
 			s[i].baz  = (float)dbaz;
+
+                /**
+                        if(verbose)
+                        {
+                          fprintf( stderr, "%s: %s: %s: i=%d net=%s sta=%s loc=%s chan=%s evla=%g evlo=%g dist=%g az=%g baz=%g\n",
+                                progname, __FILE__, __func__,
+                                i,
+                                s[i].knetwk, s[i].kstnm, s[i].khole, s[i].kcmpnm,
+                                s[i].evla, s[i].evlo,
+                                s[i].dist, s[i].az, s[i].baz );
+                        }
+                ***/
+
 		}
 	}
 
@@ -556,6 +620,8 @@ int main( int ac, char **av )
 		}
 		/* fprintf( stdout, "khole=(%s)\n", s[i].khole ); */
 	}
+
+/*** make a GMT map of stations ***/
 
 	if( igmt4 )
 	{
@@ -588,6 +654,13 @@ int main( int ac, char **av )
 		nsta_exclude_list,
 		verbose );
 
+	if(ihspec96)
+	{
+	  create_hspec96_script( depth, nsta, s, 
+		model_name, model_file_path,
+		exclude_station_list, nsta_exclude_list, 
+		evla, evlo, verbose );
+	}
 
 	create_cleanup_script();
 
@@ -638,7 +711,7 @@ void make_glib_parfile(
 {
 	FILE *fp;
 	int i = 0, j = 0;
-	float dt = 0.35;
+
 	char gmt_version_string[12];
 	char realtime_string[12];
 	char com[3];
@@ -647,6 +720,9 @@ void make_glib_parfile(
 	int icount_grn = 1;
 	int ista = 0, def = 0;
 	char loc[18];
+
+	float dt = 0.35;
+	float get_waveform_sampling_rate_by_distancekm( float rdistkm );
 
 /*** sort by distance ***/
 	int *indx;
@@ -811,26 +887,8 @@ void make_glib_parfile(
 		  fflush( stdout );
                 }
 
-		dt = 0.35;
 		rdistkm = cl[i].dist;
-		if( rdistkm < 2000 ) dt = 0.30;
-		if( rdistkm < 1000 ) dt = 0.25;
-		if( rdistkm < 800 )  dt = 0.20;
-		if( rdistkm < 450 )  dt = 0.18;
-		if( rdistkm < 400 )  dt = 0.16;
-		if( rdistkm < 340 )  dt = 0.15;
-		if( rdistkm < 320 )  dt = 0.14;
-		if( rdistkm < 300 )  dt = 0.13;
-		if( rdistkm < 280 )  dt = 0.12;
-		if( rdistkm < 260 )  dt = 0.11;
-		if( rdistkm < 240 )  dt = 0.10;
-		if( rdistkm < 220 )  dt = 0.09;
-		if( rdistkm < 200 )  dt = 0.08;
-		if( rdistkm < 180 )  dt = 0.07;
-		if( rdistkm < 160 )  dt = 0.07;
-		if( rdistkm < 140 )  dt = 0.06;
-		if( rdistkm < 120 )  dt = 0.05;
-		if( rdistkm < 50 )   dt = 0.04;
+		dt = get_waveform_sampling_rate_by_distancekm( rdistkm );
 
 /*** defautls ***/
 /***
@@ -1399,10 +1457,12 @@ void Usage( int ac, char **av )
 	fprintf( stderr, "\t -ot  or -origintime (string) source origin time format: YYYY/MM/DD,hh:mm:ss.ss or YYYY-MM-DDThh:mm:ss.ss\n" );
 	fprintf( stderr, "\t -com or -comment (string) a comment no default, use double quotes for spaces\n" );
 	fprintf( stderr, "\t -mod or -velocity_model (string) 1D model base filename, see ${MTINV_PATH}/data/modeldb/*.mod (default wus)\n" );
+	fprintf( stderr, "REQUIRED: \n" );
+        fprintf( stderr, "\t list of sac files can use wildcards, only need 1 component per sta, e.g., ../Data/*.BHZ.?.SAC ../Data/*.BHZ.SAC \n" );
 
 	fprintf( stderr, "OPTIONAL: \n" );
+	
 	fprintf( stderr, "\t -fil or -filter (float float) bandpass filter frequency corners [default 0.02 0.05 Hz]\n" );
-
 	fprintf( stderr, "\t -gmt4 (boolean flag) creates all GMT www.generic-mapping-tools.org plots using older GMT version 4 [default GMT 5+]\n" );
 	fprintf( stderr, "\t -h or -help (boolean flag) prints this page default off\n" );
 	fprintf( stderr, "\t -evid (long int only) Event-Identification unique database key [default -1 null]\n" );
@@ -1415,11 +1475,11 @@ void Usage( int ac, char **av )
 	fprintf( stderr, "\t  -MaxDistInv  automatic maximum distance for station made defining for MT inversion \n" );
 	fprintf( stderr, "\t  -MaxDistProc automatic maximum distance for stations processed for Green's functions \n" );
 
-	fprintf( stderr, "REQUIRED: \n" );
-	fprintf( stderr, "\t list of sac files can use wildcards, only need 1 component per sta, e.g., ../Data/*.BHZ.?.SAC ../Data/*.BHZ.SAC \n" );
+	fprintf( stderr, "\t -hspec96     create scripts for computing R.Herrmann's HSPEC96 Greens functions [default off].\n" );
+	fprintf( stderr, "\t\t        The GFs are written in subdirectories and stations are written is seperate subdirectores. See and run hspec96_to_grnlib.c\n" );
 
 	fprintf( stderr, "\n\n" );
-	fprintf( stderr, "\t This program auto creates a makeglib.csh file that computes Green functions.\n" );
+	fprintf( stderr, "\t Epilog: This program auto creates a makeglib.csh file that computes Green functions.\n" );
 	fprintf( stderr, "\t Add SAC files \"../Data/*.BHZ.?.SAC\" to tell setupMT which stations to use\n" );
 	fprintf( stderr, "\t in the moment tensor inversion\n" );
 	fprintf( stderr, "\n" );
@@ -1722,3 +1782,407 @@ long get_cmdline_long( int i, char *arg, char **av, char *argname )
         return result;
 }
 
+void create_hspec96_script( 
+	float depth, 
+	int nsta, 
+	Sac_Header *s, 
+	char *model_name, 
+	char *model_file_path, 
+	char exclude_station_list[256][16], 
+	int nsta_exclude_list, 
+	float evla, 
+	float evlo,
+	int verbose )
+{
+	FILE *fp;
+	int i = 0, j = 0;
+	float dt = 0.35;
+	char loc[18];
+	float t0, rdev;
+	int npts;
+	float rdistkm;
+	float get_waveform_sampling_rate_by_distancekm( float rdistkm );
+
+	int mkdirp2( const char *, mode_t mode );
+	char output_directory[256];
+	char station_directory[256];
+	char script_filename[256];
+	char cmdline[512];
+	char sacfilename[256];
+	int icmp = 0, ista = 0;
+	char kcmp[][10] = { "   ", "ZDD", "RDD", "ZDS", "RDS", "TDS", "ZSS", "RSS", "TSS", "ZEX", "REX" };
+
+/*** sort station-channels by distance ***/
+	Chanlist *cl;
+	int ncl;
+	Chanlist *remove_duplicate_chans( int n, Sac_Header *s, float *arrin, int *indx, int *ncl );
+	void sort_Chanlist_by_dist( int ncl, Chanlist *cl, float *dist, int *indx );
+	int *indx;
+	float *dist;
+
+/*** velocity model ***/
+/* see include/mt.h Mo = math.pow( 10.0, 1.5*(Mw+10.73) ) = 1.2445146117713818e+16; Reference Mw = 0.0 */
+/*** hspec96 reference moment is 1e+20 dyne*cm ***/
+	void create_mod( VelMod * );
+	void print_mod0( VelMod * );
+	void print_mod1( FILE *, VelMod * );
+	VelMod v;
+	int ilay, nlay;
+	float etap = 0, etas = 0, frefp = 1, frefs = 1;
+	
+/*** depth ***/
+	float *z, ztmp;
+	float zinc, zstart, zend;
+	int iz, nz; 
+
+/**** create conversion script ***/
+
+	void hspec96_to_grnlib_script( Chanlist *cl, int *indx, int ncl, 
+		float evla, float evlo, float zstart, float zinc, float zend, 
+		char *modeldb, char *velmod, char *filename );
+
+/************************/
+/*** start subroutine ***/
+/************************/
+
+/*** create the depth vector ***/
+	zstart = 1;
+	zend = 25;
+	zinc = 1;
+
+	nz = (int) rint( (( zend - zstart + zinc ) / zinc ) );
+	fprintf( stdout, "%s: %s: %s: nz=%d\n", progname, __FILE__, __func__, nz );
+	z = calloc( nz+1, sizeof(float) );
+
+	for( iz = 0; iz < nz; iz++ )
+	{
+		z[iz] = zstart + (float)iz*zinc;
+		if(verbose)
+		  fprintf( stdout, "%s: %s: %s: iz=%d z[iz]=%g\n", 
+			progname, __FILE__, __func__, iz, z[iz] );
+	}
+
+/*** make directory for GFs , cd directory ***/
+
+	strcpy( output_directory, "hspec96_GFs" );
+	mkdirp2( output_directory, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
+	chdir( output_directory );
+
+/*****************************************************************************/
+/*** channel list data structure, removes duplicate channels and stations  ***/
+/*** due to multiple SAC file segments of the same NSLC                    ***/
+/*****************************************************************************/
+
+	cl = calloc( nsta+1, sizeof(Chanlist) );
+	cl = remove_duplicate_chans( nsta, s, dist, indx, &ncl );
+	
+	dist = calloc( ncl+1, sizeof(float) );
+	indx = calloc( ncl+1, sizeof(int) );
+	sort_Chanlist_by_dist( ncl, cl, dist, indx );
+
+	if(verbose)
+	{
+	  for( j = 0; j < ncl; j++ )
+	  {
+		i = indx[j+1]-1;
+		fprintf( stdout, "%s: %s: %s: j=%d i=%d NSL=(%s) dist=%g az=%g nchan=%d chans=%s\n",         
+			progname,
+                        __FILE__,
+			__func__,
+                        j,
+			i, 
+                        cl[i].nslc_string,
+                        cl[i].dist,
+                        cl[i].az,
+                        cl[i].nchan,
+                        cl[i].chans );
+		fflush(stdout);
+	  }
+	}
+
+/*** make c-shell script to convert back to glibs ***/
+
+        hspec96_to_grnlib_script( cl, indx, ncl, evla, evlo, zstart, zinc, zend, model_file_path, model_name, "load.csh" );
+
+/**********************************************/
+/**********************************************/
+/*** create a script file for each station ***/
+/**********************************************/
+/**********************************************/
+
+	for( j = 0; j < ncl; j++ )
+	{
+		/*** set the pointer to the sorted index ***/
+		i = indx[j+1]-1;
+
+		/*** goto the station directory ***/
+		strcpy( station_directory, cl[i].nslc_string );
+		mkdirp2( station_directory, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
+		chdir( station_directory );
+
+		/*** calculate sampling rate dt using same function as mkgrnlib.c ***/
+		dt = get_waveform_sampling_rate_by_distancekm( cl[i].dist );
+
+		npts = 2048;
+		rdev = 18;
+		if( rdev > 0 )
+			t0 = -1;
+		else
+			t0 = 0;
+		
+		/*** name for C-shell script ***/
+		sprintf( script_filename, "%s.%s.%s.%s.hspec.csh", 
+			cl[i].net, cl[i].sta, cl[i].loc, model_name );
+
+		if(verbose)
+		{
+		  fprintf( stdout, "%s: %s: %s: writting script %s\n",
+			progname, __FILE__, __func__, script_filename );
+		  fflush(stdout);
+		}
+
+		if( (fp=fopen( script_filename,"w" )) == NULL )
+		{
+			fprintf( stderr, "%s: %s: %s: cannot open file %s for writting\n",
+				progname, __FILE__, __func__, script_filename );
+			exit(-1);
+		}
+
+		fprintf( fp, "#!/bin/csh\n" );
+        	fprintf( fp, "########################################################\n" );
+        	fprintf( fp, "### Autogenerated C-shell script by setupMT.c        ###\n" );
+		fprintf( fp, "########################################################\n" );
+		fprintf( fp, "\n" );
+
+	/*** station distance dt npts file ***/
+
+		fprintf( fp, "### \n" );
+		fprintf( fp, "### format: DIST DT NPTS T0 VRED  ## Net.Sta.Loc \n" );
+		fprintf( fp, "### \n" );
+		fprintf( fp, "cat >! distfile << EOF\n" );
+		fprintf( fp, "%g %6.2f %4d %4.2f %4.2f ## net=%s sta=%s loc=(%s) R=%g Az=%g %-12.12s nchan=%d nseg=%d (%s)\n",
+			cl[i].dist, 
+			dt,
+			npts,
+			t0,
+			rdev,
+			cl[i].net, cl[i].sta, cl[i].loc, 
+			cl[i].dist, cl[i].az,
+			cl[i].nslc_string,
+                        cl[i].nchan,
+                        cl[i].nseg,
+                        cl[i].chans );
+		fflush( fp );
+		fprintf( fp, "EOF\n");
+	
+	/*** depth file ***/
+		fprintf( fp, "\n" );
+		fprintf( fp, "###\n" );
+        	fprintf( fp, "### depth file\n" );
+        	fprintf( fp, "###\n" );
+
+		fprintf( fp, "cat >! depthfile << EOF\n" );
+		for ( iz = 0; iz < nz; iz++ )
+			fprintf( fp, "%g\n", z[iz] );
+		fprintf( fp, "EOF\n" );
+        	fflush( fp );
+
+	/*** velocity model ***/
+		strcpy( v.modpath, model_file_path );
+		strcpy( v.modfile, model_name );
+		create_mod( &v );
+
+		fprintf( fp, "\n" );
+		fprintf( fp, "###\n" );
+		fprintf( fp, "### Create Velocity Model file\n" );
+		fprintf( fp, "###\n" );
+		fflush( fp );
+	
+		fprintf( fp, "cat >! %s.model << EOF\n", model_name );
+		fprintf( fp, "MODEL.01\n" );
+		fprintf( fp, "TEST MODEL\n" );
+		fprintf( fp, "ISOTROPIC\n" );
+		fprintf( fp, "KGS\n" );
+		fprintf( fp, "FLAT EARTH\n" );
+		fprintf( fp, "1-D\n" );
+		fprintf( fp, "CONSTANT VELOCITY\n" );
+		fprintf( fp, "LINE08\n" );
+		fprintf( fp, "LINE09\n" );
+		fprintf( fp, "LINE10\n" );
+		fprintf( fp, "LINE11\n" );
+		fprintf( fp, "H       VP     VS   RHO  QP     QS    ETAP ETAS  FREFP FREFS\n" );
+		for( ilay = 0; ilay < v.nlay; ilay++ )
+		{
+			if( ( ilay == v.nlay-1 ) && ( v.thick[ilay] != 0 ) ) v.thick[ilay] = 0; /***layer over halfspace***/
+		
+			fprintf( fp, "%8.2f %8.2f %8.2f %8.2f %9.1f %9.1f %5.1f %5.1f %5.1f %5.1f\n", 
+				v.thick[ilay], 
+				v.vp[ilay], 
+				v.vs[ilay], 
+				v.rho[ilay], 
+				v.qa[ilay], 
+				v.qb[ilay],
+				etap, 
+				etas,
+				frefp, 
+				frefs );
+		}
+		fprintf( fp, "EOF\n" );
+		fflush( fp );
+	
+		fprintf( fp, "\n" );
+		fprintf( fp, "###\n" );
+		fprintf( fp, "### generate hspec96.dat read by hspec96, options are -ALL -EQEX -EXF \n" );
+		fprintf( fp, "###\n" ); 
+
+		/*** this runs just one depth ***/
+		fprintf( fp, "# hprep96 -M %s.model -d distfile -HS %g -HR 0 -EQEX -NDEC 1\n", model_name, depth );
+			
+		/*** this runs depth file ***/
+		fprintf( fp, "# hprep96 -M %s.model -d distfile -FHS depthfile -HR 0 -EQEX -NDEC 1\n", model_name );
+
+		/*** depth file plus speed up with -XF ***/
+		fprintf( fp, "hprep96 -M %s.model -d distfile -FHS depthfile -HR 0 -EQEX -NDEC 1 -XF 1\n", model_name );
+
+		fflush( fp );
+	
+		fprintf( fp, "\n" );
+		fprintf( fp, "###\n" );	
+		fprintf( fp, "### run hspec96 and send output to hspec96.out\n" );
+		fprintf( fp, "###\n" );
+		fprintf( fp, "hspec96 > hspec96.out\n" );
+		fflush( fp );
+
+		fprintf( fp, "\n" );
+		fprintf( fp, "###\n" );
+		fprintf( fp, "### read hspec96 output greens functions hspec96.grn and write sac binary files\n" );
+		fprintf( fp, "###\n" );
+		fprintf( fp, "hpulse96 -i -D | f96tosac -B\n" );
+		fflush( fp );
+
+		fprintf( fp, "\n" );
+		fprintf( fp, "###\n" );
+		fprintf( fp, "### Rename the output file (e.g., copy B0101ZDD.sac -> NM.CGM3.00.cus.ZDD.SAC)\n" );
+		fprintf( fp, "###\n" );
+		fflush( fp );
+	
+	/*** rename the output ***/
+	/***   1   2   3   4   5   6   7   8   9  10 icmp ***/
+	/*** ZDD RDD ZDS RDS TDS ZSS RSS TSS ZEX REX kcmp ***/
+	/***  B%02d%02d%3s.sac : ista icmp kcmp ***/
+	/***  B0101ZDD.sac B0102RDD.sac B0103ZDS.sac B0104RDS.sac B0105TDS.sac B0106ZSS.sac B0107RSS.sac B0108TSS.sac B0109ZEX.sac B0110REX.sac ***/
+	
+		for ( iz = 0; iz < nz; iz++ )
+		{
+		
+			for( icmp = 1; icmp <= 10; icmp++ )
+			{
+				sprintf( sacfilename, "B%02d%02d%3s.sac", iz+1, icmp, kcmp[icmp] );
+	
+				sprintf( cmdline, "/bin/cp %s %s.%s.%s.%s.%g.%s.SAC", 
+					sacfilename,
+					cl[i].net, 
+					cl[i].sta, 
+					cl[i].loc,
+					model_name,
+					z[iz], 
+					kcmp[icmp] );
+				if(verbose)
+				{
+		  			fprintf(stdout, "%s: %s: %s: cmdline=%s\n",
+						progname, __FILE__, __func__, cmdline );
+		  			fflush(stdout);
+				}
+	
+				/* system( cmdline ); */
+				fprintf( fp, "%s\n", cmdline );
+				fflush(fp);
+			}
+		}
+		fflush(fp);
+		fclose(fp);
+	
+		/*** execute the script ***/
+		chmod( script_filename, S_IRWXU|S_IRWXG|S_IRWXO );
+	
+		sprintf( cmdline, "csh ./%s", script_filename );
+	
+		fprintf(stdout, "%s: %s: %s: cmdline = %s\n",
+				progname, __FILE__, __func__, cmdline );
+		fflush(stdout);
+	
+		/*** execute the csh script ***/
+		/* system( cmdline ); */
+
+		chdir( "../" ); /*** go back to parent directory (station base directory) ***/
+
+	} /*** loop over and process each station ***/
+
+	chdir( "../" ); /*** go back to parent directory (root directory for hspec96_GFs) ***/
+
+	free(z);
+}
+
+
+float get_waveform_sampling_rate_by_distancekm( float rdistkm )
+{
+	float dt = 0.35;
+	if( rdistkm < 2000 ) dt = 0.30;
+	if( rdistkm < 1000 ) dt = 0.25;
+	if( rdistkm < 800 )  dt = 0.20;
+	if( rdistkm < 450 )  dt = 0.18;
+	if( rdistkm < 400 )  dt = 0.16;
+	if( rdistkm < 340 )  dt = 0.15;
+	if( rdistkm < 320 )  dt = 0.14;
+	if( rdistkm < 300 )  dt = 0.13;
+	if( rdistkm < 280 )  dt = 0.12;
+	if( rdistkm < 260 )  dt = 0.11;
+	if( rdistkm < 240 )  dt = 0.10;
+	if( rdistkm < 220 )  dt = 0.09;
+	if( rdistkm < 200 )  dt = 0.08;
+	if( rdistkm < 180 )  dt = 0.07;
+	if( rdistkm < 160 )  dt = 0.07;
+	if( rdistkm < 140 )  dt = 0.06;
+	if( rdistkm < 120 )  dt = 0.05;
+	if( rdistkm < 50 )   dt = 0.04;
+	return dt;
+}
+
+void hspec96_to_grnlib_script( 
+	Chanlist *cl, int *indx, int ncl,
+	float evla, float evlo, 
+	float zstart, float zinc, float zend, 
+	char *model_file_path, char *model_name, 
+	char *filename )
+{
+	FILE *fp;
+	fp = fopen( filename, "w" );
+	int i, j;
+
+/**** start ***/
+	fprintf( fp, "#!/bin/csh\n" );
+	fprintf( fp ,"\n" );
+	fprintf( fp, "cat >! hspec96_to_grnlib.par << EOF\n" );
+	fprintf( fp, "velmod=%s\n", model_name );
+	fprintf( fp, "modeldb=%s\n", model_file_path );
+	fprintf( fp, "stadb=../../Data/rdseed.stations\n" );
+	fprintf( fp, "zrange=%g,%g,%g\n", zstart, zinc, zend );
+	fprintf( fp, "evla=%g\n", evla );
+	fprintf( fp, "evlo=%g\n", evlo );
+	fprintf( fp, "EOF\n" );
+	fprintf( fp ,"\n" );
+	
+	for( j = 0; j < ncl; j++ )
+	{
+		/*** set the pointer to the sorted index ***/
+		i = indx[j+1]-1;
+
+		fprintf( fp, "hspec96_to_grnlib par=hspec96_to_grnlib.par net=%s sta=%s loc=%s ./%s/*.SAC\n",
+			cl[i].net,
+			cl[i].sta,
+			cl[i].loc,
+			cl[i].nslc_string );
+	}
+
+	fclose(fp);
+}

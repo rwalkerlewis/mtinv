@@ -33,7 +33,9 @@ int main(int ac, char **av)
 	float xmin, xmax, ymin, ymax, zmin, zmax, znorm = 0, d2r;
 	int verbose = 0;
 
-	int setpar(int ac, char **av), getpar(), mstpar();
+	int setpar(int ac, char **av);
+	int mstpar( char *, char *, void * );
+        int getpar( char *, char *, void * );
 	void endpar();
 	void findminmax( float *z, int n, float *zmin, float *zmax );
 	float estimate_spacing( float *x, int n );

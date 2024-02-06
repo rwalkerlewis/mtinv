@@ -1,3 +1,6 @@
+/***
+	reads output from CSS database using MT and Focal tables to convert mt to lune parameters
+***/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

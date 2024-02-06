@@ -24,7 +24,9 @@ void radiation_pattern_driver_main( int ac, char **av )
 	float radpat_fiber_trans_degrees( float thetad, float phi0d );
 	char wvtype[8]; /* t=transverse l=longitudinal */
 
-	int setpar(int ac, char **av), mstpar();
+	int setpar(int ac, char **av);
+	int mstpar( char *, char *, void * );
+	int getpar( char *, char *, void * );
 	void endpar();
 
 /*** start ***/
