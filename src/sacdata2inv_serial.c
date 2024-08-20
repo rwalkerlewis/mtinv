@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,7 +45,7 @@ for( ista=0; ista<nsta; ista++ ) {
 void sacdata2inv_serial(
 		EventInfo *ev, 
 		int ista,
-		int ienvelope,
+		int ienvelope,    /*** envelope is deprecated gene.ichinose 07.01.2024 ***/
 		int dumpsac,
 		int verbose )
 {
@@ -131,9 +149,6 @@ void sacdata2inv_serial(
         void  rotate(   float *ns, int ns_nt, float *ns_cmpaz, float ns_cmpinc,
                         float *ew, int ew_nt, float *ew_cmpaz, float ew_cmpinc,
                         float angle, int verbose );
-
-        /*** envelope/envelope_sub.c ***/
-        void  envelope( float *y, int npts, float dt );
 
         /*** sacextrema/sacextrema.c ***/
         void  sac_minmax( float *x, int n, float *max, float *min, float *mean );
@@ -516,11 +531,6 @@ void sacdata2inv_serial(
 		progname, __FILE__, __func__ );
 	  fflush(stdout);
 	}
-/***
-        interpolate_wiggins2( ev[ista].ew.data, ev[ista].ew.s.npts, ev[ista].ew.s.delta, ev[ista].ew.s.b, ev[ista].nt, ev[ista].dt, verbose );
-        interpolate_wiggins2( ev[ista].ns.data, ev[ista].ns.s.npts, ev[ista].ns.s.delta, ev[ista].ns.s.b, ev[ista].nt, ev[ista].dt, verbose );
-        interpolate_wiggins2( ev[ista].z.data,  ev[ista].z.s.npts,  ev[ista].z.s.delta,  ev[ista].z.s.b,  ev[ista].nt, ev[ista].dt, verbose );
-***/
 
 /*** ensure that ev->dt < ev->z.s.delta ***/
 
@@ -764,20 +774,7 @@ void sacdata2inv_serial(
 	ev->z.P2P_snr               = ev->z.pha[SIGNAL].amp /
 	                              ev->z.pha[NOISE].amp;
 
-/*********************************************/
-/*** compute envelope function of the data ***/
-/*********************************************/
-
-	ev->ienvelope = ienvelope;
-	if( ev->ienvelope == 1 )
-	{
-		fprintf( stdout, "%s: %s: %s: ista=%d computing envelope\n", 
-			progname, __FILE__, __func__, ista );
-		fflush( stdout );
-		envelope( ev->ew.data, ev->ew.s.npts, ev->ew.s.delta );
-		envelope( ev->ns.data, ev->ns.s.npts, ev->ns.s.delta );
-		envelope( ev->z.data,  ev->z.s.npts,  ev->z.s.delta );
-	}
+	ev->ienvelope = 0; /*** envelope is deprecated gene.ichinose 07.01.2024 ***/
 
 /********************************************************/
 /*** compute min max and mean extrema                 ***/

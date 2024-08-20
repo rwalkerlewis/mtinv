@@ -5,4 +5,8 @@
 # /bin/rm yoffset sacsource
 # /bin/rm mt2lune lune2mt
 
-/bin/rm FlinnEngdahl glib2inv grn2Mxy grn2db grnlib2sac makepar mkgrnlib mtbestfit mtinv multithread_mkgrnlib pltmod renamesac sac2xy sacdata2inv sacmerge setupMT switch_color updateMTdb whatshere mteig stats sac2gmtmap glib2inv_join area_sphere hspec96_to_grnlib
+/bin/rm FlinnEngdahl grn2db updateMTdb
+/bin/rm glib2inv grn2Mxy grnlib2sac makepar mkgrnlib mtbestfit mtinv multithread_mkgrnlib sacdata2inv setupMT mteig 
+/bin/rm pltmod renamesac sac2xy sacmerge whatshere stats sac2gmtmap 
+/bin/rm hspec96_to_grnlib compare_grn_gmt sw4_to_grnlib
+# /bin/rm switch_color

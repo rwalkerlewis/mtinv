@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +31,7 @@ typedef struct xyz {
 	double x,y,z;
 } Point;
 
+/**** testing ***/
 /***
 main(ac,av)
 int ac;
@@ -37,6 +56,10 @@ char **av;
 	ascii_mech( nx, ny, nr, stk1, dip1, rak1, stk2, dip2, rak2, pplg, pazi, tplg, tazi );
 }
 ***/
+
+
+
+/*** this creates a text representation of the MT solution for email messages ***/
 
 void ascii_mech( FILE *fp, int x, int y, int r,
 	float stk1, float dip1, float rak1, 

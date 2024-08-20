@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1781,19 +1799,23 @@ Results *create_clvd_eigs( Results *rbest, int *nsim_eig, int eigvec_fac, float 
 void print_result_row_pretty_screen( Results *r, FILE *fp, char *label )
 {
 	fprintf( fp, "%s: %s: %s: %s: \n", progname, __FILE__, __func__, label );
-		
+	fflush(fp);
+	
 	fprintf( fp, "\t\t lon=%9.3f lat=%8.3f VR=%.3f %s\n", 
 		r->lune_lon,
                 r->lune_lat,
-                r->var_red, label );
+                r->var_red,
+		label );
+	fflush(fp);
 
 	fprintf( fp, "\t\t arcDC=%5.1f(deg) arcExp=%5.1f(deg) DC=%3.0f%% CLVD=%3.0f%% ISO=%3.0f%% T=%5.2f k=%5.2f\n",
 		r->gcarc_dc,
                 r->gcarc_exp,
-                r->pdc*100,
-                r->pclvd*100,
-                r->piso*100,
+                r->pdc*100.0,
+                r->pclvd*100.0,
+                r->piso*100.0,
 		r->T, r->k );
+	fflush(fp);
 
 	fprintf( fp, "\t\t M0=%5.2e eigvals=(%.3f, %.3f, %.3f) Mij:(xx,xy,xz,yy,yz,zz) %5.2f %5.2f %5.2f %5.2f %5.2f %5.2f\n",
 		r->Mtotal,
@@ -1804,4 +1826,5 @@ void print_result_row_pretty_screen( Results *r, FILE *fp, char *label )
                 r->myy,
                 r->myz,
                 r->mzz );
+	fflush(fp);
 }

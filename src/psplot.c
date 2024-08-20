@@ -1,3 +1,24 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
+/*** plots waveform fits from moment tensor solution ***/
+/*** non-GMT versions, uses ../misc/Cgraph/ ***/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -263,7 +284,7 @@ int psplot(
 			plot_dc_clvd_mech( xc, yc, rad, sol, ev, grn, iz, nsta, planes, ifill, FULLMT, verbose );
 
 		/********************************************************/
-		/*** plot the major double couple if not an explosion ***/
+		/*** plot the major double couple if no isotropic cmp ***/
 		/********************************************************/
 
 			if( sol[iz].mt_type != EXPLOSION && forward == 0 )

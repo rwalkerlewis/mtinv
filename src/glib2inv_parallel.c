@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,12 +28,8 @@
                                                                                                                                                                
 extern char progname[128];
 
-
-typedef struct {
-        int ista;
-        int nz;
-        float *z;
-} DepthVector;
+/*** glib2inv processes Greens function library files *.glib for moment tensor inversion read by mtinv.c ***/
+/*** glib2inv_parallel() - pthreads version, see glib2inv_serial.c for single thread version ***/
 
 typedef struct thread_data
 {
@@ -192,13 +206,9 @@ void *glib2inv_staproc_pthread( void *ptr )
         void interpolate_fft(   float *data,
                                 int old_npts, float old_delta,
                                 int *new_npts, float new_delta );
-                                                                                                                                                               
-/*** wiggins/wiggins_sub.c ***/
-        void interpolate_wiggins2( float *data, int npts, float delta,
-                                float b, int new_nt, float new_dt, int verbose );
-                                                                                                                                                               
+                                                                                                                                                              
 /*** wrtgrn2sac.c ***/
-	void wrtgrn2sac( Greens *g, int ista, char *wavetype, int make_output_dirs );
+	void wrtgrn2sac( Greens *g, int ista, char *wavetype, char *fmt, int make_output_dirs );
 
 /*** glib2inv_subs.c ***/
         void split2grn( Greens *g, float **garray );
@@ -208,9 +218,6 @@ void *glib2inv_staproc_pthread( void *ptr )
         void array2grn( float **garray, Greens *g );
 	void array2grnRot( float **garray, Greens *g );
 
-/*** envelope/envelope_sub.c ***/
-        void envelope( float *y, int npts, float dt );
- 
 /*** misc_tools/ampshift.c ***/
         void  ampshift( float *x, int n, int verbose );
 
@@ -361,20 +368,6 @@ void *glib2inv_staproc_pthread( void *ptr )
 			taper_type, taper_frac_width );
 		***/
                                                                                                                                                        
-		/*******************************************************************/
-		/*** compute envelope function of the greens function synthetics ***/
-		/*******************************************************************/
-                                                                                                                                                               
-			if( ev[ista].ienvelope == 1 )
-			{
-  				if( verbose )
-  				{
-					fprintf( stdout, "%s: ista = %d computing envelope \n",
-						progname, ista );
-  				}
-  				envelope( garray[ig], ev[ista].nt, ev[ista].dt );
-			}
-
 		} /*** loop over Green function - ig ***/
                                                                                                                                                               
 	/***********************************************************/
@@ -408,11 +401,11 @@ void *glib2inv_staproc_pthread( void *ptr )
 		for( iz = 0; iz < z->nz; iz++ )
 		{
 			if( wvtyp == 1 )
-			  wrtgrn2sac( &grn[iz], ista, "Rotational", 0 /* int make_output_dirs */ );
+			  wrtgrn2sac( &grn[iz], ista, "Rotational", "\0", 0 /* int make_output_dirs */ );
 			else if( wvtyp == 0 )
-			  wrtgrn2sac( &grn[iz], ista, "Surf/Pnl", 0 /* int make_output_dirs */ );
+			  wrtgrn2sac( &grn[iz], ista, "Surf/Pnl", "\0", 0 /* int make_output_dirs */ );
 			else
-			  wrtgrn2sac( &grn[iz], ista, "Surf/Pnl", 0 /* int make_output_dirs */ );
+			  wrtgrn2sac( &grn[iz], ista, "Surf/Pnl", "\0", 0 /* int make_output_dirs */ );
 		}
 	}
 

@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,6 +24,9 @@
 #include "../include/mt.h" /** global datatype and structure declarations **/
 
 char progname[128];
+
+/*** computes Greens functions just one station at a time ***/
+/*** see ../misc/multithread_makeglib/multithread_mkgrnlib.c uses fork-multiprocessing ***/
 
 int main( int ac, char **av )
 {
@@ -30,7 +51,7 @@ int main( int ac, char **av )
 	void greensf_( int * );
 
 	/*** modified in version 4.0, added string char *wavetype = "Surf/Pnl" or "Rotational" ***/
-	void wrtgrn2sac( Greens *g, int ista, char *wavetype, int make_output_dirs );
+	void wrtgrn2sac( Greens *g, int ista, char *wavetype, char *fmt, int make_output_dirs );
 
 	void getparameters( int, char **, Greens *, Depth_Info *, int *, int * );
 
@@ -243,7 +264,7 @@ int main( int ac, char **av )
 	/*** this code only computes translational GFs not RotGF ***/
 	/***********************************************************/
 		ista = 0;
-		if( idump ) wrtgrn2sac( &grn_, ista, "Surf/Pnl", 0 /* int make_output_dirs */ );
+		if( idump ) wrtgrn2sac( &grn_, ista, "Surf/Pnl", "\0", 0 /* int make_output_dirs */ );
 
 	/**************************************************************/
 	/*** write out binary greens functions library for glib2inv ***/

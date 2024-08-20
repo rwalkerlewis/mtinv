@@ -1,3 +1,23 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
+/*** this is the main moment tensor inversion code ***/
+
 /***
 
 G. Ichinose Wed Jan 10 17:22:21 PST 2018
@@ -56,7 +76,8 @@ int main(int ac, char **av)
         Greens **grn;
 	/* FILE *fpg; */
 	int nz,iz;
-	float *z;
+	float *z;  /*** for backwards compat... also access by z[ista].z ***/
+	DepthVector *zvec;  /*** see ../include/mt.h ***/
 
 /****************/
 /*** Solution ***/
@@ -124,8 +145,14 @@ int main(int ac, char **av)
 	void load_the_data( EventInfo *ev, int nsta, float ts0, int verbose );
 
 	/*** mtinv_subs.c ***/
-	float *load_greens( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, int verbose );
 
+	/*** deprecated, replaced by Greens_subs.c:loadGlibAll()  ***/
+	/* float *load_greens( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, int verbose ); */
+
+	/*** Greens_subs.c:loadGlibAll() ****/
+	Greens **loadGlibAll( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, char *file_type, int verbose );
+
+	/*** load_special_grns.c ***/
 	float *load_special_grns( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, int verbose );
 
 	/*** mtinv.c ***/
@@ -562,13 +589,44 @@ int main(int ac, char **av)
 
 	if(specialLoadGrnMxy)
 	{
+	  nz = 1;
 	  grn = (Greens **)malloc( nsta*sizeof(Greens *) );
+
+	/*** previous version forgot to allocate memory for DepthVector:zvec ***/
+
+	  zvec = (DepthVector *) calloc( nsta, sizeof(DepthVector) );
+
+	/**** this loads from SAC files and is limited to just 1 depth ***/
+
 	  z = (float *)load_special_grns( ev, grn, nsta, &nz, verbose );
+
+	/*** print out to debug and demostration of load_special_grns return vals ***/
+	  for( iz = 0; iz < nz; iz++ ) 
+	  {
+		fprintf( stdout, "%s: %s: %s: specialLoadGrnMxy = %d z[iz=%d]=%g\n", 
+			progname, __FILE__, __func__, specialLoadGrnMxy, iz, z[iz] );
+	  }
+
+	  for( ista = 0; ista < nsta; ista++ )
+	  {
+		zvec[ista].nz = 1;
+		zvec[ista].ista = ista;
+		zvec[ista].z = (float *) calloc(zvec[ista].nz, sizeof(float));
+		zvec[ista].z = z;
+	  }
 	}
 	else
 	{
+	 zvec = (DepthVector *) malloc( nsta * sizeof(DepthVector) );
+
 	 grn = (Greens **)malloc( nsta*sizeof(Greens *) );
-	 z = (float *)load_greens( ev, grn, nsta, &nz, verbose );
+
+	 /* z = (float *)load_greens( ev, grn, nsta, &nz, verbose ); */
+
+	 grn = loadGlibAll( grn, ev, zvec, nsta, "ginv", verbose );
+
+	 z = zvec[0].z;
+	 nz = zvec[0].nz;
 	}
 
 /**************************************/
@@ -578,7 +636,7 @@ int main(int ac, char **av)
 
 	if( FixMyZ != -99 )
 	{
-		check_depth( FixMyZ, &FixMyiz, z, nz, verbose );
+	   check_depth( FixMyZ, &FixMyiz, z, nz, verbose );
 	}
 
 /***********************************************************************************/
@@ -1878,7 +1936,7 @@ void invert(
 	float *s_vector;    /*** synthetic                s[1..rows]          ***/
 	float *x_vector;    /*** solution (mom ten)       x[1..cols]          ***/
 	float *e_vector;    /*** error vector             e[1..cols]          ***/
-	float **cv_matrix;  /*** covariance matrix       cv[1..cols][1..cols] ***/
+	/* float **cv_matrix; */ /*** covariance matrix       cv[1..cols][1..cols] ***/ 
 	
 	float **matrix( int nrl, int nrh, int ncl, int nch );
 	void free_matrix(float **m, int nrl, int nrh, int ncl, int nch );
@@ -1888,10 +1946,6 @@ void invert(
 
 	float variance_reduction( float *data, float *synthetic, int nstart, int nend );
 	float compute_l2norm_error( float *a, float *b, int n );
-
-	/* void demultiplex( Greens **, EventInfo *, int, float *, int ); */
-	/* char sac_file_name[128]; */
-	/* void write_sac_file( char *, Sac_File *, int ); */
 
 	void mtinv_dumpSAC( EventInfo *ev, Greens **grn, int nsta, int iz, float *s_vector, int verbose );
 
@@ -1949,14 +2003,10 @@ void invert(
 
 	void svbksb( float **, float *, float **, int, int, float *, float * );
 	void svdcmp( float **, int, int, float *, float ** );
-	void svdvar( float **, int, float *, float ** );
+	/* void svdvar( float **, int, float *, float ** ); */
 
 	void matmul( int conj, float **bb, int nx, float *x, int ny, float *y );
 	
-	void computeStationChannel_VarianceReduction(
-		EventInfo *ev, Greens **grn, int nsta, int iz, float *s_vector,
-		float var_red, int verbose );
-
 	 /* int write_matrix = 1; */
 	int write_matrix = 0;
 	 void writeMatrix( int rows, int cols, float **a_matrix, float *b_vector, float *s_vector, float *x_vector );
@@ -1966,6 +2016,7 @@ void invert(
 /*************************************************/
 
 	cols = 6;
+
 	for( iz = 0 ; iz < nz ; iz++ )
 	{
 		 sol[iz].evdp = grn[0][iz].evdp;
@@ -2002,8 +2053,8 @@ void invert(
 	if(verbose)fprintf( stdout, "%s: %s: %s: Allocating memory for v_matrix\n", progname, __FILE__, __func__ );
 	v_matrix  = matrix( 0, cols+1, 0, cols+1 );
 
-	if(verbose)fprintf( stdout, "%s: %s: %s: Allocating memory for cv_matrix\n", progname, __FILE__, __func__ );
-	cv_matrix = matrix( 0, cols+1, 0, cols+1 );
+	/* if(verbose)fprintf( stdout, "%s: %s: %s: Allocating memory for cv_matrix\n", progname, __FILE__, __func__ ); */
+	/* cv_matrix = matrix( 0, cols+1, 0, cols+1 ); */
 
 	if(verbose)fprintf( stdout, "%s: %s: %s: Allocating memory for w_vector\n", progname, __FILE__, __func__ );
 	w_vector = vector( 0, cols+1 );
@@ -2066,7 +2117,7 @@ void invert(
 		{
 			for( i=0; i<=cols; i++ )
 			{
-				cv_matrix[i][j] = 0;	
+				/* cv_matrix[i][j] = 0;	 */
 				v_matrix[i][j]  = 0;
 			}
 		}
@@ -2207,7 +2258,7 @@ void invert(
 	/*** error is 1.96 * sqrt( diag(CV_matrix) )      ***/
 	/****************************************************/
 
-		svdvar( v_matrix, cols, w_vector, cv_matrix );
+		/* svdvar( v_matrix, cols, w_vector, cv_matrix ); */
 
 	/**********************************************************************************/
 	/*** Demultiplex synthetics from s_vector & write out syn and data to SAC files ***/
@@ -2222,14 +2273,6 @@ void invert(
 			fflush(stdout);
 			mtinv_dumpSAC( ev, grn, nsta, iz, s_vector, verbose );
 		}
-
-		/********************************************************************/
-		/*** this only saves the last depth to EventInfo ev structure     ***/
-		/*** try another version to compute %VR from compute_synthetics() ***/
-		/********************************************************************/
-		/*** computeStationChannel_VarianceReduction( 
-			ev, grn, nsta, iz, s_vector, sol[iz].var_red, verbose );
-		***/
 
 	/******************************************************************/
         /*** form the moment tensor from solution vector x              ***/

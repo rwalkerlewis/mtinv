@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,6 +37,9 @@ int main( int ac, char **av )
 	void print_mod1( FILE *fp, VelMod *vm );
 	void plot_gmt_mod( VelMod *vm, int ioutput, int doP, int doS, char *pline, char *sline );
 	void print_mod0( VelMod *vm );
+	void create_gmt_script( VelMod *vm );
+	void write_csv( VelMod *vm );
+	int csv_output = 0;
 
 	int setpar( int, char ** );
 	int mstpar( char *, char *, void * );
@@ -44,6 +65,7 @@ int main( int ac, char **av )
 	  fprintf( stderr, "\t [no]gmt sends output as GMT psxy output (default off, screen output)\n" );
 	  fprintf( stderr, "\t pline=(string) P-wave GMT psxy -W specs \n" );
 	  fprintf( stderr, "\t sline=(string) S-wave GMT psxy -W specs \n" );
+	  fprintf( stderr, "\t csv=(boolean switch) output to csv file (default off)\n" );
 	  fprintf( stderr, "\n" );
 	  fprintf( stderr, "DESCRIPTION:\n" );
 	  fprintf( stderr, "\t reads mod file and creates input for Generic Mapping Tools psxy\n" );
@@ -54,6 +76,7 @@ int main( int ac, char **av )
 	setpar(ac,av);
 	mstpar( "modeldb", "s", &(vm.modpath) );
 	mstpar( "velmod", "s", &(vm.modfile) );
+	getpar( "csv", "b", &csv_output );
 	getpar( "init", "b", &init );
 
 	getpar( "gmt", "b", &gmt );
@@ -86,6 +109,10 @@ int main( int ac, char **av )
 	}
 
 	if( init == 0 && gmt == 0 ) print_mod0( &vm );
+
+	if( csv_output ) write_csv( &vm );
+
+	if( !gmt ) create_gmt_script( &vm );
 
 	exit(-1);
 }

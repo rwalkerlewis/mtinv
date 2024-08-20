@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,6 +45,10 @@ char progname[128];
 #define FIBER_PSV  1 /* longitudinal waves */
 #define FIBER_SH   2 /* transverse waves */
 
+
+
+/**** stand-alone program that reads Greens functions *.glib library files and computes synthetics ****/
+
 int main( int ac, char **av )
 {
         Greens grn;
@@ -55,45 +77,48 @@ int main( int ac, char **av )
 	float my_src_to_rec_azimuth_override = -999;
 
 /******************************************************************************/
-/*** radiation_pattern.o ***/
 /******************************************************************************/
+/*** function prototypes ***/
+/******************************************************************************/
+/******************************************************************************/
+
+/*** radiation_pattern.o ***/
 	int fiber = FIBER_NONE; /**** 0 no fiber, 1=longitudinal, 2=shear ***/
 	char wave_type_fiber[32]; /* l,longitudinal or t,transverse,shear */
 	float azi_fiber = 0; /*** or phi0d ***/
 
-/******************************************************************************/
-/*** timesubs.o ***/
-/******************************************************************************/
+/*** see timesubs.c ***/
 	char dateid[256];
 	MyTime ot;
 	void parsestring( MyTime *t, char *str );
         void clone_mytime(  MyTime *t1, MyTime *t2 );
         void WriteMyTime2STDOUT( MyTime *t );
 
-/******************************************************************************/
-/*** function prototypes ***/
-/******************************************************************************/
+/**** see wrtgrn2sac.c ***/
 	void plotgrnlib_GMT5( Greens *g, int ista, char *wavetype, int make_output_dirs );
 
-	void wrtgrn2sac( Greens *g, int verbose, char *wavetype_string, int make_output_dirs );
+	void wrtgrn2sac( Greens *g, int verbose, char *wavetype_string, char *fmt, int make_output_dirs );
 
+/*** see this file ***/
 	void grn2disp2( Greens *grn, struct event ev, int verbose,
 		int mtdegfree, int inoise, float noise_Mw, int iseed,
 		int input_type, int dounits_cm2m, int dointerp,
 		float my_src_to_rec_azimuth_override, int fiber, float azi_fiber );
 
+	void Usage_Print();
+
+/*** misc see ../lib/libget.a ***/
 	int setpar( int ac, char **av );
 	int mstpar( char *, char *, void * );
 	int getpar( char *, char *, void * );
 	void endpar();
-	void Usage_Print();
 
 /**********************/
 /**** begin program ***/
 /**********************/
 	strcpy( progname, av[0] );
-	fprintf( stderr, "\n\n%s: Version=%s Release Date=%s\n",
-                progname, Version_Label, Version_Date );
+	fprintf( stderr, "\n%s: Version=%s Release Date=%s\n\n", progname, Version_Label, Version_Date );
+	fprintf( stdout, "\n%s: Version=%s Release Date=%s\n\n", progname, Version_Label, Version_Date );
 
 	if( ac <= 1 ) Usage_Print();
 
@@ -104,7 +129,10 @@ int main( int ac, char **av )
 
 	getpar("dumpgrn", "b", &idumpgrn );
 	if( idumpgrn == 1 )
-	{
+	{	/*** default ***/
+		sprintf( wavetype_string, "Surf/Pnl" );
+		/** sprintf( wavetype_string, "Rotational" ); **/
+
 		getpar( "plotgrn", "b", &gmt_plot_grn );
 		getpar( "wavetype", "s", wavetype_string );
 		getpar( "mkdir", "b", &make_output_dirs );
@@ -169,6 +197,28 @@ int main( int ac, char **av )
 			mstpar("Pdc",   "f", &ev.Pdc );
 
 			ev.Pdev = ev.Pclvd + ev.Pdc;
+		}
+
+	/*** repeat the input ***/
+
+		if( input_type == MT_INPUT )
+		{
+			fprintf( stdout, "%s: %s: %s: input_type=0(MT_INPUT) Mxx=%g Myy=%g Mzz=%g Mxy=%g Mxz=%g Myz=%g Mo=%g\n",
+				progname, __FILE__, __func__, ev.Mxx, ev.Myy, ev.Mzz, ev.Mxy, ev.Mxz, ev.Myz, ev.Mo );
+		}
+		else if( input_type == SDR_MO_INPUT )
+		{
+			fprintf( stdout, "%s: %s: %s: input_type=1(SDR_MO_INPUT) str=%g dip=%g rak=%g Mw=%g\n", 
+				progname, __FILE__, __func__, ev.str, ev.dip, ev.rak, ev.Mw );
+		}
+		else if( input_type == SDR_MISO_INPUT )
+		{
+			fprintf( stdout, "%s: %s: %s: input_type=1(SDR_MO_INPUT) str=%g dip=%g rak=%g Mw=%g Piso=%g Pclvd=%g Pdc=%g\n",
+                                progname, __FILE__, __func__, ev.str, ev.dip, ev.rak, ev.Mw, ev.Piso, ev.Pclvd, ev.Pdc );
+		}
+		else {
+			fprintf( stdout, "%s: %s: %s: input_type=%d unknown\n", progname, __FILE__, __func__, input_type );
+			exit(0);
 		}
 
 	/*** check the ratio of isotropic to deviatoric moment only when input_type != MT_INPUT ***/
@@ -353,7 +403,7 @@ int main( int ac, char **av )
 
 			if( strcmp( wavetype_string, "Rotational" ) == 0 )
 			{
-				wrtgrn2sac( &grn, ista, wavetype_string, make_output_dirs );
+				wrtgrn2sac( &grn, ista, wavetype_string, "\0", make_output_dirs );
 
 				/*** has to be run afterwards ***/
 				if(gmt_plot_grn)
@@ -362,7 +412,7 @@ int main( int ac, char **av )
 			}
 			else if( strcmp( wavetype_string, "Surf/Pnl" ) == 0 )
 			{
-				wrtgrn2sac( &grn, ista, wavetype_string, make_output_dirs );
+				wrtgrn2sac( &grn, ista, wavetype_string, "\0", make_output_dirs );
 
 				/*** has to be run afterwards ***/
 				if(gmt_plot_grn)
@@ -398,7 +448,7 @@ int main( int ac, char **av )
 } /*** end of main.c ***/
 
 /**************************************************************************************************/
-/*** GRN2DISP2.c         ***/
+/*** grn2disp2() *******/
 /**************************************************************************************************/
 
 void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree, 
@@ -407,10 +457,7 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 {
 	float *tra, *rad, *ver, *ns, *ew;
 	float *rss, *rds, *rdd, *rep, *zss, *zds, *zdd, *zep, *tss, *tds;
-
 	float a1,a2,a3,a4,a5;
-	float aa1,aa2,aa3,aa4,aa5;
-
 	Tensor M;
 	float strr,dipr,rakr,Miso,tmpaz,angle,cmpinc,az;
 	Sac_Header sp;
@@ -421,8 +468,11 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 	float slip4pi_iso, slip4pi_dev, slip4pi_tot;
 	float third, half, sixth;
 	int nt;
-	float cm2m = 0.01;
-
+	float cm2m = 0.01; /*** converts meters to centimeters 1m/100cm  ***/
+	
+	char nslc[16], nsl[16]; /*network.station.location.channel*/
+	
+/*** radiation_pattern.c ***/
 	float radpat_fiber_long_degrees( float thetad, float phi0d );
 	float radpat_fiber_trans_degrees( float thetad, float phi0d );
 	float tmpr, tmpt, tmpz;
@@ -440,16 +490,26 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 	float gasdev( int *iseed );
 	void source_time_function( float *, int, float, float, float );
 	void  rotate( float *, int, float *, float, float *, int, float *, float, float, int );
-	void interpolate_wiggins( float *, int, float, float, float *, int, float );
+
 	void duplicate_vector( float *x, float *y, int n );
-	void write_SACPZ_file( char *, char *, char *,  int, int, int, int );
+	void write_SACPZ_file( char *net, char *sta, char *loc, char *chan, int year, int jday, int hour, int min );
 
 	float peak, tmp;
 	float find_abspeak_value_from_float_array( float *x, int nt );
 
-	void HelmbergerCoef( float str, float dip, float rak,
-		float *aa1, float *aa2, float *aa3, float *aa4, float *aa5 );
+ /*** interpolate/interpolate_subs.c ***/
+        void  interpolate_fft(
+                float *data,
+                int old_npts,
+                float old_delta,
+                int *new_npts,
+                float new_delta );
 
+/**************************************************/
+/*** start subroutinnue ***/
+/**************************************************/
+	sprintf( nsl, "%s.%s.%s", g->net, g->stnm, g->loc );
+	
 	half = 0.5;
 	third = 0.33333333;
 	sixth = 0.166666667;
@@ -527,29 +587,31 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 /*** compute the 3 component displacements ***/
 /**************************************************************************************************/
 
+	if( my_src_to_rec_azimuth_override != -999 )
+	{
+		fprintf( stdout, "%s: %s: %s: %s *** my_src_to_rec_azimuth_override = %g ***\n",
+			progname, __FILE__, __func__, nsl, my_src_to_rec_azimuth_override );
+		g->az = my_src_to_rec_azimuth_override;
+		fi = my_src_to_rec_azimuth_override * d2r;
+	}
+	else
+	{
+		fprintf( stdout, "%s: %s: %s: %s *** src_to_rec_azimuth = %g no azimuth override ***\n",
+			progname, __FILE__, __func__, nsl, g->az );
+		fi = g->az * d2r;
+	}
+
 /****************************************************************************************/
 /*** in ../include/mt.h : static float base_moment = 1.2445146117713818e+16;          ***/
 /* Mo = math.pow( 10.0, 1.5*(Mw+10.73) ) = 1.2445146117713818e+16; Reference Mw = 0.0 ***/
 /* Typically base_moment is 10^20 dyne*cm  so conversion factor is 8035.2612218561935 ***/
 /****************************************************************************************/
 
-	if( my_src_to_rec_azimuth_override != -999 )
-	{
-		fprintf( stdout, "%s: %s: %s: *** my_src_to_rec_azimuth_override = %g ***\n",
-			progname, __FILE__, __func__, my_src_to_rec_azimuth_override );
-		g->az = my_src_to_rec_azimuth_override;
-		fi = my_src_to_rec_azimuth_override * d2r;
-	}
-	else
-	{
-		fi = g->az * d2r;
-	}
-
 	if( input_type == SDR_MO_INPUT || input_type == SDR_MISO_INPUT )
 	{
 		if(verbose)
-			fprintf( stdout, "%s: %s: %s: SDR_MO_INPUT or SDR_MISO_INPUT format\n",
-				progname, __FILE__, __func__ );
+			fprintf( stdout, "%s: %s: %s: %s SDR_MO_INPUT or SDR_MISO_INPUT format\n",
+				progname, __FILE__, __func__, nsl );
 
 		ev.Mo = pow( 10., (1.5*(ev.Mw + 10.73)));
 
@@ -563,8 +625,8 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 
 		if(verbose) 
 		{
-		  fprintf( stdout, "%s: %s: %s: Mw=%g Mo=%g Miso=%g(%0.f%%) Mclvd=%g(%0.f%%) Mdc=%g(%0.f%%) Mtotal=%g\n",
-			progname, __FILE__, __func__,
+		  fprintf( stdout, "%s: %s: %s: %s Mw=%g Mo=%g Miso=%g(%0.f%%) Mclvd=%g(%0.f%%) Mdc=%g(%0.f%%) Mtotal=%g\n",
+			progname, __FILE__, __func__, nsl, 
 			ev.Mw, 
 			ev.Mo, 
 			ev.Miso   * base_moment, ev.Piso  * 100, 
@@ -577,8 +639,10 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 		dipr = ev.dip * d2r;
 		rakr = ev.rak * d2r;
 
+	/*************************************************************************************************************/
 	/*** from jost&Herrmann (1989) Eq. 18 page 40 SSA-SRL ***/
 	/*** also box 4 Aki and Richards Quantitative Seismology 2ndEd ***/
+	/*************************************************************************************************************/
 		M.xx = -( sin(dipr) * cos(rakr) * sin(2*strr) + sin(2*dipr) * sin(rakr) * sin(strr)*sin(strr) );
 		M.yy =  ( sin(dipr) * cos(rakr) * sin(2*strr) - sin(2*dipr) * sin(rakr) * cos(strr)*cos(strr) );
 		M.zz =  ( sin(2*dipr) * sin( rakr ) );
@@ -588,24 +652,15 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 
 		if(verbose)
 		{
-		  fprintf( stdout, "%s: %s: %s: str=%g dip=%g rak=%g Mw=%g Mo=%g\n",
-		    progname, __FILE__, __func__,
+		  fprintf( stdout, "%s: %s: %s: %s str=%g dip=%g rak=%g Mw=%g Mo=%g\n",
+		    progname, __FILE__, __func__, nsl,
 			ev.str, ev.dip, ev.rak, ev.Mw, ev.Mo );
 
-		  fprintf( stdout, "%s: %s: %s: az=%g fi=%g strr=%g dipr=%g rakr=%g Mxx=%g Myy=%g Mzz=%g Mxy=%g Mxz=%g Myz=%g\n",
-		    progname, __FILE__, __func__,
-			g->az, fi, strr, dipr, rakr, M.xx, M.yy, M.zz, M.xy, M.xz, M.yz);
+		  fprintf( stdout, "%s: %s: %s: %s az=%g(%g) fi=%g strr=%g dipr=%g rakr=%g Tensor M.xx=%g M.yy=%g M.zz=%g M.xy=%g M.xz=%g M.yz=%g\n",
+			progname, __FILE__, __func__, nsl, 
+			g->az, my_src_to_rec_azimuth_override, fi, strr, dipr, rakr,
+			M.xx, M.yy, M.zz, M.xy, M.xz, M.yz);
 		}
-
-	/*************************************************************************************************************/
-	/**** compute the coefficients from Helmberger (1983) Earthquakes: Observations, Theory and Interpretation ***/
-	/*************************************************************************************************************/
-	/*
-		HelmbergerCoef( 0.0, 90.0,  0.0, &aa1, &aa2, &aa3, &aa4, &aa5 );
-		HelmbergerCoef( 0.0, 45.0, 90.0, &aa1, &aa2, &aa3, &aa4, &aa5 );
-		HelmbergerCoef( 0.0, 90.0, 90.0, &aa1, &aa2, &aa3, &aa4, &aa5 );
-		HelmbergerCoef( ev.str, ev.dip, ev.rak, &aa1, &aa2, &aa3, &aa4, &aa5 );
-	*/
 
 	/************************************************************************************************/
 	/*** these from Langston (1983) reason why negatives signs needed above in M.ij see a1 and a5 ***/
@@ -637,12 +692,12 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
  
 		if( verbose )
 		{
-	 	  fprintf( stdout, "%s: %s: %s: MT  a1=%g a2=%g a3=%g a4=%g a5=%g\n", 
-			progname, __FILE__, __func__, a1, a2, a3, a4, a5 );
-
-		  fprintf( stdout, "%s: %s: %s: SDR a1=%g a2=%g a3=%g a4=%g a5=%g\n",
-			progname, __FILE__, __func__, aa1, aa2, aa3, aa4, aa5 );
+	 	  fprintf( stdout, "%s: %s: %s: %s MT\t a1=%g\t a2=%g\t a3=%g\t a4=%g\t a5=%g\n", 
+			progname, __FILE__, __func__, nsl, a1, a2, a3, a4, a5 );
 		}
+
+
+
 		for( it=0; it<nt; it++)
 		{
 		  ver[it] = ( a1 * zss[it] + a2 * zds[it] + a3 * zdd[it] ) * ev.Mdc + ( half * zdd[it] * ev.Mclvd ) + zep[it] * ev.Miso;
@@ -655,8 +710,10 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 	{
 		ev.Mtotal = ev.Mo/base_moment;
 		if( verbose ) 
-		  fprintf( stdout, "%s: %s: %s: Mtotal=%e Mo=%e\n",
-			progname, __FILE__, __func__, ev.Mtotal, ev.Mo );
+		{
+		  fprintf( stdout, "%s: %s: %s: %s Mtotal=%e Mo=%e\n",
+			progname, __FILE__, __func__, nsl, ev.Mtotal, ev.Mo );
+		}
 
 		M.xx = ev.Mxx;
 		M.yy = ev.Myy;
@@ -666,8 +723,8 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 		M.yz = ev.Myz;
 
 		if( verbose )
-                  fprintf( stdout, "%s: %s: %s: az=%g fi=%g MT_INPUT format Mxx=%g Mxx=%g Mzz=%g Mxy=%g Mxz=%g Myz=%g\n",
-                        progname, __FILE__, __func__, g->az, fi,
+                  fprintf( stdout, "%s: %s: %s: %s az=%g fi=%g MT_INPUT format Mxx=%g Mxx=%g Mzz=%g Mxy=%g Mxz=%g Myz=%g\n",
+                        progname, __FILE__, __func__, nsl, g->az, fi,
                         M.xx, M.yy, M.zz, M.xy, M.xz, M.yz );
 
 	/*** just to display and compare ***/	
@@ -679,8 +736,8 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
                 a5 = -M.yz * cos( fi ) + M.xz * sin( fi );
 
                 if( verbose )
-                  fprintf( stdout, "%s: %s: %s: a1=%g a2=%g a3=%g a4=%g a5=%g\n",
-                        progname, __FILE__, __func__, a1, a2, a3, a4, a5 );
+                  fprintf( stdout, "%s: %s: %s: %s a1=%g a2=%g a3=%g a4=%g a5=%g\n",
+                        progname, __FILE__, __func__, nsl, a1, a2, a3, a4, a5 );
 
 	/*** just to display and compare ***/
 
@@ -777,8 +834,8 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 /**************************************************************************************************/
 /*** convert displacement from meters to cm ***/
 /**************************************************************************************************/
-	fprintf( stdout, "%s: %s: %s: dounits_cm2m=%d\n",
-		progname, __FILE__, __func__, dounits_cm2m );
+	fprintf( stdout, "%s: %s: %s: %s dounits_cm2m=%d [t,r,z] = amps * (cm2m=%g)\n",
+		progname, __FILE__, __func__, nsl, dounits_cm2m, cm2m );
 
 	if( dounits_cm2m )
 	{
@@ -791,8 +848,8 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 
 	 if(verbose) 
 	 {
-		fprintf( stdout, "%s: %s: %s: converting amplitudes cm to meters dounits_cm2m=%d\n",
-			progname, __FILE__, __func__, dounits_cm2m );
+		fprintf( stdout, "%s: %s: %s: %s converting amplitudes cm to meters dounits_cm2m=%d\n",
+			progname, __FILE__, __func__, nsl, dounits_cm2m );
 	 }
 	}
 
@@ -829,30 +886,39 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 	}
 
 /**************************************************************************************************/
-/*** interpolate to dt = 0.05 sec/sample using wiggins interpolation scheme ***/
+/*** interpolate to dt = 0.05 sec/sample using interpolation scheme interpolate_fft()          ***/
 /**************************************************************************************************/
 
 	if(verbose)
-		fprintf( stdout, "%s: %s: %s: dointerp=%d interpolate using wiggins\n",
+		fprintf( stdout, "%s: %s: %s: dointerp=%d interpolate using interpolate_fft()\n",
 			progname, __FILE__, __func__, dointerp );
+
 	if( dointerp )
 	{
 	 new_dt = 0.05;
 	 new_dt = 0.02;
 
 	 new_nt = twin/new_dt;
-	
+
 	 xtra = calloc( new_nt, sizeof(float) );
 	 xrad = calloc( new_nt, sizeof(float) );
 	 xver = calloc( new_nt, sizeof(float) );
 	 xew  = calloc( new_nt, sizeof(float) );
 	 xns  = calloc( new_nt, sizeof(float) );
 
-	 interpolate_wiggins( tra, nt, dt, sp.b, xtra, new_nt, new_dt );
-	 interpolate_wiggins( rad, nt, dt, sp.b, xrad, new_nt, new_dt );
-	 interpolate_wiggins( ver, nt, dt, sp.b, xver, new_nt, new_dt );
-	 interpolate_wiggins( ns,  nt, dt, sp.b, xns,  new_nt, new_dt );
-         interpolate_wiggins( ew,  nt, dt, sp.b, xew,  new_nt, new_dt );
+	 duplicate_vector( tra, xtra, new_nt );
+         duplicate_vector( rad, xrad, new_nt );
+         duplicate_vector( ver, xver, new_nt );
+         duplicate_vector(  ew,  xew, new_nt );
+         duplicate_vector(  ns,  xns, new_nt );
+
+ /*** interpolate/interpolate_subs.c ***/
+
+	 interpolate_fft( xtra, nt, dt, &new_nt, new_dt );
+	 interpolate_fft( xrad, nt, dt, &new_nt, new_dt );
+	 interpolate_fft( xver, nt, dt, &new_nt, new_dt );
+	 interpolate_fft( xns,  nt, dt, &new_nt, new_dt );
+	 interpolate_fft( xew,  nt, dt, &new_nt, new_dt );
 
 	 if(verbose) 
 		fprintf( stdout, "%s: interpolated to nt=%d dt=%g\n", 
@@ -948,6 +1014,7 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 
 	strcpy( sp.kstnm, g->stnm );
 	strcpy( sp.knetwk, g->net );
+	strcpy( sp.khole, g->loc );
 
 /**************************************************************************************************/
 /*** EAST-WEST component ***/
@@ -957,11 +1024,11 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 	sp.cmpinc = 90;
 	sp.cmpaz  = 90;
 
-	write_SACPZ_file( sp.kstnm, sp.knetwk, sp.kcmpnm, sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin );
+	write_SACPZ_file( sp.kstnm, sp.knetwk, sp.khole, sp.kcmpnm, sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin );
 
-	sprintf( sacfile, "%4d.%03d.%02d.%02d.%02d.0000.%s.%s..%s.SAC",
+	sprintf( sacfile, "%4d.%03d.%02d.%02d.%02d.0000.%s.%s.%s.%s.SAC",
                 sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin, sp.nzsec,
-                sp.knetwk, sp.kstnm, sp.kcmpnm );
+                sp.knetwk, sp.kstnm, sp.khole, sp.kcmpnm );
 
 	fprintf( stdout, "%s: %s: %s: writting file %s\n",
 		progname, __FILE__, __func__, sacfile );
@@ -980,11 +1047,11 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 	sp.cmpinc = 90;
 	sp.cmpaz  = 0;
 
-	write_SACPZ_file( sp.kstnm, sp.knetwk, sp.kcmpnm, sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin );
+	write_SACPZ_file( sp.kstnm, sp.knetwk, sp.khole, sp.kcmpnm, sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin );
 
-	sprintf( sacfile, "%4d.%03d.%02d.%02d.%02d.0000.%s.%s..%s.SAC",
+	sprintf( sacfile, "%4d.%03d.%02d.%02d.%02d.0000.%s.%s.%s.%s.SAC",
                 sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin, sp.nzsec,
-                sp.knetwk, sp.kstnm, sp.kcmpnm );
+                sp.knetwk, sp.kstnm, sp.khole, sp.kcmpnm );
 
 	fprintf( stdout, "%s: %s: %s: writting file %s\n",
                 progname, __FILE__, __func__, sacfile );
@@ -1003,11 +1070,11 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 	sp.cmpinc = 90;
 	sp.cmpaz = g->az;
 
-	write_SACPZ_file( sp.kstnm, sp.knetwk, sp.kcmpnm, sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin );
+	write_SACPZ_file( sp.kstnm, sp.knetwk, sp.khole, sp.kcmpnm, sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin );
 
-	sprintf( sacfile, "%4d.%03d.%02d.%02d.%02d.0000.%s.%s..%s.SAC",
+	sprintf( sacfile, "%4d.%03d.%02d.%02d.%02d.0000.%s.%s.%s.%s.SAC",
                 sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin, sp.nzsec,
-		sp.knetwk, sp.kstnm, sp.kcmpnm );
+                sp.knetwk, sp.kstnm, sp.khole, sp.kcmpnm );
 
 	fprintf( stdout, "%s: %s: %s: writting file %s\n",
                 progname, __FILE__, __func__, sacfile );
@@ -1026,11 +1093,11 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 	sp.cmpinc = 0;
 	sp.cmpaz = 0;
 
-	write_SACPZ_file( sp.kstnm, sp.knetwk, sp.kcmpnm, sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin );
+	write_SACPZ_file( sp.kstnm, sp.knetwk, sp.khole, sp.kcmpnm, sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin );
 
-	sprintf( sacfile, "%4d.%03d.%02d.%02d.%02d.0000.%s.%s..%s.SAC",
+	sprintf( sacfile, "%4d.%03d.%02d.%02d.%02d.0000.%s.%s.%s.%s.SAC",
                 sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin, sp.nzsec,
-		sp.knetwk, sp.kstnm, sp.kcmpnm );
+                sp.knetwk, sp.kstnm, sp.khole, sp.kcmpnm );
 
 	fprintf( stdout, "%s: %s: %s: writting file %s\n",
                 progname, __FILE__, __func__, sacfile );
@@ -1051,11 +1118,11 @@ void grn2disp2( Greens *g, struct event ev, int verbose, int mtdegfree,
 	sp.cmpinc = 90;
 	sprintf( sp.kcmpnm, "BH2" );
 
-	write_SACPZ_file( sp.kstnm, sp.knetwk, sp.kcmpnm, sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin );
+	write_SACPZ_file( sp.kstnm, sp.knetwk, sp.khole, sp.kcmpnm, sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin );
 
-	sprintf( sacfile, "%4d.%03d.%02d.%02d.%02d.0000.%s.%s..%s.SAC",
+	sprintf( sacfile, "%4d.%03d.%02d.%02d.%02d.0000.%s.%s.%s.%s.SAC",
                 sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin, sp.nzsec,
-                sp.knetwk, sp.kstnm, sp.kcmpnm );
+                sp.knetwk, sp.kstnm, sp.khole, sp.kcmpnm );
 
         fprintf( stdout, "%s: %s: %s: writting file %s\n",
                 progname, __FILE__, __func__, sacfile );
@@ -1155,41 +1222,17 @@ void Usage_Print()
 } /*** end of Print_Usage.c  ***/
 
 
-void write_SACPZ_file( char *sta, char *net, char *cmp, int year, int jday, int hour, int min )
+/* write_SACPZ_file( sp.kstnm, sp.knetwk, sp.khole, sp.kcmpnm, sp.nzyear, sp.nzjday, sp.nzhour, sp.nzmin ); */
+
+void write_SACPZ_file( char *sta, char *net, char *loc, char *cmp, int year, int jday, int hour, int min )
 {
 	FILE *fp;
 	char sacpzfilename[256];
-	sprintf( sacpzfilename, "SAC_PZs_%s_%s_%s__%4d.%03d.%02d.%02d.00.0000",
-		net, sta, cmp, year, jday, hour, min );
+	sprintf( sacpzfilename, "SAC_PZs_%s_%s_%s_%s_%4d.%03d.%02d.%02d.00.0000",
+		net, sta, loc, cmp, year, jday, hour, min );
 	fp = fopen( sacpzfilename, "w" );
 	fprintf( fp, "ZEROS 0\n" );
 	fprintf( fp, "POLES 0\n" );
 	fprintf( fp, "CONSTANT 1.00E+00\n" );
 	fclose(fp);
-}
-
-void HelmbergerCoef( float str, float dip, float rak,
-                float *aa1, float *aa2, float *aa3, float *aa4, float *aa5 )
-{
-	float strr, dipr, rakr, d2r, half=0.5000000;
-
-	d2r = M_PI/180.0;
-	strr = str * d2r;
-	dipr = dip * d2r;
-	rakr = rak * d2r;
-
-	*aa1 = sin(2.0*strr) * cos(rakr) * sin(dipr) + half*cos(2.0*strr) * sin(rakr) * sin(2.0*dipr);
-        *aa2 = cos(strr) * cos(rakr) * cos(dipr) - sin(strr) * sin(rakr) * cos(2.0*dipr);
-        *aa3 = half * sin(rakr) * sin(2.0*dipr);
-        *aa4 = cos(2.0*strr) * cos(rakr) * sin(dipr) - half*sin(2.0*strr) * sin(rakr) * sin(2.0*dipr);
-        *aa5 = -sin(strr) * cos(rakr) * cos(dipr) - cos(strr) * sin(dipr) * cos(2.0*dipr);
-
-	if( fabs(*aa1) < 1.0E-07 ) *aa1 = 0.0;
-	if( fabs(*aa2) < 1.0E-07 ) *aa2 = 0.0;
-	if( fabs(*aa3) < 1.0E-07 ) *aa3 = 0.0;
-	if( fabs(*aa4) < 1.0E-07 ) *aa4 = 0.0;
-	if( fabs(*aa5) < 1.0E-07 ) *aa5 = 0.0;
-
-	fprintf( stdout, "%s: %s: %s: str=%g dip=%g rak=%g a1=%g a2=%g a3=%g a4=%g a5=%g\n",
-		progname, __FILE__, __func__, str, dip, rak, *aa1, *aa2, *aa3, *aa4, *aa5 );
 }

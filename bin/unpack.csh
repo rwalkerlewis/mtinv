@@ -2,9 +2,13 @@
 
 if( $#argv == 1 ) then
 	set tar_file=$1
-	set tar_directory=(`echo $tar_file | cut -d. -f1` )
 
-        echo " unpacking tar file ${tar_file} into director ${tar_directory} "
+	## when using just filename no path
+	## set tar_directory=(`echo $tar_file | cut -d. -f1` )
+
+	## when using full or relative paths
+        set tar_directory=(`echo $tar_file | awk -F/ '{print $NF}' | cut -f1 -d. `)
+        echo " unpacking tar file ${tar_file} into directory ${tar_directory} "
 else
         echo "$0 needs 1 argument"
         echo " Usage : $0 tar_file "
@@ -14,7 +18,7 @@ endif
 ### untar the iris download 
 ###
 if( -e ${tar_file} ) then
-  tar xvf ${tar_file}
+  tar xvf ${tar_file} -C .
 else
   echo "$0 ERROR! IRIS download tar file does NOT exist in current directory"
   exit(-1)
@@ -67,13 +71,10 @@ EOF
 ###                -gmt4 -interactive -help -verbose [sac files]
 ###
 
-#setupMT -z  2 -ev 41.7392 +73.377 -mod wus -ot "2009-12-22T05:54:35" -com "Kambrata, Kyrgyzs" -fil 0.033 0.100 ../Data/*Z.?.SAC ../Data/*Z.SAC
-
-#setupMT -z  2 -ev 35.8767 -84.898 -mod cus -ot "2021-08-13T11:57:35" -com "Franklin Mine, TN" -fil 0.075 0.120 ../Data/*Z.?.SAC ../Data/*Z.SAC
-
-#setupMT -z 16 -ev 36.9077 -90.543 -mod cus -ot "2021-11-18T02:53:04" -com "New Madrid, MO"    -fil 0.075 0.150 ../Data/*Z.?.SAC ../Data/*Z.SAC
-
-#setupMT -z 10 -ev 34.5379 122.567 -mod mdj2 -ot 2023-04-25T15:34:29  -com "Yellow Sea"        -fil 0.02  0.05  ../Data/*Z.?.SAC ../Data/*Z.SAC
+#setupMT --hspec96 -z  2 -ev 41.7392 +73.377 -mod wus -ot "2009-12-22T05:54:35" -com "Kambrata, Kyrgyzs" -fil 0.033 0.10 -DataDir ../Data -RespDir ../Resp ../Data/*Z.?.SAC ../Data/*Z.SAC
+#setupMT --hspec96 -z  2 -ev 35.8767 -84.898 -mod cus -ot "2021-08-13T11:57:35" -com "Franklin Mine, TN" -fil 0.075 0.12 -DataDir ../Data -RespDir ../Resp ../Data/*Z.?.SAC ../Data/*Z.SAC
+#setupMT --hspec96 -z 16 -ev 36.9077 -90.543 -mod cus -ot "2021-11-18T02:53:04" -com "New Madrid, MO"    -fil 0.075 0.15 -DataDir ../Data -RespDir ../Resp ../Data/*Z.?.SAC ../Data/*Z.SAC
+#setupMT --hspec96 -z 10 -ev 34.5379 122.567 -mod mdj2 -ot 2023-04-25T15:34:29  -com "Yellow Sea"        -fil 0.02  0.05 -DataDir ../Data -RespDir ../Resp ../Data/*Z.?.SAC ../Data/*Z.SAC
 
 EOF_SETUPMT.CSH
 

@@ -1,7 +1,33 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 /*
-Sun Feb 21 09:56:01 PST 2021 ichinose1 - added cmdline option -rdseed.station to write file default off
-Sun Feb 21 09:56:31 PST 2021 ichinose1 - removed evla,evlo star when undef in sac file
+** sac2gmtmap reads event associated Seismic Analysis Code (SAC) files using wildcards, typically downloaded from IRIS/EarthScope
+**  then generates C-shell script of Generic Mapping Tools (GMT) version 4+/5+/6+ commands to make a map, executes script 
+**  using system() call and outputs PS/JPG map, also creates a rdseed.stations file needed by mkgrnlib and mtinv 
+**
+** UPDATES:
+**  Sun Feb 21 09:56:01 PST 2021 ichinose1 - added cmdline option -rdseed.station to write file default off
+**  Sun Feb 21 09:56:31 PST 2021 ichinose1 - removed evla,evlo star when undef in sac file
+**   new consolidate_data() subroutine added, potential for new futures (for example, better wf segment management)
+**
 */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,7 +59,12 @@ int main( int ac, char **av )
 	int write_rdseed_station_file = 0;
 	int interactive = 0;
 
+
+	void consolidate_data( Sac_Header *s, int nsta ); /*** from bunch of sac files, collate channels from same stations ***/
+
+
 	void writeRdseedStaFile( Sac_Header *s, int nsta );
+
 	float *readsac( Sac_Header *s, char *filename, int verbose );
 
 	void make_gmt5_map( Sac_Header *s, int nsta, char *script_filename,
@@ -159,6 +190,8 @@ int main( int ac, char **av )
 
 	fprintf( stderr, "%s: processing %d number of stations.\n", progname, nsta );
 
+	consolidate_data( s, nsta );
+
 	if( igmt5 )
 	{
 		if(verbose) fprintf(stderr, "%s: make gmt5 map\n", progname );
@@ -187,6 +220,18 @@ void writeRdseedStaFile( Sac_Header *s, int nsta )
 			s[i].kstnm, s[i].knetwk, 
 			s[i].stla, s[i].stlo, s[i].stel,
 			s[i].kcmpnm, s[i].khole );
+	}
+	fclose(fp);
+
+	fp = fopen( "stations.csv", "w" );
+	fprintf( fp, "station,network,latitude,longitude,elevation_meters,channels\n" );
+
+	for( i = 0; i < nsta; i++ )
+	{
+		fprintf( fp, "%s,%s,%g,%g,%g,\"%s%s\"\n",
+			s[i].kstnm, s[i].knetwk,
+                        s[i].stla, s[i].stlo, s[i].stel,
+                        s[i].kcmpnm, s[i].khole );
 	}
 	fclose(fp);
 }
@@ -709,3 +754,151 @@ void convert_colatlon( float *lat, float *lon, int mode )
         *lat = la;
         *lon = lo;
 }
+
+
+typedef struct {
+        char nslc[32];
+        char loc[16], chan[16];
+        float sampling_rate;
+        int npts;
+}Channels;
+
+typedef struct {
+	char sta[16], net[16];
+	int nchans;
+	Channels c[40]; /**hopefully no station has over 40 channels **/
+	float stla, stlo, stel, stdp;
+	float evla, evlo;
+	float distkm, az, baz;
+} SacData;
+
+/*** this is new, uses the list of all the data generated using *wildcards* 
+      and determines unique net.sta.loc.chans, currently only outputs csv files  ****/
+
+void consolidate_data( Sac_Header *s, int nsta )
+{
+	int i = 0, j = 0, k = 0;
+	SacData *sd;
+	int nunique = 0;
+	int distaz( double, double, double, double, double *, double *, double * );
+        double drdist,daz,dbaz;
+	FILE *fp;
+
+	sd = calloc( nsta+1, sizeof(SacData) );
+
+/*** creqte a unique list of network.stations ***/
+/********** just do the match here *********/
+	strcpy( sd[0].sta, s[0].kstnm );
+	strcpy( sd[0].net, s[0].knetwk );
+	for( j = 0,  i = 0; i < nsta; i++ )
+	{
+		if( ( strcmp( sd[j].sta, s[i].kstnm ) == 0 ) && 
+		    ( strcmp( sd[j].net, s[i].knetwk ) == 0 ) )
+		{
+			/*** not unqiue ***/
+			/* fprintf( stderr, "not unique: i=%d j=%d (%s,%s) == (%s,%s)\n",
+			      i, j, sd[j].sta, s[i].kstnm, sd[j].net, s[i].knetwk ); ***/
+		}
+		else
+		{
+			/*** fprintf( stderr, "***unique: i=%d j=%d (%s,%s) != (%s,%s)\n",
+				i, j, sd[j].sta, s[i].kstnm, sd[j].net, s[i].knetwk ); ***/
+			j++;
+			strcpy( sd[j].sta, s[i].kstnm );
+			strcpy( sd[j].net, s[i].knetwk );
+			continue;
+		}
+	}
+	nunique = j+1;
+
+/*** here add the station lat/lon and dist ***/
+	for ( i = 0; i < nunique; i++ )
+	{
+		for( j = 0; j < nsta; j++ )
+		{
+			if( ( strcmp( sd[i].sta, s[j].kstnm ) == 0 ) &&
+                            ( strcmp( sd[i].net, s[j].knetwk ) == 0 ) )
+			{
+				sd[i].evla = s[j].evla;
+                        	sd[i].evlo = s[j].evlo;
+                        	sd[i].stla = s[j].stla;
+                        	sd[i].stlo = s[j].stlo;
+				sd[i].stel = s[j].stel;
+				sd[i].stdp = s[j].stdp;
+
+				distaz( (double)sd[i].evla, (double)sd[i].evlo,
+                                	(double)sd[i].stla, (double)sd[i].stlo,
+                                                &drdist, &daz, &dbaz );
+                        	sd[i].distkm = (float)drdist;
+                        	sd[i].az     = (float)daz;
+                        	sd[i].baz    = (float)dbaz;
+
+				continue;
+			}
+		}
+	}
+
+/*** get the number of channels for each unique net.sta ***/
+
+	/*** fprintf( stderr, "nunique=%d\n", nunique ); ***/
+	for ( i = 0; i < nunique; i++ )
+	{
+		for( k = 0, j = 0; j < nsta; j++ )
+		{
+			if( ( strcmp( sd[i].sta, s[j].kstnm ) == 0 ) &&
+			    ( strcmp( sd[i].net, s[j].knetwk ) == 0 ) )
+			{
+				strcpy( sd[i].c[k].loc, s[j].khole );
+				strcpy( sd[i].c[k].chan, s[j].kcmpnm );
+				k++;
+			}
+		}
+		sd[i].nchans = k;
+	}
+
+/*** get the number of channels for each unique net.sta ***/ 
+
+	for ( i = 0; i < nunique; i++ )
+	{
+		for( k = 0; k < sd[i].nchans; k++ )
+		{
+			sprintf( sd[i].c[k].nslc, "%s.%s.%s.%s", 
+				sd[i].net, sd[i].sta, sd[i].c[k].loc, sd[i].c[k].chan );
+
+			for( j = 0; j < nsta; j++ )
+			{
+				if(	( strcmp( sd[i].net,       s[j].knetwk ) == 0 ) && 
+					( strcmp( sd[i].sta,       s[j].kstnm  ) == 0 ) && 
+					( strcmp( sd[i].c[k].loc,  s[j].khole  ) == 0 ) && 
+					( strcmp( sd[i].c[k].chan, s[j].kcmpnm ) == 0 ) )
+				{
+					sd[i].c[k].sampling_rate = s[j].delta;
+					sd[i].c[k].npts          = s[j].npts;
+ 				}
+			}
+
+			/* fprintf( stderr, "nslc=%s dt=%g nt=%d distkm=%g az=%g\n",
+				sd[i].c[k].nslc, 
+				sd[i].c[k].sampling_rate, 
+				sd[i].c[k].npts,
+				sd[i].distkm, sd[i].az ); */
+		}
+	}
+	fp = fopen( "stations.channels.csv", "w" );
+	fprintf(fp,"network,station,latitude,longitude,elevation,channels,dist_km,azimuth\n");
+	for( i = 0; i < nunique; i++ )
+	{
+		fprintf( fp, "%s,%s,%g,%g,%g,\"", 
+			sd[i].net, sd[i].sta, 
+			sd[i].stla, sd[i].stlo, sd[i].stel );
+
+		for( k = 0; k < sd[i].nchans; k++ )
+		{
+			fprintf( fp, "%s%s", sd[i].c[k].chan, sd[i].c[k].loc );
+			if( k < sd[i].nchans-1 ) fprintf(fp,",");
+		}
+		fprintf( fp, "\",%g,%g\n", sd[i].distkm, sd[i].az );
+	}
+	fclose(fp);
+	
+} /*** end consolidate_data() ***/

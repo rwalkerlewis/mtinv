@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +33,7 @@ typedef struct thread_data
 {
 	EventInfo *ev;
 	int ista;
-	int ienvelope;
+	int ienvelope;  /*** envelope is deprecated gene.ichinose 07.01.2024 ***/
 	int dumpsac;
 	int verbose;
 } ThreadData;
@@ -236,9 +254,6 @@ void *sacdata2inv_staproc_thread( void *ptr )
                         float *ew, int ew_nt, float *ew_cmpaz, float ew_cmpinc,
                         float angle, int verbose );
 
-        /*** envelope/envelope_sub.c ***/
-        void  envelope( float *y, int npts, float dt );
-
         /*** sacextrema/sacextrema.c ***/
         void  sac_minmax( float *x, int n, float *max, float *min, float *mean );
 
@@ -268,7 +283,7 @@ void *sacdata2inv_staproc_thread( void *ptr )
 
 	EventInfo *ev;
 	int ista;
-	int ienvelope;
+	int ienvelope;   /*** envelope is deprecated gene.ichinose 07.01.2024 ***/
 	int dumpsac;
 	int verbose;
 
@@ -278,7 +293,7 @@ void *sacdata2inv_staproc_thread( void *ptr )
 
 	ev         = (EventInfo *) td->ev;
 	ista       = td->ista;
-	ienvelope  = td->ienvelope;
+	ienvelope  = td->ienvelope;    /*** envelope is deprecated gene.ichinose 07.01.2024 ***/
 	dumpsac    = td->dumpsac;
 	verbose    = td->verbose;
 
@@ -851,21 +866,6 @@ void *sacdata2inv_staproc_thread( void *ptr )
 	ev[ista].z.pha[SIGNAL].frequency = 1 / ev[ista].z.pha[SIGNAL].period;
 	ev[ista].z.P2P_snr               = ev[ista].z.pha[SIGNAL].amp /
 	                                   ev[ista].z.pha[NOISE].amp;
-
-/*********************************************/
-/*** compute envelope function of the data ***/
-/*********************************************/
-
-	ev[ista].ienvelope = ienvelope;
-	if( ev[ista].ienvelope == 1 )
-	{
-		fprintf( stdout, "%s: sacdata2inv_staproc_thread(): ista=%d computing envelope \n", progname, ista );
-		fflush( stdout );
-
-		envelope( ev[ista].ew.data, ev[ista].ew.s.npts, ev[ista].ew.s.delta );
-		envelope( ev[ista].ns.data, ev[ista].ns.s.npts, ev[ista].ns.s.delta );
-		envelope( ev[ista].z.data,  ev[ista].z.s.npts,  ev[ista].z.s.delta );
-	}
 
 /********************************************************/
 /*** compute min max and mean extrema                 ***/

@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,6 +24,11 @@
 #include "../include/mt.h"
 
 extern char progname[128];
+
+
+/*** glib2inv processes Greens function library files *.glib for moment tensor inversion read by mtinv.c ***/
+/*** glib2inv_get_input_parameters subroutine for reading cmdline for glib2inv.c:main() ***/
+
 
 EventInfo *glib2inv_get_input_parameters( char *filename, 
 	EventInfo *ev, int *n, int verbose )
@@ -16,7 +39,8 @@ EventInfo *glib2inv_get_input_parameters( char *filename,
 	int ista, nitems;
 	MyTime ot;
 	char timestring[24], kdum[3], comment[256], database_info[256];
-	char kenvelope, grd_mo_type, kused;
+	char grd_mo_type, kused;
+
 	float strike, dip, rake, Mw, evdp, evla, evlo;
 	float Mxx, Mxy, Mxz, Myy, Myz, Mzz, Mo;
 	float Nyquist_Frequency;
@@ -319,13 +343,7 @@ EventInfo *glib2inv_get_input_parameters( char *filename,
 		if( kused == 'y' || kused == 'Y' || kused == '1' ) ev[ista].iused = 1;
 		if( kused == 'n' || kused == 'N' || kused == '0' ) ev[ista].iused = 0;
 
-	/*********************************************/
-	/*** check to process as envelope          ***/
-	/***   default is off                      ***/
-	/*********************************************/
-		kenvelope = 'n';
-		if( kenvelope == 'y' || kenvelope == 'Y' || kenvelope == '1' ) ev[ista].ienvelope = 1;
-		if( kenvelope == 'n' || kenvelope == 'N' || kenvelope == '0' ) ev[ista].ienvelope = 0;
+		/*** envelope is deprecated gene.ichinose 07.01.2024 ***/
 		ev[ista].ienvelope = 0;
 
 	/***************************************************/

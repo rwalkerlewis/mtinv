@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,11 +26,8 @@
 
 char progname[128];
 
-typedef struct {
-	int ista;
-	int nz;
-	float *z;
-} DepthVector;
+/*** glib2inv processes Greens function library files *.glib for moment tensor inversion read by mtinv.c ***/
+/*** see support by glib2inv_parallel.c glib2inv_serial.c glib2inv_subs.c ***/
 
 int main( int ac, char **av )
 {
@@ -22,7 +37,7 @@ int main( int ac, char **av )
 /************************/
 
 	int iz;
-	DepthVector *z;
+	DepthVector *z;  /*** see ../include/mt.h ***/
 
 /************************/
 /*** event info stuff ***/
@@ -56,25 +71,37 @@ int main( int ac, char **av )
 /*** function prototypes ***/
 /***************************/
 
+/*** Greens_subs.c: Greens **loadGlibAll() ***/
+
+	Greens **loadGlibAll( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, char *file_type, int verbose );
+
 /*** glib2inv_serial.c ***/
+
 	void glib2inv_serial( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int idumpgrn, int verbose );
 
 /*** glib2inv_parallel.c ***/
+
 	void glib2inv_parallel( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int idumpgrn, int verbose );
 
-	/*** shorten_path.c ***/
+/*** shorten_path.c ***/
+
 	char *shorten_path( char *pathname, char *filename );
 
-	/*** load_special_grns.c ***/
+/*** load_special_grns.c ***/
+
 	float *load_special_grns( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, int verbose );
 
 /*** glib2inv_serial.c ***/
+
 	void glib2inv_special( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, int idumpgrn, int verbose );
 
+/*** misc ../lib/libget.a: ../misc/getpar/ ***/
 	int setpar(int ac, char **av);
 	int mstpar( char *, char *, void * );
         int getpar( char *, char *, void * );
 	void endpar(void);
+
+/*** usage-> this file? ***/
 	void Usage_Print();
 
 /***************************************************************************************************/
@@ -152,6 +179,7 @@ int main( int ac, char **av )
 /*** loop over stations and just read in the Green functions                ***/
 /******************************************************************************/
 
+	/*** special formated greens functions, using Mij format ***/
 	if(test_special)
 	{
 		float *z_tmp;
@@ -177,135 +205,14 @@ int main( int ac, char **av )
 
 	} /*** end test_special option true ***/
 
-/******************************************************************************/
-/*** loop over stations and just read in the Green functions                ***/
-/******************************************************************************/
+	else   /*** this is the normal glib file from mkgrnlib.c ***/
 
-	if(!test_special)
 	{
-	  grn = (Greens **) malloc( nsta * sizeof(Greens *) );
+		grn = (Greens **) malloc( nsta * sizeof(Greens *) );
 
-	  z = (DepthVector *) malloc( nsta * sizeof(DepthVector) );
+		z = (DepthVector *) malloc( nsta * sizeof(DepthVector) );
 
-	  for( ista = 0; ista < nsta; ista++ )
-	  {
-		if( (fpin = fopen( ev[ista].glib_filename, "rb" ) ) == NULL )
-		{	
-			fprintf(stderr, "%s: glib2inv.c: glib2inv(): STDERR: Fatal Error, cannot open file %s\n",
-				progname, ev[ista].glib_filename );
-			exit(-1);
-		}
-
-		fprintf( stderr, "%s: %s: %s: STDERR: reading file %s\n", 
-			progname, __FILE__, __func__, ev[ista].glib_filename );
-		fprintf( stdout, "%s: %s: %s: STDOUT: reading file %s\n",                
-                        progname, __FILE__, __func__, ev[ista].glib_filename );
-
-/******************************************************************************/
-/*** get the depth range info from glib file and write it into the ginv file ***/
-/******************************************************************************/
-		
-		fread( &(z[ista].nz), sizeof(int), 1, fpin );
-
-		z[ista].z = (float *)calloc( z[ista].nz, sizeof(float) );
-		
-		fread( &(z[ista].z[0]), z[ista].nz * sizeof(float), 1, fpin );
-	
-/**********************************************************/
-/*** loop over depth and read in the Green's functions ***/
-/**********************************************************/
-
-		grn[ista] = (Greens *)malloc( z[ista].nz * sizeof(Greens) );
-
-		for( iz = 0; iz < z[ista].nz; iz++ )
-		{
-			fread( &(grn[ista][iz]), sizeof(Greens), 1, fpin );
-
-			if(debug)
-			{
-				fprintf( stdout,
-"ista=%d %s sta=%s net=%s stla=%g stlo=%g stel=%g evla=%g evlo=%g evdp=%g rdist=%g az=%g baz=%g t0=%g dt=%g twin=%g fmax=%g damp=%g eps=%g smin=%g rigidity=%g redv=%g ts0=%g tstart=%g tend=%g Ptakeoff=%g Pray=%g Ptime=%g Pray=%g kmax=%d nt=%d %s %s nlay=%d maxlay=%d rss=%g\n", 
-				ista, 
-				grn[ista][iz].filename,
-				grn[ista][iz].stnm,
-				grn[ista][iz].net,
-				grn[ista][iz].stla,
-				grn[ista][iz].stlo,
-				grn[ista][iz].stel,
-				grn[ista][iz].evla,
-				grn[ista][iz].evlo,
-				grn[ista][iz].evdp,
-				grn[ista][iz].rdist,	
-				grn[ista][iz].az,
-				grn[ista][iz].baz,
-				grn[ista][iz].t0,
-				grn[ista][iz].dt,
-				grn[ista][iz].twin,
-				grn[ista][iz].fmax,
-				grn[ista][iz].damp,
-				grn[ista][iz].eps,
-				grn[ista][iz].smin,
-				grn[ista][iz].rigidity,
-				grn[ista][iz].redv,
-				grn[ista][iz].ts0,
-				grn[ista][iz].tstart,
-				grn[ista][iz].tend,
-				grn[ista][iz].Ptakeoff,
-				grn[ista][iz].Prayparameter,
-				grn[ista][iz].Pttime,
-				grn[ista][iz].Praybottom,
-				grn[ista][iz].kmax,
-				grn[ista][iz].nt,
-				grn[ista][iz].v.modfile,
-				grn[ista][iz].v.modpath,
-				grn[ista][iz].v.nlay,
-				grn[ista][iz].v.maxlay,
-				grn[ista][iz].g.rss[0] );
-			}
-
-			if( verbose )
-			{
-			  fprintf( stdout, "%s: %s: %s: STDOUT: iz=%02d z=%3g %-8.8s rdist=%g az=%g ",
-				progname, __FILE__, __func__,
-				iz, 
-				z[ista].z[iz], 
-				grn[ista][iz].stnm, 
-				grn[ista][iz].rdist, 
-				grn[ista][iz].az );
-
-			  fprintf( stdout, " evdp=%g t0=%g dt=%g nt=%d %s\n",
-				grn[ista][iz].evdp,
-				grn[ista][iz].t0,
-				grn[ista][iz].dt,
-				grn[ista][iz].nt,
-				grn[ista][iz].filename );
-			}
-
-			if( ev[ista].nt > grn[ista][iz].nt )
-			{
-			  fprintf( stderr, "%s: %s: %s: STDERR: ERROR nt=%d of othe data greater than nt=%d ",
-				progname, __FILE__, __func__, ev[ista].nt, grn[ista][iz].nt );
-			  fprintf( stderr, "of the Green's functions for ista=%d sta=%s.%s\n",
-				ista, ev[ista].stnm, ev[ista].net );
-			  exit(-1);
-			}
-
-			if( ev[ista].dt < grn[ista][iz].dt )
-			{
-			  fprintf( stderr, "%s: %s: %s: STDERR: ERROR dt=%g of the data is less than dt=%g ",
-				progname, __FILE__, __func__, ev[ista].dt, grn[ista][iz].dt );
-
-			  fprintf( stderr, "of the Green's function for ista=%d sta=%s.%s\n",
-				ista, ev[ista].stnm, ev[ista].net );
-
-			  exit(-1);
-			}
-
-		} /*** loop over depth - iz ***/
-	
-		fclose(fpin);
-
-	  } /*** loop over stations - ista  ***/
+		grn = loadGlibAll( grn, ev, z, nsta, "glib", verbose );
 
 	/**************************************************/
 	/*** do the processing                          ***/
@@ -325,7 +232,7 @@ int main( int ac, char **av )
 
 	  free(z);
 
-	} /*** if not test_special ***/
+	}
 
 	free(ev);
 	free(grn);

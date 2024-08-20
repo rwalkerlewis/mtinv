@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +31,7 @@
 extern char progname[128];
 
 /*** Plot the NSS lune using GMT version 4.5.x ***/
+
 void mteig_gmt4_plot( 
 	char *input_filename,
         char *gmt_script_filename,
@@ -52,15 +71,14 @@ void mteig_gmt4_plot(
         fprintf( fp, "set plt_pts=n        ### randomly simulated eigenvalue pts on lune\n" );
         fprintf( fp, "set plt_user_pt=y    ### user supplied eigenvalues on lune as diamond symbol\n" );
         fprintf( fp, "set plt_label_vr=y   ### best fitting full-mt label the star with percent variance reduction value\n" );
-        fprintf( fp, "set area_sphere=n    ### plot statistics of the area of the 80percent contour\n" );
         fprintf( fp, "set pltmech=y        ### plot best fitting full-MT solution on lune with percent VR label\n" );
         fprintf( fp, "set mech_panel=y     ### side panel with MT plots for iso, DC and best full-MT\n" );
         fprintf( fp, "####################################### DEFAULTS ############################################################\n" );
         fprintf( fp, "\n" );
 
-	fprintf( fp, "if( $argc != 7 ) then\n" );
-        fprintf( fp, "  echo \" $0 requires 7 arguments got $argc  (all options y or n) \" \n" );
-        fprintf( fp, "  echo \" Usage: $0 color=y plt_pts=n plt_user_pt=y plt_label_vr=y area_sphere=n pltmech=y mech_panel=y \" \n" );
+	fprintf( fp, "if( $argc != 6 ) then\n" );
+        fprintf( fp, "  echo \" $0 requires 6 arguments got $argc  (all options y or n) \" \n" );
+        fprintf( fp, "  echo \" Usage: $0 color=y plt_pts=n plt_user_pt=y plt_label_vr=y pltmech=y mech_panel=y \" \n" );
         fprintf( fp, "  exit(-1)\n" );
         fprintf( fp, "endif\n" );
         fprintf( fp, "\n" );
@@ -156,30 +174,6 @@ fprintf( fp, "### Color Palete   ####\n" );
         fprintf( fp, "grdcontour lune.grd $R $J -A20+c0.02i+o+f1+s11p+gwhite+p0.25p/black -Ccint.xy -W1p/black -L+10/+100 -S10 -Gd1.5i -O -K -V >> ${PS}\n" );
         fprintf( fp, "\n" );
 
-        fprintf( fp, "####\n" );
-        fprintf( fp, "#### compute the area for the 80 percent %% contour\n" );
-        fprintf( fp, "####\n" );
-
-        fprintf( fp, "if( ${area_sphere} == \"y\" ) then\n" );
-        fprintf( fp, " area_sphere contour=80 contour_norm=0.95 > area_sphere.out\n" );
-        fprintf( fp, "#\n" );
-
-        fprintf( fp, " set AREA_CONT=(`awk '{ printf( \"%%.1f\", $14 ) }' area_sphere.out `)\n" );
-        fprintf( fp, "set RATIO_CONT=(`awk '{ printf( \"%%.2f\", $16 ) }' area_sphere.out `)\n" );
-        fprintf( fp, "  set CONT_INT=(`awk '{ printf( \"%%.2f\",  $8 ) }' area_sphere.out `)\n" );
-
-        fprintf( fp, "#\n" );
-        fprintf( fp, " echo \" 0 0 10 0 1 0 NormArea@+(${CONT_INT})@+=(${AREA_CONT}@+o@+)@+2@+ Rat=${RATIO_CONT} FullMT VR=%.1f%% @~D@~@+DC@+=%.1f@+o@+(@~g@~=%.3f, @~j@~=%.3f)\" | ",
-                rbest[ifullmt].var_red, 
-                rbest[ifullmt].gcarc_dc, 
-                rbest[ifullmt].lune_lon,
-                rbest[ifullmt].lune_lat );
-
-        fprintf( fp, " pstext -R0/1/0/1 -JX3i/6i -D-0.6i/-0.25i -N -O -K -V >> ${PS}\n" );
-        fprintf( fp, "#\n" );
-        fprintf( fp, "endif\n" );
-        fprintf( fp, "\n" );
-
        fprintf( fp, "### plot the special lune points and labels DC,+/-ISO,+/-CLVD,+/-LVD,+/-Crack \n" );
         fprintf( fp, "####\n" );
         fprintf( fp, "psxy points.xy $R $J -N -Sc0.1i -W1p/black -G0/0/0 -O -K -V >> ${PS}\n" );
@@ -244,9 +238,12 @@ fprintf( fp, "### Color Palete   ####\n" );
         fprintf( fp, "%.5f %.5f 0 %.3f %.3f %.3f %.3f %.3f %.3f 24 %.5f %.5f    \n",
                 rbest[ifullmt].lune_lon,
                 rbest[ifullmt].lune_lat,
-                rbest[ifullmt].mzz, rbest[ifullmt].mxx,
-                rbest[ifullmt].myy, rbest[ifullmt].mxz,
-                -rbest[ifullmt].myz, -rbest[ifullmt].mxy,
+                rbest[ifullmt].mzz,
+		rbest[ifullmt].mxx,
+                rbest[ifullmt].myy,
+		rbest[ifullmt].mxz,
+                -rbest[ifullmt].myz,
+		-rbest[ifullmt].mxy,
                 rbest[ifullmt].lune_lon,
                 rbest[ifullmt].lune_lat );
         fprintf( fp, "EOF\n" );
@@ -299,13 +296,31 @@ fprintf( fp, "### Color Palete   ####\n" );
         fprintf( fp, "psmeca -R0/1/0/1 -JX4i/8.5i -Sm0.3i/12p/3p -T0/0.3p,black -L1p,black -G100 -E255 -N -O -K -V >> ${PS} << EOF\n" );
 
         fprintf( fp, "0.9 0.95 1.0 %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f 24 0.9 0.95 (Full) VR=%.1f\n",
-                rbest[ifullmt].mzz, rbest[ifullmt].mxx, rbest[ifullmt].myy, rbest[ifullmt].mxz, -rbest[ifullmt].myz, -rbest[ifullmt].mxy, rbest[ifullmt].var_red );
+                rbest[ifullmt].mzz,
+		rbest[ifullmt].mxx,
+		rbest[ifullmt].myy,
+		rbest[ifullmt].mxz,
+		-rbest[ifullmt].myz,
+		-rbest[ifullmt].mxy,
+		rbest[ifullmt].var_red );
 
         fprintf( fp, "0.9 0.88 1.0 %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f 24 0.9 0.88 (Dev) VR=%.1f\n",   
-                rbest[idevmt].mzz, rbest[idevmt].mxx, rbest[idevmt].myy, rbest[idevmt].mxz, -rbest[idevmt].myz, -rbest[idevmt].mxy, rbest[idevmt].var_red );
+                rbest[idevmt].mzz,
+		rbest[idevmt].mxx,
+		rbest[idevmt].myy,
+		rbest[idevmt].mxz,
+		-rbest[idevmt].myz,
+		-rbest[idevmt].mxy,
+		rbest[idevmt].var_red );
 
         fprintf( fp, "0.9 0.81 1.0 %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f 24 0.9 0.81 (DC) VR=%.1f\n",    
-                rbest[idcmt].mzz, rbest[idcmt].mxx, rbest[idcmt].myy, rbest[idcmt].mxz, -rbest[idcmt].myz, -rbest[idcmt].mxy, rbest[idcmt].var_red );
+                rbest[idcmt].mzz,
+		rbest[idcmt].mxx,
+		rbest[idcmt].myy,
+		rbest[idcmt].mxz,
+		-rbest[idcmt].myz,
+		-rbest[idcmt].mxy,
+		rbest[idcmt].var_red );
 
         fprintf( fp, "EOF\n" );
         fprintf( fp, "\n" );
@@ -313,10 +328,22 @@ fprintf( fp, "### Color Palete   ####\n" );
         fprintf( fp, "psmeca -R0/1/0/1 -JX4i/8.5i -Sm0.3i/12p/3p -L1p,black -G100 -E255 -N -O -K -V >> ${PS} << EOF\n" );
 
         fprintf( fp, "0.9 0.74 1.0 %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f 24  0.9 0.74 (+Iso) VR=%.1f\n",  
-                rbest[ipiso].mzz, rbest[ipiso].mxx, rbest[ipiso].myy, rbest[ipiso].mxz, -rbest[ipiso].myz, -rbest[ipiso].mxy, rbest[ipiso].var_red );
+                rbest[ipiso].mzz,
+		rbest[ipiso].mxx,
+		rbest[ipiso].myy,
+		rbest[ipiso].mxz,
+		-rbest[ipiso].myz,
+		-rbest[ipiso].mxy,
+		rbest[ipiso].var_red );
 
         fprintf( fp, "0.9 0.67 1.0 %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f 24  0.9 0.67 (-Iso) VR=%.1f\n",  
-                rbest[iniso].mzz, rbest[iniso].mxx, rbest[iniso].myy, rbest[iniso].mxz, -rbest[iniso].myz, -rbest[iniso].mxy, rbest[iniso].var_red );
+                rbest[iniso].mzz,
+		rbest[iniso].mxx,
+		rbest[iniso].myy,
+		rbest[iniso].mxz,
+		-rbest[iniso].myz,
+		-rbest[iniso].mxy,
+		rbest[iniso].var_red );
 
         fprintf( fp, "EOF\n" );
         fprintf( fp, "\n" );
@@ -336,15 +363,23 @@ fprintf( fp, "### Color Palete   ####\n" );
         fprintf( fp, "/bin/rm -f ${PS}\n" );
         fprintf( fp, "#/bin/rm -f lune.grd\n" );
         fprintf( fp, "/bin/rm -f lune.out vred.cpt points.xy cint.xy\n" );
-        fprintf( fp, "## use xdg-open or MacOS open -a preview \n" );
-        fprintf( fp, "open ${JPG}\n" );
+
+ 	fprintf( fp, "\n" );
+        fprintf( fp, "## use xdg-open or eog for some linux systems\n" );
+        fprintf( fp, "# eog ${JPG}\n" );
+        fprintf( fp, "# xdg-open ${JPG}\n" );
+
+        fprintf( fp, "\n" );
+        fprintf( fp, "## use MacOS open -a preview \n" );
+        fprintf( fp, "# open ${JPG}\n" );       
+
         fclose(fp);
 
         chmod( gmt_script_filename, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH );
 
         sprintf(
                 command_line,
-                "csh %s color=y plt_pts=n plt_user_pt=y plt_label_vr=y pltmech=y area_sphere=n mech_panel=y",
+                "csh %s color=y plt_pts=n plt_user_pt=y plt_label_vr=y pltmech=y mech_panel=y",
                 gmt_script_filename );
 
         if(doplt)
@@ -405,15 +440,14 @@ void mteig_gmt5_plot(
 	fprintf( fp, "set plt_pts=n        ### randomly simulated eigenvalue pts on lune\n" );
 	fprintf( fp, "set plt_user_pt=y    ### user supplied eigenvalues on lune as diamond symbol\n" );
 	fprintf( fp, "set plt_label_vr=y   ### best fitting full-mt label the star with percent variance reduction value\n" );
-	fprintf( fp, "set area_sphere=n    ### plot statistics of the area of the 80percent contour\n" );
 	fprintf( fp, "set pltmech=y        ### plot best fitting full-MT solution on lune with percent VR label\n" );
 	fprintf( fp, "set mech_panel=y     ### side panel with MT plots for iso, DC and best full-MT\n" );
 	fprintf( fp, "####################################### DEFAULTS ############################################################\n" );
 	fprintf( fp, "\n" );
 
-	fprintf( fp, "if( $argc != 7 ) then\n" );
-	fprintf( fp, "  echo \" $0 requires 7 arguments got $argc  (all options y or n) \" \n" );
-	fprintf( fp, "  echo \" Usage: $0 color=y plt_pts=n plt_user_pt=y plt_label_vr=y area_sphere=n pltmech=y mech_panel=y \" \n" );
+	fprintf( fp, "if( $argc != 6 ) then\n" );
+	fprintf( fp, "  echo \" $0 requires 6 arguments got $argc  (all options y or n) \" \n" );
+	fprintf( fp, "  echo \" Usage: $0 color=y plt_pts=n plt_user_pt=y plt_label_vr=y pltmech=y mech_panel=y \" \n" );
 	fprintf( fp, "  exit(-1)\n" );
 	fprintf( fp, "endif\n" );
 	fprintf( fp, "\n" );
@@ -492,10 +526,6 @@ void mteig_gmt5_plot(
 	fprintf( fp, "gmt grdimage $R $J lune.grd -Cvred.cpt -P -K -Vq >! ${PS}\n" );
 	fprintf( fp, "####\n" );
 
-/***
-        fprintf( fp, "gmt psbasemap $R $J -Bxf180g10a180 -Byf180g10a180 -Bnsew+t\"${TITLE_TXT}\" -U\"%s:%s\" -O -K -Vq >> ${PS}\n", 
-			username, currentdir );
-***/
 	fprintf( fp, "gmt psbasemap $R $J -Bxf180g10a180 -Byf180g10a180 -Bnsew+t\"${TITLE_TXT}\" -O -K -Vq >> ${PS}\n" );
         fprintf( fp, "\n" );
 
@@ -510,33 +540,6 @@ void mteig_gmt5_plot(
 	fprintf( fp, "####\n" );
 	fprintf( fp, "gmt grdcontour lune.grd $R $J -Ccint.xy -W1p,black -O -K -Vn " );
 	fprintf( fp, " -L+10/+100 -S10 -Gd1.5i -A+20+ap+c0.02i+o+f14p,Helvetica-Bold,black+gwhite+p0.25p,black >> ${PS}\n" );
-	fprintf( fp, "\n" );
-
-	fprintf( fp, "####\n" );
-	fprintf( fp, "#### compute the area for the 80 percent %% contour\n" );
-	fprintf( fp, "####\n" );
-
-	fprintf( fp, "if( ${area_sphere} == \"y\" ) then\n" );
-	fprintf( fp, " area_sphere contour=80 contour_norm=0.95 > area_sphere.out\n" );
-	fprintf( fp, "#\n" );
-
-/* 1      2     3           4       5        6  7              8   9     10      11     12       13         14      15          16        17 */
-/* count= 43681 total_area= 120.998 contour= 80 countour_norm= 0.9 area= 50.4397 ratio= 0.416864 norm-area= 89.7857 norm-ratio= 0.742042 /Users/ichinose1/Work/rot_examples/20160926_SouthernCA/mteig.ikp_bph01-6c */
-
-	fprintf( fp, " set AREA_CONT=(`awk '{ printf( \"%%.1f\", $14 ) }' area_sphere.out `)\n" );
-        fprintf( fp, "set RATIO_CONT=(`awk '{ printf( \"%%.2f\", $16 ) }' area_sphere.out `)\n" );
-        fprintf( fp, "  set CONT_INT=(`awk '{ printf( \"%%.2f\",  $8 ) }' area_sphere.out `)\n" );
-
-	fprintf( fp, "#\n" );
-	fprintf( fp, " echo \" 0 0 NormArea@+(${CONT_INT})@+=(${AREA_CONT}@+o@+)@+2@+ Rat=${RATIO_CONT} FullMT VR=%.1f%% @~D@~@+DC@+=%.1f@+o@+(@~g@~=%.3f, @~j@~=%.3f)\" | ",
-		rbest[ifullmt].var_red, 
-		rbest[ifullmt].gcarc_dc, 
-		rbest[ifullmt].lune_lon,
-		rbest[ifullmt].lune_lat );
-
-	fprintf( fp, " gmt pstext -R0/1/0/1 -JX3i/6i -F+f10p,Helvetica-Bold,black+jTL -D-0.6i/-0.25i -N -O -K -Vq >> ${PS}\n" );
-	fprintf( fp, "#\n" );
-	fprintf( fp, "endif\n" );
 	fprintf( fp, "\n" );
 
 	fprintf( fp, "### plot the special lune points and labels DC,+/-ISO,+/-CLVD,+/-LVD,+/-Crack \n" );
@@ -586,9 +589,12 @@ void mteig_gmt5_plot(
 	fprintf( fp, "%.5f %.5f 0 %.3f %.3f %.3f %.3f %.3f %.3f 24 %.5f %.5f VR=%.1f%%\n",
                 rbest[ifullmt].lune_lon, 
 		rbest[ifullmt].lune_lat, 
-		rbest[ifullmt].mzz, rbest[ifullmt].mxx, 
-		rbest[ifullmt].myy, rbest[ifullmt].mxz,
-		-rbest[ifullmt].myz, -rbest[ifullmt].mxy, 
+		rbest[ifullmt].mzz,
+		rbest[ifullmt].mxx, 
+		rbest[ifullmt].myy,
+		rbest[ifullmt].mxz,
+		-rbest[ifullmt].myz,
+		-rbest[ifullmt].mxy, 
 		rbest[ifullmt].lune_lon, 
 		rbest[ifullmt].lune_lat, 
 		rbest[ifullmt].var_red );
@@ -602,9 +608,12 @@ void mteig_gmt5_plot(
 	fprintf( fp, "%.5f %.5f 0 %.3f %.3f %.3f %.3f %.3f %.3f 24 %.5f %.5f    \n",
 		rbest[ifullmt].lune_lon,
                 rbest[ifullmt].lune_lat,
-                rbest[ifullmt].mzz, rbest[ifullmt].mxx,
-                rbest[ifullmt].myy, rbest[ifullmt].mxz,
-                -rbest[ifullmt].myz, -rbest[ifullmt].mxy,
+                rbest[ifullmt].mzz,
+		rbest[ifullmt].mxx,
+                rbest[ifullmt].myy,
+		rbest[ifullmt].mxz,
+                -rbest[ifullmt].myz,
+		-rbest[ifullmt].mxy,
                 rbest[ifullmt].lune_lon,
                 rbest[ifullmt].lune_lat );
 	fprintf( fp, "EOF\n" );
@@ -657,13 +666,31 @@ void mteig_gmt5_plot(
 	fprintf( fp, "gmt psmeca -R0/1/0/1 -JX4i/8.5i -Sm0.3i/12p/3p -T0/0.3p,black -L1p,black -G100 -E255 -N -O -K -Vq >> ${PS} << EOF\n" );
 
 	fprintf( fp, "0.9 0.95 1.0 %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f 24 0.9 0.95 (Full) VR=%.1f\n",
-		rbest[ifullmt].mzz, rbest[ifullmt].mxx, rbest[ifullmt].myy, rbest[ifullmt].mxz, -rbest[ifullmt].myz, -rbest[ifullmt].mxy, rbest[ifullmt].var_red );
+		rbest[ifullmt].mzz,
+		rbest[ifullmt].mxx,
+		rbest[ifullmt].myy,
+		rbest[ifullmt].mxz,
+		-rbest[ifullmt].myz,
+		-rbest[ifullmt].mxy,
+		rbest[ifullmt].var_red );
 
 	fprintf( fp, "0.9 0.88 1.0 %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f 24 0.9 0.88 (Dev) VR=%.1f\n",   
-                rbest[idevmt].mzz, rbest[idevmt].mxx, rbest[idevmt].myy, rbest[idevmt].mxz, -rbest[idevmt].myz, -rbest[idevmt].mxy, rbest[idevmt].var_red );
+                rbest[idevmt].mzz,
+		rbest[idevmt].mxx,
+		rbest[idevmt].myy,
+		rbest[idevmt].mxz,
+		-rbest[idevmt].myz,
+		-rbest[idevmt].mxy,
+		rbest[idevmt].var_red );
 
 	fprintf( fp, "0.9 0.81 1.0 %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f 24 0.9 0.81 (DC) VR=%.1f\n",    
-		rbest[idcmt].mzz, rbest[idcmt].mxx, rbest[idcmt].myy, rbest[idcmt].mxz, -rbest[idcmt].myz, -rbest[idcmt].mxy, rbest[idcmt].var_red );
+		rbest[idcmt].mzz,
+		rbest[idcmt].mxx,
+		rbest[idcmt].myy,
+		rbest[idcmt].mxz,
+		-rbest[idcmt].myz,
+		-rbest[idcmt].mxy,
+		rbest[idcmt].var_red );
 
 	fprintf( fp, "EOF\n" );
 	fprintf( fp, "\n" );
@@ -671,10 +698,22 @@ void mteig_gmt5_plot(
 	fprintf( fp, "gmt psmeca -R0/1/0/1 -JX4i/8.5i -Sm0.3i/12p/3p -L1p,black -G100 -E255 -N -O -K -Vq >> ${PS} << EOF\n" );
 
 	fprintf( fp, "0.9 0.74 1.0 %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f 24  0.9 0.74 (+Iso) VR=%.1f\n",  
-		rbest[ipiso].mzz, rbest[ipiso].mxx, rbest[ipiso].myy, rbest[ipiso].mxz, -rbest[ipiso].myz, -rbest[ipiso].mxy, rbest[ipiso].var_red );
+		rbest[ipiso].mzz,
+		rbest[ipiso].mxx,
+		rbest[ipiso].myy,
+		rbest[ipiso].mxz,
+		-rbest[ipiso].myz,
+		-rbest[ipiso].mxy,
+		rbest[ipiso].var_red );
 
 	fprintf( fp, "0.9 0.67 1.0 %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f 24  0.9 0.67 (-Iso) VR=%.1f\n",  
-		rbest[iniso].mzz, rbest[iniso].mxx, rbest[iniso].myy, rbest[iniso].mxz, -rbest[iniso].myz, -rbest[iniso].mxy, rbest[iniso].var_red );
+		rbest[iniso].mzz,
+		rbest[iniso].mxx,
+		rbest[iniso].myy,
+		rbest[iniso].mxz,
+		-rbest[iniso].myz,
+		-rbest[iniso].mxy,
+		rbest[iniso].var_red );
 
 	fprintf( fp, "EOF\n" );
 	fprintf( fp, "\n" );
@@ -694,15 +733,23 @@ void mteig_gmt5_plot(
 	fprintf( fp, "/bin/rm -f ${PS}\n" );
 	fprintf( fp, "#/bin/rm -f lune.grd\n" );
 	fprintf( fp, "/bin/rm -f lune.out vred.cpt points.xy cint.xy\n" );
+
 	fprintf( fp, "\n" );
-	fprintf( fp, "open ${JPG}\n" );
+        fprintf( fp, "## use xdg-open or eog for some linux systems\n" );
+        fprintf( fp, "# eog ${JPG}\n" );
+        fprintf( fp, "# xdg-open ${JPG}\n" );
+
+        fprintf( fp, "\n" );
+        fprintf( fp, "## use MacOS open -a preview \n" );
+        fprintf( fp, "# open ${JPG}\n" );
+
 	fclose(fp);
 
 	chmod( gmt_script_filename, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH );
 
 	sprintf(
 		command_line,
-		"csh %s color=y plt_pts=n plt_user_pt=y plt_label_vr=y pltmech=y area_sphere=n mech_panel=y",
+		"csh %s color=y plt_pts=n plt_user_pt=y plt_label_vr=y pltmech=y mech_panel=y",
 		gmt_script_filename );
 
 	if(doplt)
@@ -714,7 +761,7 @@ void mteig_gmt5_plot(
 	fprintf( stderr, "\n%s: %s: %s: to plot use the following command:\n\n", progname, __FILE__, __func__ );
 	fprintf( stderr, "\t %s\n\n", command_line );
 
-} /*** end of subroutine void mteig_gmt_plot() ***/
+} /*** end of subroutine void mteig_gmt5_plot() ***/
 
 
 
@@ -824,6 +871,9 @@ int search_largest_var_red( Results *rbest, int nsim_eig, char *sort, char *mt_t
 	return((int)imax);
 }
 
+/*** this is a specialty version of mteig_gmt5_plot() that does a normalized lune plot ***/
+/*** maybe delete if no longer needed ***/
+/*** this is only a GMT5+ vers ***/
 
 void mteig_gmt_plot_lune_norm(
 	char *input_filename,
@@ -865,15 +915,14 @@ void mteig_gmt_plot_lune_norm(
         fprintf( fp, "set plt_pts=n        ### randomly simulated eigenvalue pts on lune\n" );
         fprintf( fp, "set plt_user_pt=y    ### user supplied eigenvalues on lune as diamond symbol\n" );
         fprintf( fp, "set plt_label_vr=y   ### best fitting full-mt label the star with percent variance reduction value\n" );
-        fprintf( fp, "set area_sphere=n    ### plot statistics of the area of the 80percent contour\n" );
         fprintf( fp, "set pltmech=y        ### plot best fitting full-MT solution on lune with percent VR label\n" );
         fprintf( fp, "set mech_panel=y     ### side panel with MT plots for iso, DC and best full-MT\n" );
         fprintf( fp, "####################################### DEFAULTS ############################################################\n" );
         fprintf( fp, "\n" );
 
-        fprintf( fp, "if( $argc != 7 ) then\n" );
-        fprintf( fp, "  echo \" $0 requires 7 arguments got $argc  (all options y or n) \" \n" );
-        fprintf( fp, "  echo \" Usage: $0 color=y plt_pts=n plt_user_pt=y plt_label_vr=y area_sphere=y pltmech=y mech_panel=y \" \n" );
+        fprintf( fp, "if( $argc != 6 ) then\n" );
+        fprintf( fp, "  echo \" $0 requires 6 arguments got $argc  (all options y or n) \" \n" );
+        fprintf( fp, "  echo \" Usage: $0 color=y plt_pts=n plt_user_pt=y plt_label_vr=y pltmech=y mech_panel=y \" \n" );
         fprintf( fp, "  exit(-1)\n" );
         fprintf( fp, "endif\n" );
         fprintf( fp, "\n" );
@@ -898,24 +947,6 @@ void mteig_gmt_plot_lune_norm(
 	fprintf( fp, "\n" );
         fprintf( fp, "set R=\" -R-30/30/-90/90 \"\n" );
         fprintf( fp, "set J=\" -JH0/3i \"\n" );
-        fprintf( fp, "\n" );
-
-        fprintf( fp, "#### create surface grid from lon, lat, pVR points  -Vl(long verbosy) -Vq(quiet) -Vn(err only)\n" );
-        fprintf( fp, "####\n" );
-	fprintf( fp, "#### Run area_sphere now to convert lune.grd to lune_norm.grd\n" );
-	fprintf( fp, "####\n" );
-	fprintf( fp, "\n" );
-
-	fprintf( fp, "gmt surface %s $R -I0.5/0.5 -Glune.grd -T0.25 -C0.1 -Vn\n", input_filename );
-	fprintf( fp, "\n" );
-
-	fprintf( fp, "area_sphere contour=80 contour_norm=0.95 > area_sphere.out\n" );
-	fprintf( fp, "\n" );
-
-        /* fprintf( fp, "awk '{ print $1, $2, $3 }' ${INPUT} >! lune.out\n" ); */
-
-	fprintf( fp, "gmt xyz2grd $R lune_norm.xyz -I0.5/0.5 -Glune_norm.grd -Vn\n" );
-
         fprintf( fp, "\n" );
 
         fprintf( fp, "### create the points and label for the special Lune DC,+/-ISO,+/-CLVD,+/-LVD,+/-Crack \n" );
@@ -981,10 +1012,6 @@ void mteig_gmt_plot_lune_norm(
         fprintf( fp, "gmt grdimage $R $J lune_norm.grd -Cvred.cpt -P -K -Vq >! ${PS}\n" );
 	fprintf( fp, "\n" );
 
-/***
-        fprintf( fp, "gmt psbasemap $R $J -Bxf180g10a180 -Byf180g10a180 -Bnsew+t\"${TITLE_TXT}\" -U\"%s:%s\" -O -Vq -K >> ${PS}\n",
-                        username, currentdir );
-***/
 	fprintf( fp, "gmt psbasemap $R $J -Bxf180g10a180 -Byf180g10a180 -Bnsew+t\"${TITLE_TXT}\" -O -Vq -K >> ${PS}\n" );
         fprintf( fp, "\n" );
 
@@ -999,33 +1026,6 @@ void mteig_gmt_plot_lune_norm(
         fprintf( fp, "####\n" );
         fprintf( fp, "gmt grdcontour lune_norm.grd $R $J -Ccint.xy -W1p,black -O -K -Vq " );
         fprintf( fp, " -L0.5/1 -S10 -Gd1.5i -A+20+ap+c0.02i+o+f14p,Helvetica-Bold,black+gwhite+p0.25p,black >> ${PS}\n" );
-        fprintf( fp, "\n" );
-
-        fprintf( fp, "####\n" );
-        fprintf( fp, "#### compute the area for the 80 percent %% contour\n" );
-        fprintf( fp, "####\n" );
-
-        fprintf( fp, "if( ${area_sphere} == \"y\" ) then\n" );
-        fprintf( fp, " area_sphere contour=80 contour_norm=0.95 > area_sphere.out\n" );
-        fprintf( fp, "#\n" );
-
-/* 1      2     3           4       5        6  7              8   9     10      11     12       13         14      15          16        17 */
-/* count= 43681 total_area= 120.998 contour= 80 countour_norm= 0.9 area= 50.4397 ratio= 0.416864 norm-area= 89.7857 norm-ratio= 0.742042 /Users/ichinose1/Work/rot_examples/20160926_SouthernCA/mteig.ikp_bph01-6c */
-
-        fprintf( fp, " set AREA_CONT=(`awk '{ printf( \"%%.1f\", $14 ) }' area_sphere.out `)\n" );
-        fprintf( fp, "set RATIO_CONT=(`awk '{ printf( \"%%.2f\", $16 ) }' area_sphere.out `)\n" );
-	fprintf( fp, "  set CONT_INT=(`awk '{ printf( \"%%.2f\",  $8 ) }' area_sphere.out `)\n" );
-
-        fprintf( fp, "#\n" );
-        fprintf( fp, " echo \" 0 0 NormArea@+(${CONT_INT})@+=(${AREA_CONT}@+o@+)@+2@+ Rat=${RATIO_CONT} FullMT VR=%.1f%% @~D@~@+DC@+=%.1f@+o@+(@~g@~=%.3f, @~j@~=%.3f)\" | ",
-                rbest[ifullmt].var_red,
-                rbest[ifullmt].gcarc_dc,
-                rbest[ifullmt].lune_lon,
-		rbest[ifullmt].lune_lat );
-
-        fprintf( fp, " gmt pstext -R0/1/0/1 -JX3i/6i -F+f10p,Helvetica-Bold,black+jTL -D-0.6i/-0.25i -N -O -K -Vq >> ${PS}\n" );
-        fprintf( fp, "#\n" );
-        fprintf( fp, "endif\n" );
         fprintf( fp, "\n" );
 
         fprintf( fp, "### plot the special lune points and labels DC,+/-ISO,+/-CLVD,+/-LVD,+/-Crack \n" );
@@ -1183,13 +1183,21 @@ void mteig_gmt_plot_lune_norm(
         fprintf( fp, "/bin/rm -f ${PS}\n" );
         fprintf( fp, "#/bin/rm -f lune_norm.grd\n" );
         fprintf( fp, "/bin/rm -f lune.out vred.cpt points.xy cint.xy\n" );
+
         fprintf( fp, "\n" );
-        fprintf( fp, "open ${JPG}\n" );
+        fprintf( fp, "## use xdg-open or eog for some linux systems\n" );
+        fprintf( fp, "# eog ${JPG}\n" );
+        fprintf( fp, "# xdg-open ${JPG}\n" );
+
+	fprintf( fp, "\n" );
+        fprintf( fp, "## use MacOS open -a preview \n" );
+        fprintf( fp, "# open ${JPG}\n" );
+
         fclose(fp);
 
         chmod( gmt_script_filename, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH );
 
-        sprintf( command_line, "csh %s color=y plt_pts=n plt_user_pt=y plt_label_vr=y pltmech=y area_sphere=y mech_panel=y", gmt_script_filename );
+        sprintf( command_line, "csh %s color=y plt_pts=n plt_user_pt=y plt_label_vr=y pltmech=y mech_panel=y", gmt_script_filename );
 
         if(doplt)
         {
@@ -1201,3 +1209,4 @@ void mteig_gmt_plot_lune_norm(
         fprintf( stderr, "\t %s\n\n", command_line );
 
 } /*** end of subroutine void mteig_gmt_plot_lune_norm() ****/
+

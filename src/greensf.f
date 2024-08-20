@@ -180,20 +180,21 @@
 11	  format(i2,7f9.2)
 	  endif
 cccc**********************************************
-c	  zlay0 = zz(i)
-c	  zlay1 = zz(i) + h(i)
-c	  if( sdep .eq. zlay0 .or. sdep .eq. zlay1 ) then
-c	    write(*,*) "AT INTERFACE z=",sdep," i=",i, " z=",zlay0,zlay1
-c	   else if( sdep .gt. zlay0 .and. sdep .lt. zlay1 ) then
-c	    write(*,*) "INSIDE z=",sdep," i=",i, " z=",zlay0,zlay1
-c	  endif
-c
+	  zlay0 = zz(i)
+	  zlay1 = zz(i) + h(i)
+	  if( sdep .eq. zlay0 .or. sdep .eq. zlay1 ) then
+	    write(*,*)"INTERFACE sdep=",sdep,"i=",i,"zlay0,1=",zlay0,zlay1
+	   else if( sdep .gt. zlay0 .and. sdep .lt. zlay1 ) then
+	    write(*,*)"INSIDE sdep=",sdep,"i=",i,"zlay0,1=",zlay0,zlay1
+	  endif
+cccccccccccccccc
 c	  if( sdep .gt. zlay0 .and. sdep .lt. zlay1 )then
 c	    rigidity = (vs(i) * 1.0E+05)**2 * dens(i)
 c	  endif
+ccccccccccccccc
 
 12	continue
-c	write(*,*)"rigidity=",rigidity," z=",sdep
+cccc	write(*,*)"rigidity=",rigidity," z=",sdep
 	if( iverbose .eq.  1 ) write(*,9898)
 
 ********************************************************************************
@@ -233,13 +234,19 @@ c
 	do 10 i=1,nlay
 	   dens(i)=dens1/dens(i)
  10	continue
-
+c
+c compute sdep,rdep,ns,nr,up
+c
 	do 25 n=1,2
+
 	  if(n.eq.1)then
 	    dep=rdep
 	  else
 	    dep=sdep
 	  endif
+
+c	  write(*,*)"n,rdep,sdep,dep=", n,rdep,sdep,dep
+
 	  depth=0.0
 	  do 15 i=1,nlay-1
 	     depth=depth+h(i)
@@ -249,23 +256,32 @@ c
 	       goto 20
 	     endif
  15	  continue
+
 	  nn=nlay
 	  dep=dep-depth
- 20	  if(n.eq.1)then
+ 20	  continue
+
+c	  write(*,*) "n,dep,nlay=", n,dep,nlay
+
+	  if(n.eq.1)then
 	    smax=dep
 	    ns=nn
 	  else
 	    rdep=dep
 	    nr=nn
 	  endif
+
+c	  write(*,*) "n,dep,nlay,ns,nr,smax=", n,dep,nlay,ns,nr,smax
+
  25	continue
 
 	sdep=smax
 	up=.true.
 	if(ns.gt.nr.or.(ns.eq.nr.and.sdep.gt.rdep))up=.not.up
 
-c       write(*,*) "sdep,dep,rdep,ns,nr,up=",sdep,dep,rdep,ns,nr,up
-c
+c        write(*,*)"sdep=",sdep,"dep=",dep,"rdep=",rdep,
+c     $   "ns=",ns,"nr=",nr,"up=",up
+
 c	fi=fi-azm
 c	a1= cos(rak)*cos(dip)*cos(fi)-sin(rak)*cos(2.0*dip)*sin(fi)
 c	a2=-cos(rak)*cos(dip)*sin(fi)-sin(rak)*cos(2.0*dip)*cos(fi)
@@ -293,7 +309,18 @@ c  ramp time function with time shift t0
 c  assumes only delta function for source... use makedisp to convolve source later
 c
 	tr = 0.0001
-	src(iw)=(exp(-ci*cw*tr)-1)/(cw*cw*tr)*exp(ci*cw*t0)
+c
+c## original 2.15.2024
+c
+ 	src(iw)=(exp(-ci*cw*tr)-1)/(cw*cw*tr)*exp(ci*cw*t0)
+
+c
+c## test this, chandan suggest this change, does not work
+c
+c       src(iw)=cmplx(0.001,0.0)
+c       or
+c       src(iw)=cmplx(tr,0.0)
+
 	if( abs(src(iw)) .gt. smax) smax = abs(src(iw))
 
 	if( abs(src(iw))/smax .le. smin ) then
@@ -570,11 +597,15 @@ c  source using reciprocity relations
 **** keep slip4pi in src term
 *   cw = complex frequency
 *   dk = twopi/( vp(nlay)*twin + r )
+
 *	mu = kb(nr)*kb(nr)*dens(nr)
 *	tmp=cw*slip4pi*dk*vs1*dens1/mu(nr)
-*
-	tt(iw) = cw/vs1 * dk 
-*	write(6,*) "iw,cw,vs1,dk,tt(iw)=", iw,cw,vs1,dk,tt(iw),cw*dk/vs1
+* 	tt(iw) = (cw*dk)*(vs1*dens1) / (kb(nr)*kb(nr)*dens(nr))
+
+	tt(iw) = (cw*dk)/vs1
+
+c	write(6,*) "iw,vs1,dens1,vp1,vp(nr),vs(nr),dens(nr),tt=",
+c     +    iw,vs1,dens1,vp1,vp(nr),vs(nr),dens(nr),tt(iw)
 
 	zss(iw) = 0.5*( -S0(3) + S0(4) )     *src(iw)*tt(iw)*df
 	zds(iw) = S0(1)                      *src(iw)*tt(iw)*df
@@ -598,17 +629,24 @@ c  source using reciprocity relations
 ***          this is the mulitplication factor needed to compare Green functions
 **** 20201016 gichinose
 ****
-	tt(iw) = (cw*dk)*( 0.40 * dens1 / ( vp1 * vs1 ) )
+c tmp1=cw*slip4pi*dk*vs1*dens1/(3.0*dens(nr)/ka(nr)-4.0*mu(nr))
+c
+c	tt(iw) = (cw*dk)*( 0.40 * dens1 / ( vp1 * vs1 ) )
+	
+c	tt(iw) = (cw*dk)/(vp1*dens1)
+c	mu = kb(nr)*kb(nr)*dens(nr)
+
+	tt(iw) = (cw*dk)/(vp1*dens1)
 
 ********************************************************************************
 *        1         2         3         4         5         6         7         8
 *2345678901234567890123456789012345678901234567890123456789012345678901234567890
 ********************************************************************************
 **	write(6,*)"iw,nr,ns,tt(iw)=",iw,nr,ns,tt(iw)
-
+	
         rep(iw) = -(S1(3)+S1(4)+S1(5)) * src(iw)*tt(iw)*df
 	zep(iw) = -(S0(2)+S0(3)+S0(4)) * src(iw)*tt(iw)*df
-
+	
 ******* note from yuehua zeng 
 *tmp=cw*slip4pi*dk*vs1*dens1/mu(nr)
 *zss=0.5*(-S0(3)+S0(4))*tmp
@@ -619,6 +657,7 @@ c  source using reciprocity relations
 *rdd=(S1(3)-0.5*(S1(4)+s1(5)))*tmp
 *tss=-S1(6)*tmp
 *tds=-S1(2)*tmp
+*
 *tmp1=cw*slip4pi*dk*vs1*dens1/(3.0*dens(nr)/ka(nr)-4.0*mu(nr))
 *rep=-(S1(3)+S1(4)+S1(5))*tmp1
 *zep=(S0(2)+S0(3)+S0(4))*tmp1

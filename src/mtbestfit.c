@@ -1,3 +1,28 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
+/*** this is a helper function for mtinv work flow  ***/
+/*** mtinv.c outputs results automt.txt ***/
+/*** mtbestfit reads a file named automt.txt and autogenerates scripts to make plots for real-time version ***/
+/*** autocreates run2.csh with best fitting MT solution and if 6-deg freedom MT then autocreates mteig.csh ***/
+/*** run2.csh makes the final best fitting mt solution, and database output. mteig.csh & mteig.c creates  ***/
+/*** the NetworkSensitivitySolution plot on the lune ***/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -113,14 +138,16 @@ int main( int ac, char **av )
 
 	int pretty_plot = 0;  /*** dumpxy and create pretty waveform plot for pubs ***/
 	int idb = 1; /*** do the database load ***/
-	
+	char DataDir[256];
+	char RespDir[256];
+
 /*** functional prototypes ***/
 
 	void write_mtbest( bestFitMT *a );
 	void make_run( bestFitMT *a, char *fitType, int igmt5, long evid, int pretty_plot, int idb );
 	void createResultsWebpage( bestFitMT *a );
 
-	void make_mteig( bestFitMT *a, char *fitType, float decimate_factor, int use_ts0, int igmt5 );
+	void make_mteig( bestFitMT *a, char *fitType, float decimate_factor, int use_ts0, int igmt5, char *DataDir, char *RespDir );
 	int create_mteig = 1;
 	float decimate_factor = 2; /* decimate_factor = [1,2,4,8] */
 
@@ -140,6 +167,8 @@ int main( int ac, char **av )
 /*** begin main(), open input file ***/
 
 	strcpy( progname, av[0] );
+	strcpy( DataDir, "../Data" );
+	strcpy( RespDir, "../Resp" );
 
         fprintf( stderr, "%s: STDERR: Version=%s ReleaseDate=%s\n", progname, Version_Label, Version_Date );
 	fprintf( stderr, "\n" );
@@ -155,7 +184,9 @@ int main( int ac, char **av )
 	getpar( "gmt5", "b", &igmt5 );
 	getpar( "pretty_plot", "b", &pretty_plot );
 	getpar( "db", "b", &idb );
-	
+	getpar( "DataDir", "s", DataDir );
+	getpar( "RespDir", "s", RespDir );
+
 	getpar( "mteig", "b", &create_mteig );
 	if(create_mteig)
 	{
@@ -169,7 +200,7 @@ int main( int ac, char **av )
 	if( help )
 	{
 	  fprintf( stderr,
-    "\nUsage: %s [no]force_best_vred evid={long} [no]gmt5 [no]pretty_plot [no]db [no]mteig decimate_factor={float} [no]use_ts0 [no]help\n",
+    "\nUsage: %s [no]force_best_vred evid={long} [no]gmt5 [no]pretty_plot [no]db [no]mteig decimate_factor={float} [no]use_ts0 DataDir=../Data RespDir=../Resp [no]help\n",
 		progname );
 
 	  fprintf( stderr, "\n" );
@@ -188,6 +219,8 @@ int main( int ac, char **av )
 	  fprintf( stderr, "\t [no]mteig (boolean) creates mteig.csh script to do NSS lune plots default off (note only valid when mtdegfree=6)\n" );
 	  fprintf( stderr, "\t decimate_factor={float}    decimation factor, only allows 1,2,4,8 default 2 so if nt=1024 then nt=512\n" );
 	  fprintf( stderr, "\t [no]use_ts0                use station time-shifts, default true, otherwise reset to zero\n" );
+	  fprintf( stderr, "\t DataDir                    (string) default ../Data\n" );
+	  fprintf( stderr, "\t RespDir                    (string) default ../Resp\n" );
 	  fprintf( stderr, "\n" );
 
 	  fprintf( stderr, "DESCRIPTION:\n" );
@@ -528,7 +561,7 @@ int main( int ac, char **av )
 	  fprintf( stderr, "%s: %s: calling make_mteig()\n", __FILE__, __func__ );
           fflush(stderr);
 
-	  make_mteig( &(a[i_best_vred]), "BEST VARIANCE-REDUCTION", decimate_factor, use_ts0, igmt5 );
+	  make_mteig( &(a[i_best_vred]), "BEST VARIANCE-REDUCTION", decimate_factor, use_ts0, igmt5, DataDir, RespDir );
 	}
 
 	if( strcmp( a[i_best_vred].mt_type, "FULL" ) == 0 )
@@ -572,7 +605,7 @@ void do_mtscreen( bestFitMT *a, char *python_script )
 	}
 }
 
-void make_mteig( bestFitMT *a, char *fitType, float decimate_factor, int use_ts0, int igmt5 )
+void make_mteig( bestFitMT *a, char *fitType, float decimate_factor, int use_ts0, int igmt5, char *DataDir, char *RespDir )
 {
 	FILE *fp;
 	static char *script_filename = {"mteig.csh"};
@@ -712,7 +745,7 @@ void make_mteig( bestFitMT *a, char *fitType, float decimate_factor, int use_ts0
 	fprintf( fp, "\n" );
 
 	fprintf( fp, "### PROCESS DATA ###\n");
-	fprintf( fp, "sacdata2inv par=mtinv.par path=../Data respdir=../Resp noverbose nodumpsac parallel\n");
+	fprintf( fp, "sacdata2inv par=mtinv.par path=%s respdir=%s noverbose nodumpsac parallel\n", DataDir, RespDir );
 	fprintf( fp, "\n" );
 
 	fprintf( fp, "### \n" );

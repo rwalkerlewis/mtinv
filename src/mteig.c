@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 /*********************************************************************************************************/
 /* 
 mteig.c - G. Ichinose Thu Nov 21 19:10:59 PST 2019
@@ -62,7 +80,9 @@ int main( int ac, char **av )
 /************************/
         Greens **grn;
         int nz,iz;
-        float *z;
+        float *z;  /*** for backwards compat... also access by z[ista].z ***/
+	DepthVector *zvec;  /*** see ../include/mt.h ***/
+	
 	int Detail_Output = 0;   /*** Detail_Output = 0  :: do not compute TPB-ax and P1/P2: ***/
 				/*** SDR for each evec iteration ***/
 /****************/
@@ -284,7 +304,10 @@ int main( int ac, char **av )
         void load_the_data( EventInfo *ev, int nsta, float ts0, int verbose );
 
 /*** mtinv_subs.c ***/
-        float *load_greens( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, int verbose );
+/*** deprecated ***/
+        /* float *load_greens( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, int verbose ); */
+/*** Greens_subs.c:loadGlibAll() ****/
+	Greens **loadGlibAll( Greens **grn, EventInfo *ev, DepthVector *z, int nsta, char *file_type, int verbose );
 
 /*** check_depths.c ***/
         void check_depth( float FixMyZ, int *FixMyiz, float *z, int nz, int verbose );
@@ -462,8 +485,16 @@ int main( int ac, char **av )
 	  fprintf( stdout, "%s: %s: %s: allocating memory for Green's function\n",
                         progname, __FILE__, __func__ );
 
+	zvec = (DepthVector *) malloc( nsta * sizeof(DepthVector) );
+
 	grn = (Greens **)malloc( nsta*sizeof(Greens *) );
-	z = (float *)load_greens( ev, grn, nsta, &nz, verbose );
+
+	/* z = (float *)load_greens( ev, grn, nsta, &nz, verbose ); */
+	grn = loadGlibAll( grn, ev, zvec, nsta, "ginv", verbose );
+
+	/*** for backwards compatibility ***/
+	z = zvec[0].z;
+	nz = zvec[0].nz;
 
 /**************************************/
 /*** check if fixing solution depth ***/

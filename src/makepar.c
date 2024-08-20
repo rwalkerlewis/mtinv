@@ -1,5 +1,32 @@
-/*** ichinose.gene
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
+/***
+ this is a helper function that autogenerates the run.csh and run2.csh files 
+   reads *.glib files and determines which stations are used
+   use after mkgrnlib or makeglib.csh 
+***/
+
+/*** gene.ichinose
  Mon Aug  3 16:01:58 PDT 2020
+  
+ todo list?
+
 	add a feature to mv old version of run.csh to hidden directory
          rename old versions as run.csh.date_time.version_number
 
@@ -653,12 +680,12 @@ int main( int ac, char **av )
 	if(igmt5)
 	{
 	  fprintf( fp,
-	    "mtbestfit gmt5 evid=%ld db pretty_plot noforce_best_vred mteig decimate_factor=2\n", evid );
+	    "mtbestfit gmt5 evid=%ld db pretty_plot noforce_best_vred mteig decimate_factor=2 DataDir=%s RespDir=%s\n", evid, DataDir, RespDir );
 	}
 	else
 	{
 	  fprintf( fp,
-	    "mtbestfit nogmt5 evid=%ld db pretty_plot noforce_best_vred mteig decimate_factor=2\n", evid );
+	    "mtbestfit nogmt5 evid=%ld db pretty_plot noforce_best_vred mteig decimate_factor=2 DataDir=%s RespDir=%s\n", evid, DataDir, RespDir );
 	}
 	fclose(fp);
 

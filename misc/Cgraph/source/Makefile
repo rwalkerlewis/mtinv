@@ -34,8 +34,8 @@ all: $(LIB_FILE) install
 	@echo All done, now do a make install
 
 install:
-	mkdir -p $(LIB_DIR)
-	mkdir -p $(INCLUDE_DIR)
+#	mkdir -p $(LIB_DIR)
+#	mkdir -p $(INCLUDE_DIR)
 	cp $(LIB_FILE) $(LIB_DIR)
 	ranlib $(LIB_DIR)/$(LIB_FILE)
 	cp cgraph.h $(INCLUDE_DIR)

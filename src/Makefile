@@ -18,10 +18,11 @@ FFLAGS =
 .f.o : 
 	$(FC) $(FFLAGS) -c $< -o $@
 
-EXEC = libglib mkgrnlib grnlib2sac glib2inv glib2inv_join sacdata2inv mtinv makepar \
-       setupMT pltmod mteig area_sphere whatshere mtbestfit grn2Mxy hspec96_to_grnlib
+EXEC = libglib mkgrnlib grnlib2sac glib2inv sacdata2inv mtinv makepar \
+       setupMT pltmod mteig whatshere mtbestfit grn2Mxy \
+         hspec96_to_grnlib compare_grn_gmt sw4_to_grnlib
 
-# removed for distribution: mt2lune lune2mt
+# removed for distribution: mt2lune lune2mt, go back to older versions to find these
 
 all : $(EXEC)
 
@@ -46,9 +47,6 @@ OBJS0 = rtrend/rtrend.o \
 	tdif/Differentiates.o \
 	shift/shift.o \
 	random/ransubs.o \
-	envelope/envelope_sub.o \
-	envelope/fftsub.o \
-	wiggins/wiggins_sub.o \
 	sacio/sacio.o \
 	writesacfile.o \
         load_special_grns.o
@@ -58,7 +56,7 @@ libglib : $(OBJS0)
 	mv libglib.a ../lib
 	ranlib ../lib/libglib.a
 
-OBJS1 = mkgrnlib.o wrtgrn2sac.o stasubs.o greensf.o besasy.o bessel.o cinv2.o fork.o \
+OBJS1 = mkgrnlib.o Greens_subs.o stasubs.o greensf.o besasy.o bessel.o cinv2.o fork.o \
 	genrefl.o timesubs.o modsubs.o misc_tools/distaz.o rayp/rayp_subs.o shorten_path.o \
         misc_tools/ampshift.o sacio/sacio.o mkdirp2.o
 
@@ -66,7 +64,7 @@ mkgrnlib : $(OBJS1)
 	$(FC) $(FFLAGS) -o $@ $(OBJS1) -lm -L../lib -lget
 	mv $@ $(INSTALL)
 
-OBJS2 = grnlib2sac.o wrtgrn2sac.o radiation_pattern_subs.o mkdirp2.o
+OBJS2 = grnlib2sac.o Greens_subs.o radiation_pattern_subs.o mkdirp2.o
 grnlib2sac : $(OBJS2)
 	$(CC) $(CFLAGS) -o $@ $(OBJS2) -lm -L../lib -lglib -lget
 	mv $@ $(INSTALL)
@@ -82,37 +80,25 @@ sacdata2inv : $(OBJS3) libglib
 	$(CC) $(CFLAGS) -pthread -o $@ $(OBJS3) -lm -L../lib -lglib -lget -lpthread
 	mv $@ $(INSTALL)
 
-OBJS4 = glib2inv.o glib2inv_subs.o glib2inv_serial.o glib2inv_parallel.o wrtgrn2sac.o shorten_path.o mkdirp2.o
+OBJS4 = glib2inv.o glib2inv_subs.o glib2inv_serial.o glib2inv_parallel.o Greens_subs.o shorten_path.o mkdirp2.o
 glib2inv : $(OBJS4)
 	$(CC) $(CFLAGS) -pthread -o $@ $(OBJS4) -lm -L../lib -lglib -lget -lpthread
 	mv $@ $(INSTALL)
 
-GLIB_JOIN = glib2inv_join.o glib2inv_subs.o glib2inv_serial.o glib2inv_parallel.o wrtgrn2sac.o shorten_path.o mkdirp2.o
-glib2inv_join : $(GLIB_JOIN)
-	$(CC) $(CFLAGS) -pthread -o $@ $(GLIB_JOIN) -lm -L../lib -lglib -lget -lpthread
-	mv $@ $(INSTALL)
-
-MTINV_SUBS= mtinv.o glib2inv_subs.o svbksb.o svdcmp.o tred2.o tqli.o trans1.o tpdss.o \
+MTINV_SUBS= mtinv.o glib2inv_subs.o svbksb.o svdcmp.o tred2.o tqli.o trans1.o tpdss.o Greens_subs.o mkdirp2.o \
 	mtinv_subs.o mtinv_gmtsubs.o ascii_mech.o psplot.o svdvar.o psmech.o make_amatrix.o indexx.o \
         check_depths.o dbsubs.o eig2lune.o shorten_path.o find_best_shift.o realtime_subs.o dumpSAC.o
 
-mtinv : $(MTINV_SUBS) $(OBJS0)
+mtinv : $(MTINV_SUBS) libglib
 	$(CC) $(CFLAGS)  -o $@ $(MTINV_SUBS) $(GRN_LIBS) $(PLOT_LIBS)
 	mv $@ $(INSTALL)
 
-LUNE2MT_OBJS= lune2mt.o mteig_subs.o eig2lune.o shorten_path.o misc_tools/distaz.o \
-              indexx.o bessel/bessel_subs.o floatsort.o simulate_lune2MT_lite.o
-
-lune2mt : $(LUNE2MT_OBJS)
-	$(CC) $(CFLAGS)  -o $@ $(LUNE2MT_OBJS) -lm -L../lib -lget
-	mv $@ $(INSTALL)
-
 MTEIG_SUBS = mteig_subs.o simulate_MTeig2evec_serial.o simulate_MT_parallel.o simulate_MT_lite.o \
-        forward_calc_from_MT.o glib2inv_subs.o tred2.o tqli.o trans1.o tpdss.o mteig_gmt.o \
+        forward_calc_from_MT.o glib2inv_subs.o tred2.o tqli.o trans1.o tpdss.o mteig_gmt.o Greens_subs.o mkdirp2.o \
         mtinv_subs.o mtinv_gmtsubs.o ascii_mech.o psplot.o psmech.o make_amatrix.o indexx.o bessel/bessel_subs.o \
         check_depths.o dbsubs.o eig2lune.o shorten_path.o find_best_shift.o realtime_subs.o dumpSAC.o misc_tools/distaz.o
 
-mteig : mteig.o $(MTEIG_SUBS) $(OBJS0)
+mteig : mteig.o $(MTEIG_SUBS) libglib
 	$(CC) $(CFLAGS) -pthread -o $@ mteig.o $(MTEIG_SUBS) $(GRN_LIBS) $(PLOT_LIBS) -lpthread
 	mv $@ $(INSTALL)
 	
@@ -137,22 +123,20 @@ mtbestfit : mtbestfit.o timesubs.o
 	$(CC) $(CFLAGS) -o $@ mtbestfit.o timesubs.o -L../lib -lget -lm
 	mv $@ $(INSTALL)
 
-area_sphere : area_sphere.o
-	$(CC) $(CFLAGS) -o $@ area_sphere.o -lm -L../lib -lget -lm
-	mv $@ $(INSTALL)
-
-mt2lune : mt2lune.o tqli.o tred2.o eig2lune.o floatsort.o math/math.o
-	$(CC) $(CFLAGS) -o $@ mt2lune.o tqli.o tred2.o eig2lune.o floatsort.o math/math.o -L../lib -lget -lm
-	mv $@ $(INSTALL)
-
-radiation_pattern : radiation_pattern.o radiation_pattern_subs.o 
-	$(CC) -o radiation_pattern radiation_pattern.o radiation_pattern_subs.o -lm -lget -L../lib
-	mv $@ $(INSTALL)
-
 OBJS_HSPEC96 = timesubs.o modsubs.o shorten_path.o sacio/sacio.o mkdirp2.o misc_tools/distaz.o stasubs.o
 
 hspec96_to_grnlib : hspec96_to_grnlib.o $(OBJS_HSPEC96)
 	$(CC) $(CFLAGS) -o $@ hspec96_to_grnlib.o $(OBJS_HSPEC96) -lm -L../lib -lget
+	mv $@ $(INSTALL)
+
+OBJS_SW4_TO_GRNLIB = timesubs.o modsubs.o shorten_path.o sacio/sacio.o mkdirp2.o misc_tools/distaz.o stasubs.o Integrate.o rotate/rotate.o
+
+sw4_to_grnlib : sw4_to_grnlib.o $(OBJS_SW4_TO_GRNLIB)
+	$(CC) $(CFLAGS) -o $@ sw4_to_grnlib.o $(OBJS_SW4_TO_GRNLIB) -lm -L../lib -lget
+	mv $@ $(INSTALL)
+
+compare_grn_gmt : compare_grn_gmt.o Greens_subs.o mkdirp2.o
+	$(CC) $(CFLAGS) -o $@ compare_grn_gmt.o Greens_subs.o mkdirp2.o -lm -L../lib -lglib -lget
 	mv $@ $(INSTALL)
 
 clean :

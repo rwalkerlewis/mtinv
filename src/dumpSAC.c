@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,7 +27,9 @@
 
 extern char progname[128];
 
-void demultiplex( Greens **grn, EventInfo *ev, int iz, float *s_vector, int nsta )
+/*** local demultiplexer only used below, takes values from data and syn vectors (see amatrix.c) ***/
+
+void demultiplex_Greens( Greens **grn, EventInfo *ev, int iz, float *s_vector, int nsta )
 {
         int ista, it, nt, ir;
         ir = 1;
@@ -229,123 +249,14 @@ void computeStationChannel_VarianceReduction_v2(
 
 } /*** end of subroutine: computeStationChannel_VarianceReduction_v2()  ***/
 
-
-
-/****************************************************************************************************/
-/****************************************************************************************************/
-/*** this only works with s_vector which is only available after invert() call from main         ***/
-/*** and EventInfo ev structure is overwritten at each depth so useless                         ****/
-/*** create new version 2 which can be called after call to invert() and compute_synthetics()    ***/
-/*** to do the data and syn from the best solution iz=iz_best                                    ***/
-/****************************************************************************************************/
-/****************************************************************************************************/
-
-void computeStationChannel_VarianceReduction( 
-	EventInfo *ev, Greens **grn, int nsta, int iz, float *s_vector, 
-	float var_red, int verbose )
-{
-	int it, nt, ista;
-	int ir, ix;
-
-	float *tdat, *rdat, *zdat;
-	float *tsyn, *rsyn, *zsyn;
-	float *dat, *syn;
-
-	float variance_reduction( float *d, float *s, int n0, int n1 );
-
-	fprintf( stdout, "%s: %s: %s: event variance reduction iz=%d var_red=%.1f\n",
-		progname, __FILE__, __func__, iz, var_red );
-
-	ir = 1;
-	for( ista = 0; ista < nsta; ista++ )
-	{
-		if( ev[ista].iused != 1 ) continue;
-
-		ix = 1;
-		nt = grn[ista][iz].nt;
-
-		tdat = calloc( nt+1, sizeof(float) );
-		rdat = calloc( nt+1, sizeof(float) );
-		zdat = calloc( nt+1, sizeof(float) );
-		dat = calloc( 3*(nt+1), sizeof(float) );
-
-		tsyn = calloc( nt+1, sizeof(float) );
-		rsyn = calloc( nt+1, sizeof(float) );
-		zsyn = calloc( nt+1, sizeof(float) );
-		syn  = calloc( 3*(nt+1), sizeof(float) );
-
-		for( it=1; it<=nt; it++)
-		{
-			tsyn[it] = s_vector[ir];
-			tdat[it] = ev[ista].ew.data[it];
-
-			syn[ix]  = s_vector[ir];
-			dat[ix]  = ev[ista].ew.data[it];
-			ir++;
-			ix++;
-		}
-/* fprintf( stdout, "%s: %s: %s: ista=%d ir=%d ix=%d nt=%d\n", progname, __FILE__, __func__, ista, ir, ix, nt ); */
-
-		ev[ista].vred_tcmp = variance_reduction( tdat, tsyn, 0, nt );
-		
-		for( it=1; it<=nt; it++ )
-		{
-			rsyn[it] = s_vector[ir];
-			rdat[it] = ev[ista].ns.data[it];
-
-                        syn[ix]  = s_vector[ir];
-                        dat[ix]  = ev[ista].ns.data[it];
-                        ir++;
-			ix++;
-		}
-/* fprintf( stdout, "%s: %s: %s: ista=%d ir=%d ix=%d nt=%d\n", progname, __FILE__, __func__, ista, ir, ix, nt ); */
-
-		ev[ista].vred_rcmp = variance_reduction( rdat, rsyn, 0, nt );
-
-		for( it=1; it<=nt; it++ )
-                {
-                        zsyn[it] = s_vector[ir];
-                        syn[ix]  = s_vector[ir];
-                        zdat[it] = ev[ista].z.data[it];
-                        dat[ix]  = ev[ista].z.data[it];
-                        ir++;
-			ix++;
-                }
-/* fprintf( stdout, "%s: %s: %s: ista=%d ir=%d ix=%d nt=%d\n", progname, __FILE__, __func__, ista, ir, ix, nt ); */
-
-                ev[ista].vred_zcmp = variance_reduction( zdat, zsyn, 0, nt );
-
-		ev[ista].vred_sta =  variance_reduction( dat, syn, 0, (3*nt) );
-
-		fprintf( stdout, "%s: %s: %s: iz=%02d ista=%02d sta=%4s vred_sta=%.1f z=%.1f r=%.1f t=%.1f\n",
-			progname,
-			__FILE__,
-			__func__,
-			iz,
-			ista,
-			ev[ista].z.s.kstnm,
-			ev[ista].vred_sta,
-			ev[ista].vred_zcmp,
-			ev[ista].vred_rcmp,
-			ev[ista].vred_tcmp );
-
-		free(dat);
-		free(syn);
-		free(rdat);
-		free(rsyn);
-		free(zdat);
-		free(zsyn);
-		free(tdat);	
-		free(tsyn);
-	}
-}
+/*** deleted computeStationChannel_VarianceReduction version 1, g. ichinose 2024-07-01 ***/
 
 void mtinv_dumpSAC( EventInfo *ev, Greens **grn, int nsta, int iz, float *s_vector, int verbose )
 {
 	int ista;
 	char sac_file_name[128];
 
-	void demultiplex( Greens **grn, EventInfo *ev, int iz, float *s_vector, int nsta );
+	void demultiplex_Greens( Greens **grn, EventInfo *ev, int iz, float *s_vector, int nsta );
 	void sac_minmax( float *, int, float *, float *, float * );
 	void write_sac_file( char *, Sac_File *, int );
 
@@ -367,7 +278,7 @@ void mtinv_dumpSAC( EventInfo *ev, Greens **grn, int nsta, int iz, float *s_vect
 
 	}
 
-	demultiplex( grn, ev, iz, s_vector, nsta );
+	demultiplex_Greens( grn, ev, iz, s_vector, nsta );
 
 	for( ista = 0; ista < nsta; ista++ )
 	{
@@ -446,4 +357,4 @@ void mtinv_dumpSAC( EventInfo *ev, Greens **grn, int nsta, int iz, float *s_vect
 	}
 ***/
 
-}
+} /*** end of mtinv_dumpSAC() ***/

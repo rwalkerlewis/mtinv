@@ -13,7 +13,7 @@ INSTALL = ../../../bin
 
 all : sac2gmtmap stats
 
-OBJS = sac2gmtmap.o ../../../src/sacio/sacio.o ../../../src/timesubs.o
+OBJS = sac2gmtmap.o ../../../src/sacio/sacio.o ../../../src/timesubs.o ../../../src/misc_tools/distaz.o
 
 sac2gmtmap : $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LIBDIRS) $(LIBS)

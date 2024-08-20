@@ -1,3 +1,23 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
+/*** reads SAC files and outputs *.data files processed (3-C) data for moment tensor inversion - mtinv.c ***/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,7 +70,7 @@ int main( int ac, char **av )
 /****************************************************************************************/
         int verbose=0;          /*** verbose   1=yes 0=no default no verbose ***/
 	int dumpsac=0;          /*** dump the processed and filtered data as SAC binary files ***/
-	int ienvelope = 0;
+	int ienvelope = 0;     /*** envelope is deprecated gene.ichinose 07-01-2024 ***/
 	int iparallel = 0;
 
 	char currentdir[128];
@@ -131,7 +151,6 @@ int main( int ac, char **av )
 	getpar( "respdir", "s", &respdir );
         getpar( "verbose", "b", &verbose );
         getpar( "dumpsac", "b", &dumpsac );
-	getpar( "envelope", "b", &ienvelope );
 	getpar( "parallel", "b", &iparallel );
 	endpar();
 

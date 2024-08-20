@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,6 +23,8 @@
 #include "../include/mt.h"
 
 extern char progname[128];
+
+/*** various subroutines for creating, manipulating, and printing 1D Earth velocity models ***/
 
 void clone_model( VelMod *vm0, VelMod *vm1 )
 {
@@ -24,6 +44,22 @@ void clone_model( VelMod *vm0, VelMod *vm1 )
 		vm1->rho[i]	= vm0->rho[i];
 		vm1->sigma[i]	= vm0->sigma[i];
 	}
+}
+
+void create_gmt_script( VelMod *vm )
+{
+	FILE *fp;
+	char filename[256];
+	sprintf( filename, "%s.gmt.csh", vm->modfile );
+	fp = fopen( filename, "w" );
+	fprintf( stderr, "%s: %s: %s: writting %s\n",
+		progname, __FILE__, __func__, filename );
+	fprintf( fp, "#!/bin/csh\n" );	
+	fprintf( fp, "set PS=%s.ps\n", vm->modfile );
+	fprintf( fp, "pltmod gmt modeldb=%s velmod=%s | \\\n", vm->modpath, vm->modfile );
+        fprintf( fp, " gmt psxy -R0/10/-100/0 -JX5i/5i -W -P -Bxf0.1a1+l\"Velocity km/sec\" -Byf5a10+l\"Depth km\" -BNSEW+t\"1D Earth Model\" >! ${PS}\n" );
+	fprintf( fp, "gmt psconvert  -A -Tj -E300 ${PS}\n" );
+	fclose(fp);
 }
 
 void print_mod0( VelMod *vm )
@@ -64,6 +100,30 @@ void print_mod0( VelMod *vm )
  ****/
 }
  
+void write_csv( VelMod *vm )
+{
+	FILE *fp;
+	char filename[128];
+	int i;
+
+	sprintf( filename, "%s.csv", vm->modfile );
+	fp = fopen( filename, "w" );
+	fprintf(fp, "thickness_km,depth_to_top_km,Vp_kps,Qp,Vs_kps,Qs,Density_gpcc,sigma\n" );
+	for( i=0; i< vm->nlay; i++)
+	{
+		fprintf( fp, "%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n",
+			vm->thick[i],
+                        vm->ztop[i],
+                        vm->vp[i],
+                        vm->qa[i],
+                        vm->vs[i],
+                        vm->qb[i],
+                        vm->rho[i],
+                        vm->sigma[i] );
+	}
+	fclose(fp);
+}
+
 void write_mod1( FILE *fp, VelMod *vm )
 {
 	int i;

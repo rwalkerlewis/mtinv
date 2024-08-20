@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 /***
 
 G. Ichinose Wed Jan 10 17:22:21 PST 2018
@@ -1912,103 +1930,6 @@ void time_shift( EventInfo *ev, int nsta, int verbose )
 		free(ver);
 		free(tra);
 	}
-}
-
-/**********************************************************************/
-/*** load green's functions - saved in GLIB binary files            ***/
-/*** in regular 10 fundamental faulting format RSS,RDS,RDD,REX,.... ***/
-/**********************************************************************/
-
-float *load_greens( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, int verbose )
-{
-        FILE *fpg;
-        int ista, iz, nz;
-        float *z;
-        int it, nt;
-        float min,max;
-
-        for( ista=0; ista<nsta; ista++ )
-        {
-                if( (fpg=fopen( ev[ista].ginv_filename, "rb" )) == NULL )
-                {
-                        fprintf( stdout, "%s: %s: %s: Fatal Error cannot open file %s\n",
-                                progname, __FILE__, __func__, ev[ista].ginv_filename );
-                        exit(-1);
-                }
-
-                if(verbose)
-		{
-                  fprintf(stdout, 
-			"%s: getting depth increment information \n", progname );
-		}
-
-                fread( &nz, sizeof(int), 1, fpg );
-                if(verbose) 
-		{
-			fprintf( stdout, "%s: %s: %s: ista=%d nz=%d from %s\n", 
-				progname, __FILE__, __func__, ista, nz, ev[ista].ginv_filename );
-		}
-
-                z = malloc( nz*sizeof(*z) );
-                fread( &z[0], nz*sizeof(float), 1, fpg );
-
-                if(verbose) 
-		{
-			fprintf( stdout, 
-			  "%s: allocating memory for grn[nsta=%d][nz=%d]\n", 
-				progname, ista, nz );
-		}
-
-                if(verbose) 
-		{
-			fprintf( stdout, "%s: opened file=%s nz=%d\n", 
-				progname, ev[ista].ginv_filename, nz );
-		}
-
-                grn[ista] = (Greens *)malloc( (nz+1)*sizeof(Greens));
-                for( iz=0; iz<nz; iz++ )
-                {
-                        if(verbose)
-			{
-				fprintf( stdout, 
-				  "%s: reading grn[ista=%d][iz=%d]\n",
-                                        progname, ista, iz );
-			}
-                        fread( &grn[ista][iz], sizeof(Greens), 1, fpg );
-
-                        nt = grn[ista][iz].nt;
-                        min = grn[ista][iz].g.rss[0];
-                        max = grn[ista][iz].g.rss[0];
-
-			for( it=1; it<nt; it++ )
-                        {
-                          if( grn[ista][iz].g.rss[it] < min ) min = grn[ista][iz].g.rss[0];
-                          if( grn[ista][iz].g.rss[it] > max ) max = grn[ista][iz].g.rss[0];
-                        }
-                        if(verbose)
-                        {
-                          fprintf( stdout, 
-			    "%s: iz=%d z=%g %s.%s rdist=%g az=%g t0=%g dt=%g nt=%d min=%g max=%g fn=%s modf=%s\n",
-                                progname, iz, grn[ista][iz].evdp, grn[ista][iz].stnm, grn[ista][iz].net,
-                                grn[ista][iz].rdist, grn[ista][iz].az, grn[ista][iz].t0, grn[ista][iz].dt,
-                                grn[ista][iz].nt, min, max, grn[ista][iz].filename, grn[ista][iz].v.modfile );
-                        }
-                        grn[ista][iz].ts0 = ev[ista].ts0;
-
-		/*** do I really need to allocate space for this, or can I wait till it is needed? ***/
-
-			grn[ista][iz].tra = (float *)calloc(grn[ista][iz].nt, sizeof(float) );
-			grn[ista][iz].rad = (float *)calloc(grn[ista][iz].nt, sizeof(float) );
-			grn[ista][iz].ver = (float *)calloc(grn[ista][iz].nt, sizeof(float) );
-
-                }  /*** depth loop ****/
-
-                fclose(fpg);
-
-        } /*** station loop ****/
-
-        *nz_tmp = nz;
-        return (float *)z;
 }
 
 /************************************************/

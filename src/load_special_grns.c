@@ -1,3 +1,21 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,14 +27,32 @@
 
 extern char progname[128];
 
+/*** load_special_grns.c - load_special_grns() - loads Greens functions saved in Mij format (Not fundamental-faulting) ***/
+/*** use grn2Mxy to convert/create these kinds of  Greens functions ***/
+/*** this is called by glib2inv.c. grn2Mxy.c, and mtinv.c ***/
+
 /*****************************************************************************************************************/
 /*** load green's functions (see email note below)                                                             ***/
 /*** saved in 17 SAC files formated in Zxx, Zxy, Zxz, ..., Rxx, Rxy, ... Txx, Txy, ... Tyz (Tzz = 0)           ***/
 /*****************************************************************************************************************/
 /*** To load green's functions - saved in GLIB binary files in regular 10 fundamental faulting format          ***/
 /*** RSS,RDS,RDD,REX, ZSS,ZDS,ZDD,ZEP, TSS,TDS                                                                 ***/
-/*** see mtinv_subs.c: float *load_greens( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, int verbose )   ***/
+/***                                                                                                           ***/
+/*** Greens_subs.c:     mtinv_subs.c:load_greens() loads the *.ginv files/processed glibs                      ***/
 /*****************************************************************************************************************/
+
+/**
+I add the option now but need to test the code changes which requires writing something to provide test input.
+
+With a special command line flag for mtinv, the code will read 17 SAC files for the Green’s functions.
+Six (rxx, rxy, rxz, ryy, ryz, rzz) are for the radial component.
+Six (zxx, zxy, zxz, zyy, zyz, zzz) are for the vertical components.
+There is only 5 (txx, txy, txz, tyy, tyz) for the transverse component because tzz is zero.
+The files need to be in subdirectories named by station and the filename format is station.network.model.glib.rxx.grn as listed in the mtinv.par file.
+
+Should take me a few days to test. For this to work properly, the data and GFs need to be processed in the same exact way (i.e., resampling and filtering).
+**/
+
 
 float *load_special_grns( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, int verbose )
 {
@@ -125,15 +161,3 @@ float *load_special_grns( EventInfo *ev, Greens **grn, int nsta, int *nz_tmp, in
         z[0] = mydepth;
         return (float *)z;
 }
-
-/**
-I add the option now but need to test the code changes which requires writing something to provide test input.  
-
-With a special command line flag for mtinv, the code will read 17 SAC files for the Green’s functions.  
-Six (rxx, rxy, rxz, ryy, ryz, rzz) are for the radial component.  
-Six (zxx, zxy, zxz, zyy, zyz, zzz) are for the vertical components.  
-There is only 5 (txx, txy, txz, tyy, tyz) for the transverse component because tzz is zero.
-The files need to be in subdirectories named by station and the filename format is station.network.model.glib.rxx.grn as listed in the mtinv.par file.
-
-Should take me a few days to test. For this to work properly, the data and GFs need to be processed in the same exact way (i.e., resampling and filtering).  
-**/

@@ -1,21 +1,45 @@
+/***********************************************************************************/
+/*** Copyright 2024 Gene A. Ichinose (LLNL)                                      ***/
+/***                                                                             ***/
+/*** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” ***/
+/*** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE   ***/
+/*** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE  ***/
+/*** ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE   ***/
+/*** LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         ***/
+/*** CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        ***/
+/*** SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    ***/
+/*** INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     ***/
+/*** CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     ***/
+/*** ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF      ***/
+/*** THE POSSIBILITY OF SUCH DAMAGE.                                             ***/
+/***                                                                             ***/
+/*** Prepared by LLNL under Contract DE-AC52-07NA27344.                          ***/
+/***********************************************************************************/
+
+/*** 
+* this is a helper function, setupMT is the very first to run and is very basic, 
+* sets up makeglib.c based on SAC data and now setups runs for hspec96 Greens functions 
+***/
+
 /***
-
-Mon Aug  3 15:40:26 PDT 2020 ichinose
-
- added channel list data structure to remove duplicate channels in makeglib.csh -> mkgrnlib.par file output
-  cause... sometimes user requires multiple channels LH,BH,HH chans in SAC, seed or mseed waveform data
-  reason... most stations host multiple streams or decimated streams to user, this causes multiple entries
-             in mkgrnlib.par and causes mkgrnlib to compute duplicate Green's functions wasting time 
-
-  added check for multiple segments for user to check 
-
-
-Sat Jan 13 14:51:40 PST 2024
-	add support to compute HSPEC96 greens functions from R. Herrmann's Computer Programs in Seismology 
-### autogenerate this using setupMT -hspec96
-### https://www.eas.slu.edu/eqc/eqccps.html
-###  https://www.eas.slu.edu/eqc/eqc_cps/CPS/CPS330/cps330o.pdf
-
+*
+* Mon Aug  3 15:40:26 PDT 2020 ichinose
+*
+* added channel list data structure to remove duplicate channels in makeglib.csh -> mkgrnlib.par file output
+*  cause... sometimes user requires multiple channels LH,BH,HH chans in SAC, seed or mseed waveform data
+*  reason... most stations host multiple streams or decimated streams to user, this causes multiple entries
+*             in mkgrnlib.par and causes mkgrnlib to compute duplicate Green's functions wasting time 
+*
+*  added check for multiple segments for user to check 
+*
+*
+* Sat Jan 13 14:51:40 PST 2024
+*	add support to compute HSPEC96 greens functions from R. Herrmann's Computer Programs in Seismology 
+* ### autogenerate this using setupMT -hspec96
+* ### https://www.eas.slu.edu/eqc/eqccps.html
+* ###  https://www.eas.slu.edu/eqc/eqc_cps/CPS/CPS330/cps330o.pdf
+*
+* Wed Aug 14 09:28:42 PDT 2024 - modified f96tosac.f filename format output (see comments)
 ***/
 
 #include <stdio.h>
@@ -54,6 +78,13 @@ int main( int ac, char **av )
 	char model_name[128];   /*** wus ***/
 	char model_file_path[256]; /*** /Users/ichinose1/Work/mtinv/data/modeldb ***/
 	char model_file_full_path[256];  /*** /Users/ichinose1/Work/mtinv/data/modeldb/wus.mod ***/
+
+/***************************************************************************************/
+/*** populate makeglib.csh:makepar DataDir= and RespDir=                             ***/
+/*** also for makeglib.csh:mod.par:stadb=/home/user/Work/event/Data/rdseed.stations  ***/
+/***************************************************************************************/
+	char DataDir[256]; /*** /home/user/Work/event/Data ***/
+	char RespDir[256]; /*** /home/user/Work/event/Resp ***/
 
 	char cmdline[512];
 	float lf, hf;
@@ -133,6 +164,8 @@ int main( int ac, char **av )
 		char *script_filename,
 		char *model_name,
 		long evid,
+		char *DataDir,
+		char *RespDir,
 		char exclude_station_list[256][16], 
 		int nsta_exclude_list,
 		int verbose );
@@ -165,7 +198,7 @@ int main( int ac, char **av )
 	long get_cmdline_long( int i, char *arg, char **av, char *argname );
 
 /********************************************************************************/
-	/*** start progname ***/
+/*********** start progname *******************************************/
 /********************************************************************************/
 
 	strcpy( pathname, av[0] );
@@ -202,12 +235,16 @@ int main( int ac, char **av )
 	verbose = 0;
 	ot = NULL;
 
+	strcpy( DataDir, "../Data" );
+	strcpy( RespDir, "../Resp" );
+
+/*** if no cmdline args given, print usage and exit ***/
 	if( ac <= 1 ) Usage(ac,av); /**exits***/
 
-	s = (Sac_Header *)malloc( ac * sizeof(Sac_Header) );
-
+/*** allocate sac header temp space ***/
 /***  go through list of sac files and read headers for station information ***/
 /** i = 0, skip because is av[0]=progname **/
+	s = (Sac_Header *)malloc( ac * sizeof(Sac_Header) );
 
 	nsta = 0;
 	while( i < ac )
@@ -216,7 +253,7 @@ int main( int ac, char **av )
 
 	/*** this is new, for setting up bob Herrmann's hspec96 GFs run ***/
 
-		if( strcmp( arg, "-hspec96" ) == 0 )
+		if( strcmp( arg, "--hspec96" ) == 0 || strcmp( arg, "-hspec" ) == 0 )
 		{
 			i++;
 			ihspec96 = 1;
@@ -501,6 +538,39 @@ int main( int ac, char **av )
                         continue;
 		}
 
+		if( strcmp( arg, "-DataDir" ) == 0 || strcmp( arg, "-data" ) == 0 )
+		{
+			i++;
+			if( av[i] != NULL ) {
+				strcpy( DataDir, av[i] );
+			} else {
+				fprintf(stderr, "%s: %s: %s: Error %s requires Data Directory\n",
+					progname, __FILE__, __func__, arg );
+				exit(-1);
+			}
+			fprintf( stderr, "%s: -DataDir : %s\n", progname, DataDir );
+			i++;
+			continue;
+		}
+
+		if( strcmp( arg, "-RespDir" ) == 0 || strcmp( arg, "-resp" ) == 0 )
+		{
+			i++;
+			if( av[i] != NULL ) {
+				strcpy( RespDir, av[i] );
+			} else {
+				fprintf(stderr, "%s: %s: %s: Error %s requires Response Directory\n",
+					progname, __FILE__, __func__, arg );
+				exit(-1);
+			}
+			i++;
+			continue;
+		}
+
+	/*************************************************************************/
+	/*** after checking all cmdline flags, then test this arg for sacfile ***/
+	/*************************************************************************/
+
 		strcpy( sacfilename, arg );
 
 		if( (fp=fopen( arg, "rb")) == NULL )
@@ -650,6 +720,8 @@ int main( int ac, char **av )
 		"makeglib.csh",
 		model_name,
 		evid,
+		DataDir,
+		RespDir,
 		exclude_station_list,
 		nsta_exclude_list,
 		verbose );
@@ -705,6 +777,8 @@ void make_glib_parfile(
 	char *script_filename,
 	char *model_name,
 	long evid,
+	char *DataDir,
+	char *RespDir,
 	char exclude_station_list[256][16],
 	int nsta_exclude_list, 
 	int verbose )
@@ -790,15 +864,18 @@ void make_glib_parfile(
         }
 	
 	fprintf( fp, "#!/bin/csh\n" );
-	fprintf( fp, "########################################################\n" );
-	fprintf( fp, "### Autogenerated C-shell script by setupMT.c        ###\n" );
-	fprintf( fp, "###  This C-shell script sets up mkgrnlin to create  ###\n" );
-	fprintf( fp, "###  Green's functions from all the SAC data hdrs in ###\n" );
-	fprintf( fp, "###  directory ../Data/*.??Z.?.SAC ../Data/*.??Z.SAC ###\n" );
-	fprintf( fp, "########################################################\n" );
+	fprintf( fp, "######################################################################\n" );
+	fprintf( fp, "### Autogenerated C-shell script by setupMT.c                      ###\n" );
+	fprintf( fp, "###  This C-shell script sets up mkgrnlin to create                ###\n" );
+	fprintf( fp, "###  Green's functions from all the SAC data hdrs                  ###\n" );
+	fprintf( fp, "######################################################################\n" );
+	fprintf( fp, "### DataDir = (%s)\n", DataDir );
+	fprintf( fp, "### RespDir = (%s)\n", RespDir );
+	fprintf( fp, "######################################################################\n" );
 	fprintf( fp, "\n" );
 	fprintf( fp, "### don't forget to add ${MTINV_PATH}/bin to your executable path in the shell startup file ###\n" );
 	fprintf( fp, "\n" );
+
 	if( ( mtinv_path = getenv( "MTINV_PATH" )) == NULL )
 	{
 	  /* fprintf( fp, "setenv MTINV_PATH /Users/ichinose1/Work/mtinv.v4.0.0\n" ); */
@@ -859,7 +936,7 @@ void make_glib_parfile(
 	fprintf( fp, "eps=0.0005\n" );
 	fprintf( fp, "smin=0.0005\n" );
 	fprintf( fp, "modeldb=${MTINV_PATH}/data/modeldb/\n" );
-	fprintf( fp, "stadb=../Data/rdseed.stations\n" );
+	fprintf( fp, "stadb=%s/rdseed.stations\n", DataDir );
 	fprintf( fp, "noverbose\n" );
 	fprintf( fp, "nodump\n" );
 	fprintf( fp, "EOF\n" );
@@ -992,10 +1069,9 @@ void make_glib_parfile(
         fprintf( fp, "    date=\"%4d-%02d-%02dT%02d:%02d:%05.2f\" \\\n", 
 		ot->year, ot->month, ot->mday, 
 		ot->hour, ot->min, ot->fsec );
-        fprintf( fp, "    DataDir=../Data \\\n" );
-        fprintf( fp, "    RespDir=../Resp \\\n" );
-        fprintf( fp, "    %s nooracle nomysql sqlite\\\n", gmt_version_string );
-
+        fprintf( fp, "    DataDir=%s \\\n", DataDir );
+        fprintf( fp, "    RespDir=%s \\\n", RespDir );
+        fprintf( fp, "    %s nooracle nomysql sqlite \\\n", gmt_version_string );
 	fprintf( fp, "    maxsta=%d mindist=%g maxdist=%g \\\n", 
 		max_number_stations_invert, 
 		min_distance_define_km,
@@ -1004,6 +1080,22 @@ void make_glib_parfile(
 	fprintf( fp, "    lf=%g hf=%g \\\n", lf, hf ); 
 	if(evid>0)fprintf( fp, "    evid=%ld \\\n", evid );
 	fprintf( fp, "    minsnr=3.0 ctol=0.85 maxshift=10 %s nolocal *.glib\n", realtime_string );
+
+
+	fprintf( fp, "###\n" );
+	fprintf( fp, "### dump and plot the greens functions for single depth\n" );
+	fprintf( fp, "###\n" );
+
+	for( j = 0; j < ncl; j++ )
+	{
+                i = indx[j+1]-1;
+                snprintf( loc, 10, "\"%s\"", cl[i].loc );
+		fprintf( fp, "# grnlib2sac glib=%s.%s.%s.%s.glib dumpgrn plotgrn z=1\n",
+			cl[i].net,
+			cl[i].sta, 
+                        loc,
+                        model_name );
+	}
 
 	fclose(fp);
 
@@ -1446,7 +1538,7 @@ void Usage( int ac, char **av )
 {
 	fprintf( stderr, "\n\n" );
 	fprintf( stderr, "%s: \n", av[0] );
-	fprintf( stderr, "Usage: %s -z [depth(km)] -ev [lat lon] -mod [model_basename] -ot [\"YYYY-MM-DDTHH:mm:SS.SS\"]\n", progname );
+	fprintf( stderr, "Usage: %s --hspec96 -z [depth(km)] -ev [lat lon] -mod [model_basename] -ot [\"YYYY-MM-DDTHH:mm:SS.SS\"]\n", progname );
 	fprintf( stderr, "\t       -com [\"Comment\"] -fil [lo_f(Hz) hi_f(Hz)] -evid [eventID] -exclude_sta [file name]\n" );
 	fprintf( stderr, "\t       -gmt4 -interactive -help -verbose [sac files]\n" );
  
@@ -1475,9 +1567,10 @@ void Usage( int ac, char **av )
 	fprintf( stderr, "\t  -MaxDistInv  automatic maximum distance for station made defining for MT inversion \n" );
 	fprintf( stderr, "\t  -MaxDistProc automatic maximum distance for stations processed for Green's functions \n" );
 
-	fprintf( stderr, "\t -hspec96     create scripts for computing R.Herrmann's HSPEC96 Greens functions [default off].\n" );
-	fprintf( stderr, "\t\t        The GFs are written in subdirectories and stations are written is seperate subdirectores. See and run hspec96_to_grnlib.c\n" );
-
+	fprintf( stderr, "\t --hspec96    create scripts for computing R.Herrmann's HSPEC96 Greens functions [default off].\n" );
+	fprintf( stderr, "\t\t        Creates directory hspec96_GFs/ and csh script runall_hspec96_to_glib.csh \n" );
+	fprintf( stderr, "\t\t        HSPEC96 scripts are created in subdirectories hspec96_GFs/net.sta.loc/net.sta.loc.model.hspec.csh\n" );
+	
 	fprintf( stderr, "\n\n" );
 	fprintf( stderr, "\t Epilog: This program auto creates a makeglib.csh file that computes Green functions.\n" );
 	fprintf( stderr, "\t Add SAC files \"../Data/*.BHZ.?.SAC\" to tell setupMT which stations to use\n" );
@@ -1902,8 +1995,9 @@ void create_hspec96_script(
 
 /*** make c-shell script to convert back to glibs ***/
 
-        hspec96_to_grnlib_script( cl, indx, ncl, evla, evlo, zstart, zinc, zend, model_file_path, model_name, "load.csh" );
-
+        hspec96_to_grnlib_script( cl, indx, ncl, evla, evlo, zstart, zinc, zend, model_file_path, model_name, "runall_hspec96_to_glib.csh" );
+	chmod( "runall_hspec96_to_glib.csh", S_IRWXU|S_IRWXG|S_IRWXO );
+	
 /**********************************************/
 /**********************************************/
 /*** create a script file for each station ***/
@@ -2077,8 +2171,16 @@ void create_hspec96_script(
 		
 			for( icmp = 1; icmp <= 10; icmp++ )
 			{
-				sprintf( sacfilename, "B%02d%02d%3s.sac", iz+1, icmp, kcmp[icmp] );
-	
+				/*******************************************************************************************/
+				/*** CPS3.30/VOLV/src/f96tosac.f RBH changed the filename format for output GFs          ***/ 
+				/***                                         expanding ntrace field width i2->i3         ***/
+				/*** Version 2002 format(a1,i2,i2,a3,'.sac')                                             ***/
+				/*** Version 2021 format(a1,i3,i2,a3,'.sac') write(ofile,10)'B',ntrace,jtr,stcomp(1:3)   ***/
+				/*******************************************************************************************/
+
+				/*** sprintf( sacfilename, "B%02d%02d%3s.sac", iz+1, icmp, kcmp[icmp] ); ***/
+				sprintf( sacfilename, "B%03d%02d%3s.sac", iz+1, icmp, kcmp[icmp] );
+
 				sprintf( cmdline, "/bin/cp %s %s.%s.%s.%s.%g.%s.SAC", 
 					sacfilename,
 					cl[i].net, 
@@ -2161,7 +2263,38 @@ void hspec96_to_grnlib_script(
 
 /**** start ***/
 	fprintf( fp, "#!/bin/csh\n" );
-	fprintf( fp ,"\n" );
+	fprintf( fp, "\n" );
+	fprintf( fp, "\n" );
+
+/*** do the hspec96 fk computations here ***/
+	
+	fprintf( fp, "###\n");
+        fprintf( fp, "### do the hspec96 fk computations here\n" );
+        fprintf( fp, "###\n");
+
+	fprintf( fp, "foreach nsl ( " );
+	for( j = 0; j < ncl; j++ )
+	{
+		/*** set the pointer to the sorted index ***/
+		i = indx[j+1]-1;
+		fprintf( fp, "%s ", cl[i].nslc_string );
+	}
+	fprintf( fp, ")\n" );
+
+	fprintf( fp, "echo ${nsl}\n" );
+	fprintf( fp, "cd ${nsl}\n" );
+	fprintf( fp, "pwd\n" );
+	fprintf( fp, "csh ${nsl}.%s.hspec.csh\n", model_name );
+	fprintf( fp, "cd ..\n" );
+	fprintf( fp, "end\n" );
+	fprintf( fp, "\n" );
+	fprintf( fp, "\n" );
+	
+/*** do the loading here ***/
+	fprintf( fp, "###\n");
+	fprintf( fp, "### create glib files from hspec96 output\n");
+	fprintf( fp, "###\n");
+
 	fprintf( fp, "cat >! hspec96_to_grnlib.par << EOF\n" );
 	fprintf( fp, "velmod=%s\n", model_name );
 	fprintf( fp, "modeldb=%s\n", model_file_path );
@@ -2177,12 +2310,11 @@ void hspec96_to_grnlib_script(
 		/*** set the pointer to the sorted index ***/
 		i = indx[j+1]-1;
 
-		fprintf( fp, "hspec96_to_grnlib par=hspec96_to_grnlib.par net=%s sta=%s loc=%s ./%s/*.SAC\n",
+		fprintf( fp, "hspec96_to_grnlib par=hspec96_to_grnlib.par net=%s sta=%s loc=\"%s\" ./%s/*.SAC\n",
 			cl[i].net,
 			cl[i].sta,
 			cl[i].loc,
 			cl[i].nslc_string );
 	}
-
 	fclose(fp);
 }
